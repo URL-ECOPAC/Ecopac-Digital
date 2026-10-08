@@ -18,11 +18,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import {
-  validarDonacion,
-  validarDonante,
-  validarAnulacionDeDonacion,
-} from "../donaciones/validaciones.js";
+import { validarDonacion, validarDonante } from "../donaciones/validaciones.js";
 import {
   validarAsignacionPersonal,
   validarEdicionTurno,
@@ -57,7 +53,6 @@ import {
 const VALIDADORES = [
   ["validarDonante", validarDonante],
   ["validarDonacion", validarDonacion],
-  ["validarAnulacionDeDonacion", validarAnulacionDeDonacion],
   ["validarJornada", validarJornada],
   ["validarAsignacionPersonal", validarAsignacionPersonal],
   ["validarEdicionTurno", validarEdicionTurno],

@@ -282,6 +282,35 @@ export function construirError(codigo, detalle = "") {
 }
 
 /**
+ * normalizarError() con mensajes propios para rechazos de negocio que se conocen de antemano.
+ *
+ * Las funciones del servidor rechazan con RAISE EXCEPTION por razones que la persona si puede
+ * resolver ("el proyecto esta cancelado", "a esta jornada le quedan 3"), y normalizarError() las
+ * convertia en "Alguno de los datos no cumple las reglas del sistema", que manda a revisar un
+ * formulario que esta bien (issue #925). Esto NO reenvia el texto del servidor -la regla 1 de este
+ * archivo sigue en pie-: cada regla reconoce un rechazo por su patron y devuelve un mensaje escrito
+ * aqui, en el cliente. De lo que coincidio solo se reutilizan numeros o valores de un enum, nunca
+ * texto libre.
+ *
+ * @param {unknown} error Lo que devolvio supabase-js.
+ * @param {Array<{ patron: RegExp, mensaje: string|((coincidencia: RegExpMatchArray) => string) }>} reglas
+ * @returns {{ codigo: string, mensaje: string, detalle: string, esReintentable: boolean }}
+ */
+export function normalizarErrorConReglas(error, reglas = []) {
+  const base = normalizarError(error);
+  const texto = typeof error?.message === "string" ? error.message : "";
+  if (!texto) return base;
+
+  for (const { patron, mensaje } of reglas) {
+    const coincidencia = texto.match(patron);
+    if (coincidencia) {
+      return { ...base, mensaje: typeof mensaje === "function" ? mensaje(coincidencia) : mensaje };
+    }
+  }
+  return base;
+}
+
+/**
  * Convierte cualquier error de Supabase en un objeto uniforme.
  *
  * @param {unknown} error Lo que devolvio supabase-js, o lo que sea que llego.

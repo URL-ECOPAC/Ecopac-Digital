@@ -27,6 +27,7 @@ import {
   registrarNota,
 } from "./avance.api.js";
 import { CAMPOS_HITO } from "./campos.js";
+import { useCambiosEnTiempoReal } from "../hooks/useCambiosEnTiempoReal.js";
 
 /**
  * Anota esCumplido/esVencido en un hito. Pura y exportada aparte del hook -packages/shared corre
@@ -275,6 +276,12 @@ export function useSeguimientoProyecto({
       return { ok: true };
     },
     [proyecto?.id, puedeCambiarEstado, cargar],
+  );
+
+  // Se recarga sola cuando cambian estas tablas (00163).
+  useCambiosEnTiempoReal(
+    ["proyectos", "proyecto_hitos", "proyecto_seguimiento", "jornadas"],
+    cargar,
   );
 
   return {

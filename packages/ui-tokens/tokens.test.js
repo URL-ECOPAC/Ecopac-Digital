@@ -7,7 +7,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import { colors, radii, shadows, statusColors, typography } from "./index.js";
+import { chartSeries, colors, radii, shadows, statusColors, typography } from "./index.js";
 
 describe("typography", () => {
   it("movil sigue usando el nombre que entiende React Native", () => {
@@ -143,5 +143,12 @@ describe("contrato de la paleta", () => {
     const fuera = Object.entries(statusColors).filter(([, v]) => !deLaPaleta.has(v));
 
     expect(fuera).toEqual([]);
+  });
+
+  it("las series de grafica salen de la paleta y no repiten color (issue #916)", () => {
+    const deLaPaleta = new Set(Object.values(colors));
+
+    expect(chartSeries.filter((valor) => !deLaPaleta.has(valor))).toEqual([]);
+    expect(new Set(chartSeries).size).toBe(chartSeries.length);
   });
 });

@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { obtenerHistorialMedico } from "./historial.api.js";
 import { FILTROS_HISTORIAL_VACIOS } from "./historial.filtros.js";
 import { puedeVerHistorial } from "./permisos.js";
+import { useCambiosEnTiempoReal } from "../hooks/useCambiosEnTiempoReal.js";
 
 /**
  * Agrupa los eventos del historial por jornada, conservando el orden de llegada.
@@ -117,6 +118,9 @@ export function useHistorialPaciente(pacienteId, { rol, limiteInicial = null } =
   const eventosVisibles = hayMas ? grupos.flatMap((grupo) => grupo.eventos) : visibles;
 
   const verMas = useCallback(() => setLimite(null), []);
+
+  // Se recarga sola cuando cambian estas tablas (00163).
+  useCambiosEnTiempoReal(["atenciones", "consultas", "recetas", "triajes"], cargar);
 
   return {
     grupos,

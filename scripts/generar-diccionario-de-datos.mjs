@@ -74,6 +74,8 @@ const MODULOS = [
       "fusiones_pacientes",
       "padecimientos_cronicos",
       "condiciones_cronicas",
+      "areas_atencion",
+      "paciente_area",
       "triajes",
     ],
   },
@@ -87,6 +89,8 @@ const MODULOS = [
       "consulta_diagnostico",
       "recetas",
       "receta_detalle",
+      "clinicas",
+      "citas",
     ],
   },
   {
@@ -104,6 +108,8 @@ const MODULOS = [
       "movimientos_inventario",
       "alertas_caducidad",
       "alerta_caducidad_detalle",
+      "avisos_caducidad",
+      "configuracion_alertas_caducidad",
     ],
   },
   {
@@ -114,7 +120,12 @@ const MODULOS = [
   {
     id: "presupuestos",
     titulo: "Presupuestos y gastos",
-    tablas: ["gastos", "fuentes_de_presupuesto", "jornada_presupuesto_origen"],
+    tablas: [
+      "gastos",
+      "categorias_de_gasto",
+      "fuentes_de_presupuesto",
+      "jornada_presupuesto_origen",
+    ],
   },
   {
     id: "proyectos",

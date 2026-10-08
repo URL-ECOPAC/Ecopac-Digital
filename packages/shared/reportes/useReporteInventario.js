@@ -36,6 +36,7 @@ import { FILTROS_INVENTARIO_REPORTE_VACIOS } from "./filtros.js";
 import { useOrdenYPagina } from "./useOrdenYPagina.js";
 import { ESTADOS_DE_VENCIMIENTO, obtenerReporteDeInventario } from "./inventario.api.js";
 import { puedeVerReporteDeInventario } from "./permisos.js";
+import { useCambiosEnTiempoReal } from "../hooks/useCambiosEnTiempoReal.js";
 
 const TOTALES_VACIOS = {
   unidadesDisponibles: 0,
@@ -194,6 +195,9 @@ export function useReporteInventario({ rol } = {}) {
 
   const { pagina, orden, alternarOrden, numeroDePagina, totalPaginas, irAPagina, total } =
     useOrdenYPagina(medicamentos, { columnas: COLUMNAS_INVENTARIO_REPORTE });
+
+  // Se recarga sola cuando cambian estas tablas (00163).
+  useCambiosEnTiempoReal(["lotes", "existencias", "movimientos_inventario"], cargar);
 
   return {
     tieneAcceso,

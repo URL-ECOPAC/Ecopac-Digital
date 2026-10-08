@@ -12,6 +12,12 @@ BEGIN;
 
 SELECT plan(6);
 
+-- Desde la 00178 toda jornada nueva lleva una bodega movil. Estas pruebas no tratan de bodegas:
+-- sus jornadas reciben una de prueba como DEFAULT de la columna, que el ROLLBACK del final deshace.
+INSERT INTO bodegas (id, nombre, es_movil) VALUES
+  ('5b000000-0000-0000-0000-000000000178', 'Bodega movil de prueba 00178', TRUE);
+ALTER TABLE jornadas ALTER COLUMN botiquin_bodega_id SET DEFAULT '5b000000-0000-0000-0000-000000000178';
+
 -- ============================================================================
 -- Setup: un administrador, dos proyectos (uno con dos jornadas y gastos, uno sin ninguna
 -- jornada), y una jornada suelta sin proyecto para presupuestos_de_jornadas().
@@ -32,6 +38,9 @@ INSERT INTO proyectos (id, nombre, responsable_id) VALUES
   ('20000000-0000-0000-0000-000000075902', 'Proyecto sin jornadas 759',
    '00000000-0000-0000-0000-000000075901');
 
+-- La jornada sin proyecto es una anterior a la 00169, que desde entonces ya no se puede crear:
+-- se salta el trigger para tenerla, porque lo que se prueba es como se trata a esas jornadas.
+ALTER TABLE jornadas DISABLE TRIGGER trg_jornadas_proyecto_obligatorio_al_crear;
 INSERT INTO jornadas (id, nombre, fecha, comunidad_id, responsable_id, proyecto_id, presupuesto_asignado) VALUES
   ('40000000-0000-0000-0000-000000075901', 'Jornada A 759', CURRENT_DATE + 10,
    '10000000-0000-0000-0000-000000000759', '00000000-0000-0000-0000-000000075901',
@@ -42,6 +51,7 @@ INSERT INTO jornadas (id, nombre, fecha, comunidad_id, responsable_id, proyecto_
   ('40000000-0000-0000-0000-000000075903', 'Jornada suelta 759', CURRENT_DATE + 12,
    '10000000-0000-0000-0000-000000000759', '00000000-0000-0000-0000-000000075901',
    NULL, 300.00);
+ALTER TABLE jornadas ENABLE TRIGGER trg_jornadas_proyecto_obligatorio_al_crear;
 
 INSERT INTO gastos (jornada_id, concepto, categoria, monto, estado, registrado_por) VALUES
   ('40000000-0000-0000-0000-000000075901', 'Gasto A aprobado', 'Medicamentos', 200.00, 'aprobado',

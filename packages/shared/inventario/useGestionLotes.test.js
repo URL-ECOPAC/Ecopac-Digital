@@ -27,12 +27,18 @@ describe("calcularAlertaDeLote", () => {
     expect(calcularAlertaDeLote("2026-06-14", HOY).estadoAlerta).toBe("danger");
   });
 
-  it("dentro de 30 dias da estado warning", () => {
-    expect(calcularAlertaDeLote("2026-07-15", HOY).estadoAlerta).toBe("warning");
+  it("dentro de la ventana de aviso da estado warning", () => {
+    expect(calcularAlertaDeLote("2026-07-15", HOY, 30).estadoAlerta).toBe("warning");
   });
 
-  it("a mas de 30 dias da estado normal", () => {
-    expect(calcularAlertaDeLote("2026-08-01", HOY).estadoAlerta).toBe("normal");
+  it("fuera de la ventana de aviso da estado normal", () => {
+    expect(calcularAlertaDeLote("2026-08-01", HOY, 30).estadoAlerta).toBe("normal");
+  });
+
+  // Issue #899: sin ventana explicita usa la de por defecto de los avisos (90 dias).
+  it("por defecto la ventana es de 90 dias", () => {
+    expect(calcularAlertaDeLote("2026-08-01", HOY).estadoAlerta).toBe("warning");
+    expect(calcularAlertaDeLote("2026-09-14", HOY).estadoAlerta).toBe("normal");
   });
 
   it("la hora del dia no mueve el corte: casi medianoche sigue siendo el mismo dia de calendario", () => {

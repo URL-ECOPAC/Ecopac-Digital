@@ -12,7 +12,7 @@
 
 BEGIN;
 
-SELECT plan(29);
+SELECT plan(30);
 
 -- ============================================================================
 -- Setup: cuatro perfiles (administrador, junta directiva, socio fundador, medico) y una
@@ -47,7 +47,7 @@ INSERT INTO donacion_detalle (id, donacion_id, descripcion) VALUES
 SET LOCAL ROLE authenticated;
 
 -- ============================================================================
--- administrador: lee y escribe las tres tablas, incluida la anulacion
+-- administrador: lee y escribe las tres tablas; desde la 00173 ya no anula
 -- ============================================================================
 SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000000403';
 
@@ -84,12 +84,20 @@ SELECT lives_ok(
   'administrador registra un renglon de detalle'
 );
 
-SELECT lives_ok(
+-- Desde la 00173 nadie anula una donacion, tampoco la administradora: no hay politica de UPDATE,
+-- y RLS deja el UPDATE sin filas en vez de lanzar.
+SELECT is_empty(
   $$ UPDATE donaciones
      SET estado = 'anulada', motivo_anulacion = 'Prueba de anulacion 403',
          anulada_por = '00000000-0000-0000-0000-000000000403', anulada_en = NOW()
-     WHERE id = 'd0000000-0000-0000-0000-000000000101' $$,
-  'administrador anula una donacion'
+     WHERE id = 'd0000000-0000-0000-0000-000000000101'
+     RETURNING id $$,
+  'administrador ya no puede anular una donacion (00173)'
+);
+
+SELECT hasnt_function(
+  'public', 'fn_anular_donacion', ARRAY['uuid', 'text'],
+  'fn_anular_donacion ya no existe (00173)'
 );
 
 -- ============================================================================

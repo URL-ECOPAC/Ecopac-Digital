@@ -1,3 +1,4 @@
+import { TIPOS_DE_ARTICULO } from "@ecopac/shared";
 import { Save, X } from "lucide-react";
 
 import CampoDeFormulario from "./CampoDeFormulario";
@@ -10,14 +11,17 @@ import SecondaryButton from "./SecondaryButton";
  * campos, sus errores y el catalogo de principios activos salen de alli.
  *
  * No es SelectorConAlta porque un medicamento no se crea con un nombre solo: el catalogo exige
- * concentracion, presentacion, marca y principio activo para distinguir uno de otro.
+ * concentracion, presentacion, marca y principio activo para distinguir uno de otro. Con
+ * `alta.tipoArticulo` insumo se da de alta un insumo: el hook ya quita los campos que no lleva.
  */
 export default function AltaDeMedicamentoEnLinea({ alta }) {
   if (!alta?.abierto) return null;
 
+  const articulo = alta.tipoArticulo === TIPOS_DE_ARTICULO.INSUMO ? "insumo" : "medicamento";
+
   return (
-    <div className="ec-alta-en-linea" role="group" aria-label="Nuevo medicamento">
-      <p className="ec-alta-en-linea-titulo">Nuevo medicamento del catálogo</p>
+    <div className="ec-alta-en-linea" role="group" aria-label={`Nuevo ${articulo}`}>
+      <p className="ec-alta-en-linea-titulo">Nuevo {articulo} del catálogo</p>
       {alta.error && (
         <div className="alert alert-danger py-2" role="alert">
           {alta.error.mensaje}
@@ -38,7 +42,7 @@ export default function AltaDeMedicamentoEnLinea({ alta }) {
       </div>
       <div className="ec-acciones">
         <PrimaryButton
-          title="Guardar medicamento"
+          title={`Guardar ${articulo}`}
           size="sm"
           icon={<Save size={14} aria-hidden="true" />}
           onClick={alta.crear}

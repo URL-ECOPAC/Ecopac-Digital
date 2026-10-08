@@ -12,7 +12,7 @@
 // Ver packages/shared/pacientes/filtros.js, que es el ejemplar de referencia.
 
 import { SUBTIPOS_DE_RANGO, TIPOS_DE_FILTRO } from "../descriptores.js";
-import { OPCIONES_CATEGORIA_GASTO, OPCIONES_ESTADO_GASTO } from "./campos.js";
+import { OPCIONES_ESTADO_GASTO } from "./campos.js";
 
 export const FILTROS_GASTO = [
   {
@@ -33,7 +33,8 @@ export const FILTROS_GASTO = [
     id: "categoria",
     tipo: TIPOS_DE_FILTRO.SELECT,
     label: "Categoría",
-    opciones: OPCIONES_CATEGORIA_GASTO,
+    // Catalogo de la base (categorias_de_gasto, 00158).
+    opcionesDesde: "categorias",
   },
   {
     id: "jornada_id",

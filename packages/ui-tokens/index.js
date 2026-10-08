@@ -57,6 +57,21 @@ export const moduleAccents = {
 };
 
 /**
+ * Colores de las series de una grafica, en el orden en que se asignan (issue #916). Cuando una
+ * grafica compara varias jornadas o comunidades cada una necesita su color, y escribirlos en la
+ * pantalla saltaria la paleta. Salen todos de `colors`; la web los publica como
+ * `--color-serie-1`, `--color-serie-2`...
+ */
+export const chartSeries = [
+  colors.primary,
+  colors.info,
+  colors.warning,
+  colors.danger,
+  colors.secondary,
+  colors.primaryDark,
+];
+
+/**
  * Color de los chips de estado. Las claves coinciden exactamente con los valores de los
  * enums de supabase/migrations/00001_initial_schema.sql, que son la fuente de verdad.
  */
@@ -97,6 +112,10 @@ export const statusColors = {
   // estado_receta (recetas.estado, 00066_recetas_anulacion_y_generacion.sql). 'anulada' ya
   // estaba arriba con estado_donacion, que usa el mismo valor y el mismo color.
   emitida: colors.success,
+  // estado_cita (citas.estado, 00184). 'atendida' y 'cancelada' ya estaban arriba, con el mismo
+  // color.
+  creada: colors.info,
+  en_atencion: colors.primary,
   // estado_condicion_cronica (padecimientos_cronicos.estado, 00010_condiciones_cronicas.sql)
   activa: colors.warning,
   controlada: colors.success,
@@ -236,6 +255,7 @@ export const typography = {
 export const labels = {
   medicamentoVencido: "Medicamento vencido",
   proximoAVencer: "Próximo a vencer",
+  pendiente: "Pendiente",
   aprobado: "Aprobado",
   rechazado: "Rechazado",
   disponible: "Disponible",
@@ -301,6 +321,7 @@ export const organizacion = {
 
 export default {
   colors,
+  chartSeries,
   moduleAccents,
   statusColors,
   spacing,

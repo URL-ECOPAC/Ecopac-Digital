@@ -28,6 +28,7 @@ export * from "./presentaciones.api.js";
 export * from "./presentaciones.permisos.js";
 export * from "./medicamentos.api.js";
 export * from "./medicamentos.permisos.js";
+export * from "./medicamentos.validaciones.js";
 export * from "./lotes.api.js";
 export * from "./existencias.api.js";
 export * from "./entrega.api.js";
@@ -39,7 +40,14 @@ export * from "./bodegas.api.js";
 export * from "./proveedores.api.js";
 export * from "./bodegas.permisos.js";
 export * from "./movimientos.api.js";
+export * from "./rechazos.js";
+export * from "./entregasDeReceta.js";
 export * from "./alertas.api.js";
+export * from "./configuracionAlertas.api.js";
+export * from "./configuracionAlertas.validaciones.js";
+export * from "./useConfiguracionAlertasVencimiento.js";
+export * from "./useVentanaDeAvisoVencimiento.js";
+export * from "./useAtencionAlertaCaducidad.js";
 export * from "./permisos.js";
 export * from "./validacion.api.js";
 export * from "./useCatalogoMedicamentos.js";
@@ -67,6 +75,8 @@ export {
 export {
   datosAtenderAlerta,
   recargarAlertasMontadas,
+  textoSinLotesPorVencer,
+  textoVentanaDeAlertas,
   useAlertasVencimiento,
 } from "./useAlertasVencimiento.js";
 
@@ -93,6 +103,7 @@ export {
 // Los helpers internos de cada archivo -resultadoDeListado(), nombreDe(), filasDeKardex()- no
 // son API del paquete y no salen.
 export {
+  esProveedorDeDonante,
   TIPO_BODEGA,
   TIPO_PROVEEDOR,
   useAdministracionBodegasProveedores,
@@ -104,7 +115,12 @@ export {
   TIPO_MOVIMIENTO,
   useKardexMovimientos,
 } from "./useKardexMovimientos.js";
-export { useRegistroSalida } from "./useRegistroSalida.js";
+export {
+  claveDeLoteDeSalida,
+  MOTIVO_TRASLADO,
+  motivosDeSalida,
+  useRegistroSalida,
+} from "./useRegistroSalida.js";
 export {
   filaDeMisMovimientos,
   useMisMovimientos,

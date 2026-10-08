@@ -35,6 +35,13 @@ import { aFechaLocal } from "../formato/fechas.js";
 // 'servicios' queda fuera a proposito: una jornada de voluntariado medico no tiene unidades.
 const TIPOS_QUE_EXIGEN_CANTIDAD = [TIPOS_DE_DONACION.MEDICAMENTOS, TIPOS_DE_DONACION.INSUMOS];
 
+// Tipos cuyo renglon elige un articulo del catalogo (medicamento_id), con el nombre del articulo
+// para el mensaje. Espejo de fn_registrar_donacion (00135, 00170).
+const TIPOS_CON_ARTICULO_DEL_CATALOGO = {
+  [TIPOS_DE_DONACION.MEDICAMENTOS]: "medicamento",
+  [TIPOS_DE_DONACION.INSUMOS]: "insumo",
+};
+
 function estaVacio(valor) {
   return valor === undefined || valor === null || String(valor).trim() === "";
 }
@@ -104,35 +111,51 @@ export function validarDonante(donante = {}) {
  * @param {string} tipoDeDonacion Tipo de la donacion a la que pertenece el renglon.
  * @returns {Record<string, string>}
  */
+// Como se llama la descripcion en el renglon de cada tipo (CAMPOS_RENGLON_POR_TIPO_DE_DONACION):
+// el error decia "necesita una descripcion" junto a un campo rotulado "Concepto" (issue #925).
+const NOMBRE_DE_LA_DESCRIPCION = {
+  [TIPOS_DE_DONACION.DINERO]: "el concepto",
+  [TIPOS_DE_DONACION.SERVICIOS]: "el servicio prestado",
+};
+
 function validarDetalle(detalle = {}, indice, tipoDeDonacion) {
   const errores = {};
   const prefijo = `detalles_${indice}`;
   const renglon = indice + 1;
 
-  if (tipoDeDonacion === TIPOS_DE_DONACION.MEDICAMENTOS) {
+  if (TIPOS_CON_ARTICULO_DEL_CATALOGO[tipoDeDonacion]) {
     // Desde la #840 el medicamento se elige del catalogo y la descripcion la arma
-    // fn_registrar_donacion con el (00135): pedir texto aqui volveria a la adivinanza.
+    // fn_registrar_donacion con el (00135): pedir texto aqui volveria a la adivinanza. Los
+    // insumos, igual desde la 00170.
     if (estaVacio(detalle.medicamentoId)) {
       errores[`${prefijo}_medicamentoId`] =
-        `El renglon ${renglon} tiene que elegir un medicamento del catalogo.`;
+        `El renglón ${renglon} tiene que elegir un ${TIPOS_CON_ARTICULO_DEL_CATALOGO[tipoDeDonacion]} del catálogo.`;
     }
   } else if (estaVacio(detalle.descripcion)) {
-    errores[`${prefijo}_descripcion`] = `El renglon ${renglon} necesita una descripcion.`;
+    errores[`${prefijo}_descripcion`] =
+      `El renglón ${renglon} necesita ${NOMBRE_DE_LA_DESCRIPCION[tipoDeDonacion] ?? "una descripción"}.`;
   }
 
   if (TIPOS_QUE_EXIGEN_CANTIDAD.includes(tipoDeDonacion)) {
     if (estaVacio(detalle.cantidad) || Number(detalle.cantidad) <= 0) {
       errores[`${prefijo}_cantidad`] =
-        `El renglon ${renglon} debe incluir una cantidad mayor a cero.`;
+        `El renglón ${renglon} debe incluir una cantidad mayor a cero.`;
     }
   } else if (!estaVacio(detalle.cantidad) && Number(detalle.cantidad) <= 0) {
     // Fuera de medicamentos e insumos la cantidad es opcional, pero si viene tiene que ser
     // positiva: es lo que exige el CHECK de la tabla.
-    errores[`${prefijo}_cantidad`] = `La cantidad del renglon ${renglon} debe ser mayor a cero.`;
+    errores[`${prefijo}_cantidad`] = `La cantidad del renglón ${renglon} debe ser mayor a cero.`;
   }
 
   if (!estaVacio(detalle.monto) && Number(detalle.monto) < 0) {
-    errores[`${prefijo}_monto`] = `El monto del renglon ${renglon} no puede ser negativo.`;
+    errores[`${prefijo}_monto`] = `El monto del renglón ${renglon} no puede ser negativo.`;
+  } else if (
+    tipoDeDonacion === TIPOS_DE_DONACION.DINERO &&
+    (estaVacio(detalle.monto) || !(Number(detalle.monto) > 0))
+  ) {
+    // El monto de cada renglon en dinero esta marcado como obligatorio (campos.js), y solo se
+    // exigia que la suma fuera mayor a cero: un renglon sin monto pasaba (issue #925).
+    errores[`${prefijo}_monto`] = `El renglón ${renglon} necesita un monto mayor a cero.`;
   }
 
   return errores;
@@ -159,22 +182,22 @@ export function validarDonacion(donacion = {}) {
   }
 
   if (estaVacio(donacion.tipo)) {
-    errores.tipo = "El tipo de donacion es obligatorio.";
+    errores.tipo = "El tipo de donación es obligatorio.";
   } else if (!Object.values(TIPOS_DE_DONACION).includes(donacion.tipo)) {
-    errores.tipo = "El tipo de donacion seleccionado no es valido.";
+    errores.tipo = "El tipo de donación seleccionado no es válido.";
   }
 
   if (estaVacio(donacion.fecha)) {
-    errores.fecha = "La fecha de la donacion es obligatoria.";
+    errores.fecha = "La fecha de la donación es obligatoria.";
   } else if (!esFechaValida(donacion.fecha)) {
-    errores.fecha = "La fecha proporcionada no es valida.";
+    errores.fecha = "La fecha proporcionada no es válida.";
   } else if (aFechaLocal(donacion.fecha) > finDeHoy()) {
-    errores.fecha = "La fecha de la donacion no puede ser futura.";
+    errores.fecha = "La fecha de la donación no puede ser futura.";
   }
 
   // Toda donacion necesita al menos un renglon: es lo unico que registra que se recibio.
   if (detalles.length === 0) {
-    errores.detalles = "La donacion necesita al menos un renglon de detalle.";
+    errores.detalles = "La donación necesita al menos un renglón de detalle.";
   }
 
   // Una donacion en dinero se reconoce por tener importe en algun renglon, ya que `donaciones` no
@@ -182,33 +205,12 @@ export function validarDonacion(donacion = {}) {
   if (donacion.tipo === TIPOS_DE_DONACION.DINERO && detalles.length > 0) {
     const total = detalles.reduce((suma, detalle) => suma + Number(detalle?.monto ?? 0), 0);
     if (!(total > 0)) {
-      errores.monto = "Una donacion en dinero exige un monto mayor a cero.";
+      errores.monto = "Una donación en dinero exige un monto mayor a cero.";
     }
   }
 
   for (const [indice, detalle] of detalles.entries()) {
     Object.assign(errores, validarDetalle(detalle, indice, donacion.tipo));
-  }
-
-  return errores;
-}
-
-/**
- * Valida la anulacion de una donacion.
- *
- * chk_donaciones_anulacion_coherente (00022) exige que al pasar a 'anulada' viajen juntos
- * motivo_anulacion, anulada_por y anulada_en. El motivo es el unico que escribe la persona, asi
- * que es el unico que se valida aqui; los otros dos los pone la API.
- *
- * @param {object} [opciones]
- * @param {string} [opciones.motivo]
- * @returns {object}
- */
-export function validarAnulacionDeDonacion({ motivo } = {}) {
-  const errores = {};
-
-  if (estaVacio(motivo)) {
-    errores.motivo = "Anular una donacion exige indicar el motivo.";
   }
 
   return errores;

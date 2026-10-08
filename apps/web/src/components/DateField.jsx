@@ -1,5 +1,6 @@
 import { Form } from "react-bootstrap";
 import { useId } from "react";
+import MarcaDeRequerido from "./MarcaDeRequerido";
 
 /**
  * Campo de fecha. Mismo patron visual que TextField (label arriba, error abajo), pero el
@@ -15,6 +16,7 @@ import { useId } from "react";
  */
 export default function DateField({
   label,
+  requerido,
   value = null,
   onChange,
   minDate,
@@ -28,9 +30,11 @@ export default function DateField({
   return (
     <Form.Group className="mb-3" style={style}>
       {label && <Form.Label htmlFor={id}>{label}</Form.Label>}
+      {label && <MarcaDeRequerido requerido={requerido} />}
       <Form.Control
         id={id}
         type="date"
+        aria-required={requerido === true || undefined}
         value={value ?? ""}
         min={minDate}
         max={maxDate}

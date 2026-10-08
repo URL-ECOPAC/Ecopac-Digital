@@ -202,6 +202,7 @@ describe("fusionarPacientes", () => {
       pacienteSobrevivienteId: "pac-1",
       realizadaPor: "user-1",
       realizadaEn: "2026-08-30T10:00:00Z",
+      citasTraslapadas: 0,
     });
   });
 

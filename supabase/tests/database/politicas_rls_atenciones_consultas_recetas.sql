@@ -8,6 +8,18 @@ BEGIN;
 
 SELECT plan(33);
 
+-- Desde la 00169 toda jornada nueva lleva proyecto. Estas pruebas no tratan de proyectos: sus
+-- jornadas reciben uno de prueba como DEFAULT de la columna, que el ROLLBACK del final deshace.
+INSERT INTO proyectos (id, nombre) VALUES
+  ('5f000000-0000-0000-0000-000000000169', 'Proyecto de prueba 00169');
+ALTER TABLE jornadas ALTER COLUMN proyecto_id SET DEFAULT '5f000000-0000-0000-0000-000000000169';
+
+-- Desde la 00178 toda jornada nueva lleva una bodega movil. Estas pruebas no tratan de bodegas:
+-- sus jornadas reciben una de prueba como DEFAULT de la columna, que el ROLLBACK del final deshace.
+INSERT INTO bodegas (id, nombre, es_movil) VALUES
+  ('5b000000-0000-0000-0000-000000000178', 'Bodega movil de prueba 00178', TRUE);
+ALTER TABLE jornadas ALTER COLUMN botiquin_bodega_id SET DEFAULT '5b000000-0000-0000-0000-000000000178';
+
 -- ============================================================================
 -- Setup: comunidad, perfiles (dos medicos: uno asignado a la jornada, otro no),
 -- jornada en curso con el primer medico asignado, paciente, expediente y atencion.
@@ -118,14 +130,18 @@ SELECT ok(
   'voluntario lee el catalogo de diagnosticos (00148)'
 );
 
-SELECT is(
-  (SELECT count(*)::int FROM consultas), 0,
-  'voluntario no puede leer consultas'
+-- 00148: el personal de campo lee consultas y recetas (docs/PERMISOS.md). Esta prueba decia lo
+-- contrario y pasaba solo porque, en este punto, ninguna tabla tenia filas; con las consultas y
+-- recetas del seed de demostracion se veia que la regla ya era otra. Se afirma contra las del
+-- seed, que existen desde antes de que corra esta suite.
+SELECT ok(
+  (SELECT count(*) FROM consultas WHERE id::text LIKE 'de000016-%') > 0,
+  'voluntario lee las consultas (00148)'
 );
 
-SELECT is(
-  (SELECT count(*)::int FROM recetas), 0,
-  'voluntario no puede leer recetas'
+SELECT ok(
+  (SELECT count(*) FROM recetas WHERE id::text LIKE 'de000018-%') > 0,
+  'voluntario lee las recetas (00148)'
 );
 
 -- ============================================================================

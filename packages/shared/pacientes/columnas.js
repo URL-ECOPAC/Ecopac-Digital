@@ -37,6 +37,8 @@ export const CAMPOS_FICHA_PACIENTE = [
   { id: "fechaNacimiento", label: "Fecha de nacimiento", tipo: TIPOS_DE_PRESENTACION.FECHA },
   { id: "sexo", label: "Sexo", tipo: TIPOS_DE_PRESENTACION.TEXTO },
   { id: "tipoSangre", label: "Tipo sanguineo", tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  // Issue #927 (00182): las areas de atencion, separadas por coma; una retirada lo dice.
+  { id: "areas", label: "Áreas de atención", tipo: TIPOS_DE_PRESENTACION.TEXTO },
   { id: "idioma", label: "Idioma", tipo: TIPOS_DE_PRESENTACION.TEXTO },
   { id: "departamento", label: "Departamento", tipo: TIPOS_DE_PRESENTACION.TEXTO },
   { id: "municipio", label: "Municipio", tipo: TIPOS_DE_PRESENTACION.TEXTO },

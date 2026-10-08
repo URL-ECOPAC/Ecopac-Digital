@@ -24,6 +24,7 @@
 // construyen sus issues.
 
 export * from "./api.js";
+export * from "./bodega.api.js";
 export * from "./campos.js";
 export * from "./columnas.js";
 export * from "./filtros.js";
@@ -32,7 +33,10 @@ export * from "./permisos.js";
 export * from "./resumenCierre.js";
 export * from "./turnos.imprimible.js";
 export * from "./useAsignacionPersonal.js";
+export * from "./useCargaDeBodegaDeJornada.js";
+export * from "./useConsumoDeJornada.js";
 export * from "./useCuadroTurnos.js";
+export * from "./useDevolucionDeBodegaDeJornada.js";
 export * from "./useDetalleJornada.js";
 export * from "./useEdicionTurno.js";
 export * from "./useFormularioJornada.js";

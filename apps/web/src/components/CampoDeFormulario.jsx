@@ -54,6 +54,8 @@ export default function CampoDeFormulario({
   disabled = false,
 }) {
   const estilo = ocupaFilaCompleta(campo) ? { gridColumn: "1 / -1" } : undefined;
+  // Obligatorio u opcional, segun el descriptor (MarcaDeRequerido).
+  const requerido = campo.validacion?.requerido;
 
   // Lo que la edicion muestra pero no deja cambiar (issue #840, B1): el mismo campo que en el
   // alta, como texto no editable. No un select deshabilitado: sin su catalogo cargado saldria
@@ -82,6 +84,7 @@ export default function CampoDeFormulario({
     return (
       <Selector
         label={campo.label}
+        requerido={requerido}
         value={valor ?? null}
         options={opciones}
         onSelect={onChange}
@@ -98,6 +101,7 @@ export default function CampoDeFormulario({
     return (
       <MultiSelector
         label={campo.label}
+        requerido={requerido}
         value={Array.isArray(valor) ? valor : []}
         options={opciones}
         onChange={onChange}
@@ -115,6 +119,7 @@ export default function CampoDeFormulario({
     return (
       <DateField
         label={campo.label}
+        requerido={requerido}
         value={valor || null}
         onChange={onChange}
         error={error}
@@ -128,6 +133,7 @@ export default function CampoDeFormulario({
     return (
       <NumberField
         label={campo.label}
+        requerido={requerido}
         value={valor === "" || valor === undefined ? null : Number(valor)}
         suffix={campo.sufijo}
         min={campo.validacion?.min}
@@ -145,6 +151,7 @@ export default function CampoDeFormulario({
     return (
       <Selector
         label={campo.label}
+        requerido={requerido}
         value={valor === true ? "si" : valor === false ? "no" : null}
         options={[
           { value: "si", label: "Si" },
@@ -163,6 +170,7 @@ export default function CampoDeFormulario({
   return (
     <TextField
       label={campo.label}
+      requerido={requerido}
       as={esLargo ? "textarea" : undefined}
       rows={esLargo ? (campo.filas ?? 3) : undefined}
       type={esLargo ? undefined : (TIPO_DE_INPUT[campo.tipo] ?? "text")}

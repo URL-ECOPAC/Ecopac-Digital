@@ -174,6 +174,29 @@ async function especialidadesPorPerfiles(perfilIds = []) {
 }
 
 /**
+ * Nombre de cada persona (nombres_de_perfiles, 00161): id, nombres, apellidos y si esta activa.
+ * Lo lee toda persona activa, sin permisos de Colaboradores; sirve para poner nombre a un id que ya
+ * se ve (el encargado de un gasto, quien lo registro). No trae datos de contacto: para eso esta
+ * listarUsuarios().
+ *
+ * @returns {Promise<{ perfiles: { id: string, nombres: string, apellidos: string,
+ *   activo: boolean }[], error: object|null }>}
+ */
+export async function listarNombresDePerfiles() {
+  try {
+    const { data, error } = await obtenerSupabase()
+      .from("nombres_de_perfiles")
+      .select("id, nombres, apellidos, activo")
+      .order("nombres", { ascending: true });
+
+    if (error) return { perfiles: [], error: normalizarError(error) };
+    return { perfiles: data ?? [], error: null };
+  } catch (error) {
+    return { perfiles: [], error: normalizarError(error) };
+  }
+}
+
+/**
  * Lista el personal, opcionalmente filtrado.
  *
  * `rol` acepta cualquiera de los cinco valores de ROLES (roles.js): esta funcion no restringe

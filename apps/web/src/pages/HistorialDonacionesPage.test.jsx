@@ -1,10 +1,9 @@
-// Prueba de HistorialDonacionesPage: correccion del bug de proyectoNombre/anuladaPorNombre y
-// del boton de anular donacion (issue #756). anularDonacion() y CAMPOS_ANULACION_DONACION ya
-// existian (issue #635) sin ningun boton que los llamara.
+// Prueba de HistorialDonacionesPage: el detalle de una donacion (proyectoNombre/anuladaPorNombre,
+// issue #756), las cuatro tarjetas de totales y que ya no se ofrece anular (issue #911).
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import * as matchers from "@testing-library/jest-dom/matchers";
 
@@ -39,7 +38,7 @@ const mockEstadoHook = {
   cargando: false,
   error: null,
   donaciones: [],
-  totalesPorTipo: { dinero: 0, medicamentos: 0, insumos: 0, servicios: 0 },
+  totalesPorTipo: { dinero: 1500, medicamentos: 40, insumos: 12, servicios: 3 },
   filtros: {
     filtroDonante: "",
     setFiltroDonante: vi.fn(),
@@ -58,12 +57,6 @@ const mockEstadoHook = {
     modalDetalleAbierto: false,
     abrirDetalle: vi.fn(),
     cerrarDetalle: vi.fn(),
-  },
-  anulacion: {
-    puedeAnular: true,
-    anulando: false,
-    errorAnular: null,
-    anular: vi.fn(async () => ({ ok: true })),
   },
 };
 
@@ -91,16 +84,22 @@ describe("HistorialDonacionesPage", () => {
       donacionSeleccionada: null,
       modalDetalleAbierto: false,
     };
-    mockEstadoHook.anulacion = {
-      puedeAnular: true,
-      anulando: false,
-      errorAnular: null,
-      anular: vi.fn(async () => ({ ok: true })),
-    };
     useHistorialDonaciones.mockClear();
   });
 
-  it("una donacion activa muestra el boton Anular donacion en el detalle", () => {
+  it("muestra una tarjeta por cada tipo de donacion, servicios incluido", () => {
+    const { container } = pantalla();
+
+    const tarjetas = [...container.querySelectorAll(".ec-kpi")].map((t) => t.textContent);
+    expect(tarjetas).toHaveLength(4);
+    expect(tarjetas[0]).toContain("1,500.00");
+    expect(tarjetas[1]).toContain("40");
+    expect(tarjetas[2]).toContain("12");
+    expect(tarjetas[3]).toContain("3");
+    expect(tarjetas[3]).toContain("donaciones");
+  });
+
+  it("el detalle de una donacion activa ya no ofrece anularla", () => {
     mockEstadoHook.modalDetalle = {
       ...mockEstadoHook.modalDetalle,
       donacionSeleccionada: DONACION_ACTIVA,
@@ -108,10 +107,11 @@ describe("HistorialDonacionesPage", () => {
     };
     pantalla();
 
-    expect(screen.getByText("Anular donación")).toBeInTheDocument();
+    expect(screen.queryByText("Anular donación")).not.toBeInTheDocument();
+    expect(screen.getByText("Cerrar")).toBeInTheDocument();
   });
 
-  it("una donacion ya anulada no ofrece el boton Anular, y muestra quien la anulo", () => {
+  it("una donacion anulada antes de la 00173 sigue mostrando quien la anulo", () => {
     mockEstadoHook.modalDetalle = {
       ...mockEstadoHook.modalDetalle,
       donacionSeleccionada: DONACION_ANULADA,
@@ -119,73 +119,7 @@ describe("HistorialDonacionesPage", () => {
     };
     pantalla();
 
-    expect(screen.queryByText("Anular donación")).not.toBeInTheDocument();
     expect(screen.getByText("Ana Lopez")).toBeInTheDocument();
-  });
-
-  it("sin permiso de escritura, no se ofrece anular", () => {
-    mockEstadoHook.anulacion = { ...mockEstadoHook.anulacion, puedeAnular: false };
-    mockEstadoHook.modalDetalle = {
-      ...mockEstadoHook.modalDetalle,
-      donacionSeleccionada: DONACION_ACTIVA,
-      modalDetalleAbierto: true,
-    };
-    pantalla();
-
-    expect(screen.queryByText("Anular donación")).not.toBeInTheDocument();
-  });
-
-  it("Anular donacion pide el motivo, y Confirmar exige que no este vacio", () => {
-    mockEstadoHook.modalDetalle = {
-      ...mockEstadoHook.modalDetalle,
-      donacionSeleccionada: DONACION_ACTIVA,
-      modalDetalleAbierto: true,
-    };
-    pantalla();
-
-    fireEvent.click(screen.getByText("Anular donación"));
-
-    expect(screen.getByText("Confirmar anulación")).toBeDisabled();
-  });
-
-  it("con motivo escrito, Confirmar llama a anular() con el id y el motivo", async () => {
-    mockEstadoHook.modalDetalle = {
-      ...mockEstadoHook.modalDetalle,
-      donacionSeleccionada: DONACION_ACTIVA,
-      modalDetalleAbierto: true,
-    };
-    pantalla();
-
-    fireEvent.click(screen.getByText("Anular donación"));
-    fireEvent.change(screen.getByLabelText("Motivo de la anulación"), {
-      target: { value: "Registro duplicado" },
-    });
-    fireEvent.click(screen.getByText("Confirmar anulación"));
-
-    expect(mockEstadoHook.anulacion.anular).toHaveBeenCalledWith("d-1", "Registro duplicado");
-  });
-
-  // Camino de error: si anular() falla, el motivo se queda visible con el error, no se cierra.
-  it("camino de error: si anular falla, muestra el error y no vuelve al boton inicial", async () => {
-    mockEstadoHook.anulacion = {
-      ...mockEstadoHook.anulacion,
-      anular: vi.fn(async () => ({ ok: false, error: { mensaje: "42501" } })),
-      errorAnular: { mensaje: "Operación exclusiva para el rol Administrador." },
-    };
-    mockEstadoHook.modalDetalle = {
-      ...mockEstadoHook.modalDetalle,
-      donacionSeleccionada: DONACION_ACTIVA,
-      modalDetalleAbierto: true,
-    };
-    pantalla();
-
-    fireEvent.click(screen.getByText("Anular donación"));
-    fireEvent.change(screen.getByLabelText("Motivo de la anulación"), {
-      target: { value: "x" },
-    });
-    fireEvent.click(screen.getByText("Confirmar anulación"));
-
-    expect(screen.getByText("Operación exclusiva para el rol Administrador.")).toBeInTheDocument();
-    expect(screen.getByText("Confirmar anulación")).toBeInTheDocument();
+    expect(screen.getByText("Registro duplicado")).toBeInTheDocument();
   });
 });

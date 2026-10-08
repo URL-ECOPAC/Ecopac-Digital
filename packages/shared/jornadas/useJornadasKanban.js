@@ -26,6 +26,7 @@ import { cambiarEstadoJornada, contarPacientesAtendidosPorJornada, listarJornada
 import { FILTROS_JORNADA_VACIOS, OPCIONES_ESTADO_JORNADA, hayFiltrosDeJornada } from "./filtros.js";
 import { permisosDeJornadas } from "./permisos.js";
 import { ESTADOS_JORNADA } from "../enums.js";
+import { useCambiosEnTiempoReal } from "../hooks/useCambiosEnTiempoReal.js";
 
 /**
  * Traduce el estado de filtros de la pantalla a los parametros que listarJornadas() (#170)
@@ -353,6 +354,9 @@ export function useJornadasKanban(rol) {
   );
 
   const permisos = permisosDeJornadas(rol);
+
+  // Se recarga sola cuando cambian estas tablas (00163).
+  useCambiosEnTiempoReal(["jornadas", "atenciones"], cargar);
 
   return {
     columnas,

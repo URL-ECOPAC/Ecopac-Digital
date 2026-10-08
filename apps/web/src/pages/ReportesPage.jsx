@@ -7,6 +7,7 @@ import {
 } from "@ecopac/shared";
 import DashboardMetricasPage from "./DashboardMetricasPage";
 import ReporteImprimible from "./ReporteImprimible";
+import ReporteEnfermedadesPage from "./ReporteEnfermedadesPage";
 import ReporteInventarioPage from "./ReporteInventarioPage";
 import ReportePacientesPage from "./ReportePacientesPage";
 import BotonExportarCSV from "../components/BotonExportarCSV";
@@ -44,6 +45,8 @@ const PESTANAS = [
   },
   { id: "pacientes", label: "Pacientes atendidos", ruta: "/reportes/pacientes-atendidos" },
   { id: "inventario", label: "Inventario actual", ruta: "/reportes/inventario-actual" },
+  // Issue #916: casos por diagnostico, con comparaciones entre jornadas y comunidades.
+  { id: "enfermedades", label: "Enfermedades", ruta: "/reportes/enfermedades" },
 ];
 
 /** La pestana que corresponde a una ruta. `/reportes` y `/reportes/dashboard` son el panel. */
@@ -76,6 +79,7 @@ export default function ReportesPage() {
         {pestanaActiva === "vencimientos" && <PestanaMedicamentosPorVencer />}
         {pestanaActiva === "pacientes" && <ReportePacientesPage incrustado />}
         {pestanaActiva === "inventario" && <ReporteInventarioPage incrustado />}
+        {pestanaActiva === "enfermedades" && <ReporteEnfermedadesPage incrustado />}
       </Tabs>
     </ScreenContainer>
   );

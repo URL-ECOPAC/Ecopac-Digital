@@ -51,7 +51,7 @@ function Disponible({ medicamento, onAgregar }) {
   );
 }
 
-function Renglon({ renglon, lotes, problema, onEditar, onQuitar, deshabilitado }) {
+function Renglon({ renglon, lotes, problema, aviso, onEditar, onQuitar, deshabilitado }) {
   return (
     <Card style={styles.tarjeta}>
       <View style={styles.cabeceraRenglon}>
@@ -104,6 +104,7 @@ function Renglon({ renglon, lotes, problema, onEditar, onQuitar, deshabilitado }
       />
 
       {problema && <Text style={styles.motivo}>{problema}</Text>}
+      {!problema && aviso && <Text style={styles.aviso}>{aviso}</Text>}
     </Card>
   );
 }
@@ -122,8 +123,10 @@ export default function RecetaScreen() {
     catalogo,
     cargandoCatalogo,
     lotesPorMedicamento,
+    bodegaDeEntrega,
     renglones,
     problemas,
+    avisosDeReparto,
     indicacionesGenerales,
     setIndicacionesGenerales,
     error,
@@ -180,6 +183,14 @@ export default function RecetaScreen() {
     <ScreenContainer>
       <Text style={styles.paciente}>{nombreCompletoDePaciente(paciente) ?? "Paciente"}</Text>
 
+      {/* 00176, issue #911: solo se ofrecen los lotes de esta bodega, el que vence antes primero. */}
+      {bodegaDeEntrega?.nombre ? (
+        <Text style={styles.textoTenue}>
+          Los medicamentos salen de la bodega {bodegaDeEntrega.nombre}, primero el lote que vence
+          antes.
+        </Text>
+      ) : null}
+
       {error && (
         <Card style={styles.tarjeta}>
           <Text style={styles.motivo}>{error.mensaje}</Text>
@@ -218,6 +229,7 @@ export default function RecetaScreen() {
           renglon={renglon}
           lotes={lotesPorMedicamento[renglon.medicamentoId]}
           problema={problemas[renglon.clave]}
+          aviso={avisosDeReparto[renglon.clave]}
           onEditar={editarRenglon}
           onQuitar={quitarRenglon}
           deshabilitado={enviando}
@@ -294,6 +306,10 @@ const styles = StyleSheet.create({
   },
   motivo: {
     color: colors.danger,
+    fontSize: typography.sizes.sm,
+  },
+  aviso: {
+    color: colors.textMuted,
     fontSize: typography.sizes.sm,
   },
   agregar: {

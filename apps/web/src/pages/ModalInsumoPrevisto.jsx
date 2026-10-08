@@ -90,6 +90,7 @@ export default function ModalInsumoPrevisto({
               <Selector
                 key={campo.id}
                 label={campo.label}
+                requerido={campo.validacion?.requerido}
                 value={valores[campo.id] || null}
                 options={opciones}
                 onSelect={(valor) => cambiar(campo.id, valor)}
@@ -105,6 +106,7 @@ export default function ModalInsumoPrevisto({
               <NumberField
                 key={campo.id}
                 label={campo.label}
+                requerido={campo.validacion?.requerido}
                 value={valores[campo.id] === "" ? null : Number(valores[campo.id])}
                 min={campo.validacion?.minimo}
                 step={campo.id === "costoUnitarioEstimado" ? 0.01 : 1}
@@ -119,6 +121,7 @@ export default function ModalInsumoPrevisto({
             <TextField
               key={campo.id}
               label={campo.label}
+              requerido={campo.validacion?.requerido}
               placeholder={campo.placeholder}
               as={campo.tipo === TIPOS_DE_CAMPO.TEXTO_LARGO ? "textarea" : undefined}
               rows={campo.tipo === TIPOS_DE_CAMPO.TEXTO_LARGO ? 2 : undefined}

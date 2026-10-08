@@ -15,8 +15,10 @@ describe("camposDeRenglonDeDonacion", () => {
     expect(ids(TIPOS_DE_DONACION.MEDICAMENTOS)).toEqual(["medicamentoId", "cantidad"]);
   });
 
-  it("insumos sigue siendo texto libre, porque no hay catalogo contra el que validar", () => {
-    expect(ids(TIPOS_DE_DONACION.INSUMOS)).toEqual(["descripcion", "cantidad", "unidad"]);
+  // 00170: el insumo se elige del catalogo, como un medicamento. Era texto libre, y la pantalla
+  // terminaba guardando el id del articulo como descripcion.
+  it("insumos elige del catalogo, igual que medicamentos", () => {
+    expect(ids(TIPOS_DE_DONACION.INSUMOS)).toEqual(["medicamentoId", "cantidad"]);
   });
 
   // Antes "servicios" no dibujaba ningun campo: un renglon de servicios no se podia llenar.

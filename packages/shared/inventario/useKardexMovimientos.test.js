@@ -9,6 +9,7 @@ import { describe, expect, it } from "vitest";
 
 import { conZonaHorariaDeGuatemala } from "../pruebas/zonaHoraria.js";
 import {
+  cantidadConSigno,
   conSaldoAcumulado,
   filasDeKardex,
   filtrarPorRangoDeFecha,
@@ -180,5 +181,62 @@ describe("filtrarPorRangoDeFecha", () => {
 
       expect(filtrados.map((m) => m.id)).toEqual(["de-noche"]);
     });
+  });
+});
+
+// Issue #925: un traslado registra el ingreso en la destino antes que la salida del origen (00143),
+// y el saldo del lote pasaba por un valor que nunca existio (300, 350, 300).
+describe("cambio de bodega en el kardex", () => {
+  const momento = "2026-10-03T21:53:00.000Z";
+  const movimientos = [
+    {
+      id: "a",
+      created_at: "2026-10-03T21:45:00.000Z",
+      estado: "aprobado",
+      tipo: "ingreso",
+      cantidad: 300,
+    },
+    { id: "b", created_at: momento, estado: "aprobado", tipo: "ingreso", cantidad: 50 },
+    { id: "c", created_at: momento, estado: "aprobado", tipo: "salida", cantidad: 50 },
+    {
+      id: "d",
+      created_at: "2026-10-03T22:10:00.000Z",
+      estado: "aprobado",
+      tipo: "salida",
+      cantidad: 10,
+    },
+  ];
+
+  it("no mueve el saldo del lote", () => {
+    const filas = conSaldoAcumulado(movimientos);
+    expect(filas.map((fila) => fila.saldoAcumulado)).toEqual([300, 300, 300, 290]);
+    expect(filas.filter((fila) => fila.esCambioDeBodega).map((fila) => fila.id)).toEqual([
+      "b",
+      "c",
+    ]);
+  });
+
+  it("no cuenta como ingreso ni como salida en el resumen", () => {
+    expect(resumenDeKardex(conSaldoAcumulado(movimientos))).toMatchObject({
+      ingresos: 300,
+      salidas: 10,
+      saldo: 290,
+    });
+  });
+
+  it("un ingreso y una salida distintos en el mismo instante si mueven el saldo", () => {
+    const filas = conSaldoAcumulado([
+      { id: "x", created_at: momento, estado: "aprobado", tipo: "ingreso", cantidad: 20 },
+      { id: "y", created_at: momento, estado: "aprobado", tipo: "salida", cantidad: 5 },
+    ]);
+    expect(filas.at(-1).saldoAcumulado).toBe(15);
+    expect(filas.some((fila) => fila.esCambioDeBodega)).toBe(false);
+  });
+});
+
+describe("cantidadConSigno", () => {
+  it("las salidas llevan signo menos, como los ingresos llevan mas", () => {
+    expect(cantidadConSigno({ tipo: "ingreso", cantidad: 30 })).toBe("+30");
+    expect(cantidadConSigno({ tipo: "salida", cantidad: 30 })).toBe("−30");
   });
 });

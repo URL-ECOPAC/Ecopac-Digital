@@ -20,6 +20,9 @@ const COLUMNAS_DE_LA_CONSULTA = [
   "tratamiento",
   "observaciones",
   "planSeguimiento:plan_seguimiento",
+  // 00184: la cita de la que salio (consulta agendada) y el area en que se atendio.
+  "citaId:cita_id",
+  "areaId:area_id",
   "createdAt:created_at",
   "updatedAt:updated_at",
 ].join(", ");
@@ -56,6 +59,8 @@ const CAMPOS_EDITABLES = {
   tratamiento: "tratamiento",
   observaciones: "observaciones",
   planSeguimiento: "plan_seguimiento",
+  // 00184: opcional. Con cita, la base la iguala al area de la cita aunque se mande otra.
+  areaId: "area_id",
 };
 
 function aColumnasDeTabla(datos = {}) {
@@ -253,7 +258,14 @@ export async function registrarConsulta(datos = {}, { estadoDeJornada } = {}) {
         atencion_id: atencion,
         medico_id: medico,
         jornada_id: jornada,
-        ...aColumnasDeTabla({ ...datos, motivoConsulta: motivoConsulta.trim() }),
+        // 00184: la consulta de una cita. Con ella la base pasa la cita a atendida en la misma
+        // transaccion (fn_consulta_de_cita_despues).
+        cita_id: datos.citaId ?? null,
+        ...aColumnasDeTabla({
+          ...datos,
+          motivoConsulta: motivoConsulta.trim(),
+          areaId: datos.areaId || null,
+        }),
       })
       .select(COLUMNAS_DE_LA_CONSULTA)
       .single();
@@ -365,6 +377,7 @@ export async function actualizarConsulta(id, datos = {}) {
 
 const COLUMNAS_DE_PACIENTE_ATENDIDO = [
   "id",
+  "createdAt:created_at",
   "atencion:atenciones(pacienteId:paciente_id, paciente:pacientes(nombres, apellidos))",
   "diagnosticos:consulta_diagnostico(esPrincipal:es_principal, diagnostico:diagnosticos(id, codigo, nombre))",
 ].join(", ");
@@ -379,6 +392,7 @@ function aPacienteAtendido(fila) {
 
   return {
     consultaId: fila.id,
+    createdAt: fila.createdAt ?? null,
     pacienteId: fila.atencion?.pacienteId ?? null,
     paciente:
       [fila.atencion?.paciente?.nombres, fila.atencion?.paciente?.apellidos]
@@ -390,8 +404,40 @@ function aPacienteAtendido(fila) {
 }
 
 /**
+ * Una fila por paciente atendido (issue #927): con citas, un paciente puede tener varias
+ * consultas en la misma jornada, y la lista lo repetia una vez por consulta. Se queda la primera
+ * consulta como la de la fila, su diagnostico principal, todos los diagnosticos sin repetir y
+ * cuantas consultas tuvo. Pura: se exporta para probarla.
+ *
+ * @param {ReturnType<typeof aPacienteAtendido>[]} filas Una por consulta, con `createdAt`.
+ * @returns {object[]}
+ */
+export function agruparPacientesAtendidos(filas = []) {
+  const porPaciente = new Map();
+  const enOrden = [...filas].sort((una, otra) =>
+    String(una.createdAt ?? "").localeCompare(String(otra.createdAt ?? "")),
+  );
+  for (const fila of enOrden) {
+    const clave = fila.pacienteId ?? fila.consultaId;
+    const actual = porPaciente.get(clave);
+    if (!actual) {
+      porPaciente.set(clave, { ...fila, consultas: 1 });
+      continue;
+    }
+    const conocidos = new Set(actual.diagnosticos.map((uno) => uno.id));
+    actual.diagnosticos = [
+      ...actual.diagnosticos,
+      ...fila.diagnosticos.filter((uno) => !conocidos.has(uno.id)),
+    ];
+    actual.diagnosticoPrincipal = actual.diagnosticoPrincipal ?? fila.diagnosticoPrincipal;
+    actual.consultas += 1;
+  }
+  return [...porPaciente.values()];
+}
+
+/**
  * Lista los pacientes atendidos en una jornada, con su diagnostico principal (issue #181,
- * criterio 2).
+ * criterio 2). Una fila por paciente aunque tenga varias consultas (issue #927).
  *
  * `consultas.jornada_id` (00018) filtra directo, sin pasar por `atenciones`: cada fila trae el
  * nombre del paciente embebido a traves de `atencion_id` (`atenciones.paciente_id`), no de
@@ -437,7 +483,10 @@ export async function listarPacientesAtendidosDeJornada(jornadaId, { rol } = {})
 
     if (error) return { pacientes: [], error: normalizarError(error) };
 
-    return { pacientes: (data ?? []).map(aPacienteAtendido), error: null };
+    return {
+      pacientes: agruparPacientesAtendidos((data ?? []).map(aPacienteAtendido)),
+      error: null,
+    };
   } catch (error) {
     return { pacientes: [], error: normalizarError(error) };
   }

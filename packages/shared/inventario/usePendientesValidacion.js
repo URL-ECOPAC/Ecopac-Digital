@@ -4,6 +4,7 @@ import { esRespuestaVigente } from "../hooks/useBusquedaPacientes.js";
 import { listarMovimientos } from "./movimientos.api.js";
 import { recargarAlertasMontadas } from "./useAlertasVencimiento.js";
 import { aprobarMovimiento, rechazarMovimiento } from "./validacion.api.js";
+import { useCambiosEnTiempoReal } from "../hooks/useCambiosEnTiempoReal.js";
 
 /**
  * Decide si una accion de aprobar/rechazar tiene que refrescar la bandeja.
@@ -98,6 +99,9 @@ export function usePendientesValidacion({ usuarioId, rolUsuario } = {}) {
     },
     [usuarioId, rolUsuario, consultar],
   );
+
+  // Se recarga sola cuando cambian estas tablas (00163).
+  useCambiosEnTiempoReal(["movimientos_inventario"], recargar);
 
   return {
     pendientes,

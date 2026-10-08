@@ -36,7 +36,7 @@ const COLUMNAS_DE_HISTORIAL = [
   "estadoAnterior:estado_anterior",
   "estadoNuevo:estado_nuevo",
   "createdAt:created_at",
-  "cambiadoPor:perfiles(nombres, apellidos)",
+  "cambiadoPor:nombres_de_perfiles(nombres, apellidos)",
 ].join(", ");
 
 // Las columnas se enumeran en lugar de pedir "*" para que una columna nueva en proyectos no
@@ -59,7 +59,7 @@ const COLUMNAS_DEL_PROYECTO = [
   "updatedAt:updated_at",
   // Mismo patron que jornadas/api.js: la pantalla muestra al responsable por su nombre, y sin
   // este join solo tenia el UUID de responsable_id para pintar en la columna.
-  "responsable:perfiles(nombres, apellidos)",
+  "responsable:nombres_de_perfiles(nombres, apellidos)",
 ].join(", ");
 
 /**
@@ -288,10 +288,11 @@ export function cerrarProyecto(id) {
 }
 
 /**
- * Asocia una jornada a un proyecto, o la desasocia si `proyectoId` es null.
+ * Asocia una jornada a un proyecto, o la cambia de proyecto.
  *
  * El vinculo vive en jornadas.proyecto_id (migracion 00012) y no en una tabla intermedia: una
- * jornada pertenece a un solo proyecto.
+ * jornada pertenece a un solo proyecto. Desde la 00169 no se desasocia: la base rechaza dejar
+ * una jornada sin proyecto (23502), asi que `proyectoId` null vuelve como error.
  *
  * @param {string} jornadaId
  * @param {string} proyectoId

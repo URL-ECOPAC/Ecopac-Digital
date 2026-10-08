@@ -357,7 +357,7 @@ Registro de deduplicacion. `paciente_absorbido_id` (UNIQUE: no se absorbe dos ve
 | `fecha`                | DATE NOT NULL               | Fecha planificada                         |
 | `comunidad_id`         | UUID NOT NULL               |                                           |
 | `responsable_id`       | UUID NOT NULL               | Perfil a cargo                            |
-| `proyecto_id`          | UUID                        | Opcional                                  |
+| `proyecto_id`          | UUID                        | [00169] Obligatorio al crear y no se quita (trigger); solo las jornadas anteriores pueden no tenerlo. FK RESTRICT |
 | `estado`               | `estado_jornada` NOT NULL   | `planificada`/`en curso`/`finalizada`/`cancelada` |
 | `presupuesto_asignado` | NUMERIC(12,2) NOT NULL      | Suma de `jornada_presupuesto_origen` [00135]; no se escribe a mano |
 | `codigo`               | VARCHAR(30) UNIQUE          | [+00036]                                  |
@@ -519,6 +519,11 @@ Pese al nombre, la tabla guarda **tambien los insumos** (gasas, jeringas, guante
 `presentacion` (enum `presentacion_medicamento`) **ya no existe**: la `00144` la reemplazo por
 `presentacion_id` y borro el enum.
 
+Desde la `00164` un insumo no tiene datos farmacologicos: `concentracion` admite NULL (el CHECK
+`chk_medicamentos_concentracion_de_medicamento` la sigue exigiendo a un medicamento) y
+`fn_registrar_medicamento()` pide principio activo solo a un medicamento; a un insumo no le guarda
+principio, concentracion, forma farmaceutica ni uso pediatrico aunque lleguen.
+
 ### `presentaciones` [00144]
 
 `nombre` (unico). Catalogo administrable de presentaciones -tableta, jarabe, capsula...-, que antes
@@ -544,7 +549,7 @@ las etiquetas en espanol, incluidos los dos valores que el enum tenia en ingles 
 | -------------------- | ----------------------- | ---------------------------------------------------- |
 | `medicamento_id`     | UUID NOT NULL           |                                                      |
 | `numero_lote`        | VARCHAR(50) NOT NULL    |                                                      |
-| `fecha_vencimiento`  | DATE                    |                                                      |
+| `fecha_vencimiento`  | DATE                    | [00171] Obligatoria en un lote de medicamento (trigger); un lote de insumo puede no tenerla y no vence |
 | `proveedor_id`       | UUID NOT NULL           | [+00020]                                             |
 | `origen`             | `origen_lote` NOT NULL  | [+00020] `compra` / `donacion`                       |
 | `cantidad_ingresada` | INT NOT NULL            | [+00020] Cuanto entro; lo disponible esta en `existencias` |
@@ -664,7 +669,8 @@ incidencia salvo "sin stock", que puede volver a ocurrir despues de reponer.
 ### `jornada_presupuesto_origen` [00135]
 
 De donde viene cada parte del presupuesto de una jornada (issue #840): `origen`
-(`origen_de_presupuesto`: `donacion`, `fondos_propios`, `aporte_externo`, `sin_clasificar`),
+(`origen_de_presupuesto`: `donacion`, `fondos_propios`, `aporte_externo`, `sin_clasificar` y,
+desde la 00167, `caja`),
 `donacion_id` (obligatoria si y solo si el origen es una donacion; tiene que ser de dinero y estar
 registrada), `monto` (> 0), `descripcion`, `registrado_por` (lo fija `auth.uid()`).
 `jornadas.presupuesto_asignado` es la suma de estas filas y la mantiene un trigger; un UPDATE
@@ -675,6 +681,28 @@ un INSERT de jornada que ya lo traia, entran como `sin_clasificar`.
 `fuente_id` [+00149]: quien hizo un aporte externo (`fuentes_de_presupuesto`). Solo con origen
 `aporte_externo` (CHECK `chk_presupuesto_origen_fuente_solo_externo`) y opcional: el detalle libre
 sigue existiendo.
+
+`devuelto` y `traspasado_desde` [+00160]: al liquidar el sobrante de una jornada finalizada
+(`fn_liquidar_sobrante_de_jornada`), lo que sobro de cada aporte sale de la jornada (`devuelto`,
+0 <= devuelto <= monto) y, si se traspasa, entra en otra jornada del mismo proyecto como un aporte
+del mismo origen con `traspasado_desde` apuntando al que lo cedio. Lo que cuenta de un aporte es
+`monto - devuelto`: con eso se calculan `presupuesto_asignado` y el saldo de una donacion. Que parte
+de cada aporte uso la jornada lo dice `sobrante_de_jornada()`: primero donaciones y aportes
+externos, al final fondos propios. Quitar o rebajar un aporte por debajo de lo comprometido en
+gastos se rechaza (`00159`), y un aporte ya liquidado no se toca.
+
+### `movimientos_de_caja` [00168]
+
+El libro de la caja, donde queda el sobrante que no vuelve a una donacion: `tipo` (`entrada` o
+`salida`, CHECK), `monto` (> 0), `aporte_id` (en una entrada, el aporte cuyo sobrante se devolvio;
+en una salida, el aporte con origen `caja`; CASCADE), `jornada_id`, `descripcion`,
+`registrado_por`, `created_at`. Una entrada la escribe `fn_liquidar_sobrante_de_jornada` al
+devolver el sobrante de un aporte que no es de una donacion; una salida, el trigger
+`fn_registrar_salida_de_caja` al registrar un aporte con origen `caja` (una sola por aporte, indice
+`uq_movimientos_de_caja_salida_por_aporte`). Un traspaso entre jornadas no pasa por la caja. El
+saldo es entradas menos salidas (`saldo_de_caja()`), y un aporte de la caja no puede pasar de el
+(`fn_validar_aporte_de_caja`). Lo que se habia devuelto antes de la 00168 entro como entrada con la
+fecha de su liquidacion.
 
 ### `fuentes_de_presupuesto` [00149]
 
@@ -690,9 +718,10 @@ guardaba nada: el origen es un enum y no admite valores nuevos desde la aplicaci
 medicamentos, la linea del detalle apunta al lote que se creo en inventario. La unicidad es lo que
 impide que dos donaciones reclamen el mismo lote.
 
-`medicamento_id` [+00135]: el medicamento del catalogo. `fn_registrar_donacion` lo exige en cada
-renglon de una donacion de medicamentos y arma `descripcion` y `unidad` (la presentacion) desde el
-catalogo; los otros tipos lo dejan en NULL y siguen en texto libre. Con el, el ingreso a
+`medicamento_id` [+00135]: el articulo del catalogo. `fn_registrar_donacion` lo exige en cada
+renglon de una donacion de medicamentos y, desde la 00170, de insumos, siempre del mismo
+`tipo_articulo` que la donacion, y arma `descripcion` y `unidad` (la presentacion) desde el
+catalogo; dinero y servicios lo dejan en NULL y siguen en texto libre. Con el, el ingreso a
 inventario desde la donacion ya no vuelve a preguntar el medicamento.
 
 Un renglon ya insertado **solo** admite `UPDATE` de `lote_id` (el enlace con el lote que se creo al
@@ -749,7 +778,8 @@ asignacion); la escribe el administrador o quien tenga `proyectos.gestionar`.
 `00150` devuelve **la union** de esta tabla y del equipo de las jornadas del proyecto
 (`jornada_personal`), con dos columnas mas: `jornadas` (nombres de las jornadas en que esta la
 persona) y `en_equipo_del_proyecto` (si tiene fila aqui, que es lo unico que se puede quitar desde
-el proyecto).
+el proyecto). Desde la `00157` suma tambien al responsable de cada jornada del proyecto
+(`jornadas.responsable_id`), aunque no tenga turno en ella.
 
 ### `proyecto_insumos` [00147]
 
@@ -778,7 +808,7 @@ abrio Jornadas o Proyectos. El proyecto la muestra agrupada por jornada.
 | ---------------- | --------------------------- | -------------------------------------------------- |
 | `jornada_id`     | UUID NOT NULL               |                                                    |
 | `concepto`       | TEXT NOT NULL               |                                                    |
-| `categoria`      | `categoria_gasto` NOT NULL  | Medicamentos, Logistica, Diagnostico, Honorarios, Educacion, Infraestructura |
+| `categoria`      | TEXT NOT NULL               | [00158] FK a `categorias_de_gasto(nombre)`; antes el enum `categoria_gasto` |
 | `monto`          | NUMERIC(12,2) CHECK (> 0)   |                                                    |
 | `fecha`          | DATE NOT NULL               |                                                    |
 | `responsable_id` | UUID                        | Antes `encargado_id` [renombrada 00092]            |
@@ -797,6 +827,22 @@ La migracion `00089` **desacoplo gastos de inventario**: antes compartian el enu
 
 Los totales no se guardan: los calculan `presupuesto_de_jornada()`, `presupuesto_de_proyecto()` y
 `presupuesto_del_sistema()` (`00040`).
+
+Desde la `00159` un gasto pendiente o aprobado no deja lo comprometido de su jornada (pendientes
+mas aprobados, `comprometido_de_jornada()`) por encima de `jornadas.presupuesto_asignado`, y su
+`fecha` llega hasta el dia de la jornada (o hasta hoy, si ya paso); hacia atras no hay limite, para
+los gastos de preparacion. Una jornada finalizada no admite gastos nuevos; sus pendientes se
+siguen aprobando o rechazando. Lo aplica el trigger `fn_validar_gasto_contra_presupuesto`.
+"Hoy" es el mas tardio entre el dia del servidor (UTC, el de `fecha DEFAULT CURRENT_DATE`) y el
+de Guatemala (`00165`): desde las 18:00 de Guatemala el servidor ya va un dia adelante.
+
+### `categorias_de_gasto` [00158]
+
+`nombre` (TEXT, unico exacto y unico sin importar mayusculas, indice
+`uq_categorias_de_gasto_nombre`), `registrado_por`, `created_at`. Reemplaza al enum
+`categoria_gasto`: se siembra con sus seis valores y con las categorias que ya usaban los gastos, y
+crece desde "Crear categoria nueva" del formulario de gasto. `gastos.categoria` la referencia por
+nombre (`ON UPDATE CASCADE`). Sin UPDATE ni DELETE.
 
 ---
 
@@ -817,7 +863,6 @@ Los totales no se guardan: los calculan `presupuesto_de_jornada()`, `presupuesto
 | `estado_donacion`          | registrada, anulada                                                            | 00022     |
 | `tipo_movimiento`          | ingreso, salida                                                                | 00023     |
 | `estado_movimiento`        | pendiente, aprobado, rechazado                                                 | 00023     |
-| `categoria_gasto`          | Medicamentos, Logistica, Diagnostico, Honorarios, Educacion, Infraestructura   | 00025     |
 | `operacion_auditoria`      | insercion, actualizacion, baja, eliminacion                                    | 00026     |
 | `tipo_sanguineo`           | A+, A-, B+, B-, AB+, AB-, O+, O-                                               | 00035     |
 | `sexo_paciente`            | Femenino, Masculino                                                            | 00132     |
@@ -868,14 +913,14 @@ Del lado del cliente, estos valores nacen una sola vez en `packages/shared/enums
 | `fn_detectar_pacientes_duplicados()`    | Propone candidatos a fusion                                       |
 | `fn_fusionar_pacientes(sobrevive, absorbido)` | Ejecuta la fusion y la registra                             |
 | `fn_registrar_medicamento(...)`         | Alta de medicamento o insumo con sus principios activos. Desde la `00144` recibe `p_presentacion_id` (UUID) y desde la `00142` `p_tipo_articulo` |
-| `fn_medicamento_tiene_existencias(medicamento)` | [00050] Si tiene stock positivo no vencido; se consulta antes de dar de baja un medicamento |
+| `fn_medicamento_tiene_existencias(medicamento)` | [00050] Si tiene stock positivo no vencido (un lote sin fecha no vence, 00171); se consulta antes de dar de baja un medicamento |
 | `existencias_totales_por_bodega(bodegas[])` | [00124] Suma de stock por bodega en una sola llamada. `SECURITY INVOKER` |
 | `fn_generar_receta(...)`                | Emite la receta y descuenta inventario, atomicamente              |
 | `fn_ajustar_entrega_receta(...)`        | Corrige la cantidad realmente entregada de un renglon, sin descontar el inventario dos veces |
 | `fn_existencias_disponibles(...)`       | Stock consultable, filtrado y paginado                            |
 | `fn_valor_de_inventario_disponible(...)` | [00122] Valoriza el stock por bodega, medicamento y origen; declara aparte lo que no tiene `costo_unitario` |
 | `fn_aplicar_ajuste_existencias(...)`    | Suma o resta stock por (lote, bodega); lanza error si no alcanza   |
-| `fn_registrar_donacion(...)`            | [00114] Crea la donacion y su detalle en una transaccion. Devuelve JSONB, no la fila: quien llama necesita el id real de cada renglon para poder generar despues el ingreso de inventario. [00153] Recibe `p_jornada_id` |
+| `fn_registrar_donacion(...)`            | [00114] Crea la donacion y su detalle en una transaccion. Devuelve JSONB, no la fila: quien llama necesita el id real de cada renglon para poder generar despues el ingreso de inventario. [00153] Recibe `p_jornada_id`. [00170] Insumos tambien eligen del catalogo, y el articulo debe ser del tipo de la donacion |
 | `fn_anular_donacion(donacion, motivo)`  | [00114] Anula y sella `anulada_por` / `anulada_en`                 |
 | `fn_generar_alertas_caducidad()`        | Genera alertas de lo que vence en 30 dias o ya vencio (00129)     |
 | `fn_sincronizar_alertas_caducidad()`    | [00129] Corre el generador a peticion de la administradora, sin esperar a la rutina diaria |
@@ -885,7 +930,7 @@ Del lado del cliente, estos valores nacen una sola vez en `packages/shared/enums
 | `fn_crear_usuario_administrativo(...)`  | Alta de cuenta; SECURITY DEFINER, sin GRANT a PUBLIC              |
 | `presupuesto_de_jornada / _de_proyecto / _del_sistema()` | Asignado, ejecutado y disponible             |
 | `presupuestos_de_jornadas(ids[]) / presupuestos_de_proyectos(ids[])` | [00123] Lo mismo en lote: una fila por id en vez de una RPC por fila. Un id ausente del resultado se trata como presupuesto en ceros |
-| `equipo_de_proyecto(proyecto)`          | [00146] El equipo del proyecto con nombres, sin abrir `perfiles`. [00150] Union con el equipo de sus jornadas |
+| `equipo_de_proyecto(proyecto)`          | [00146] El equipo del proyecto con nombres, sin abrir `perfiles`. [00150] Union con el equipo de sus jornadas. [00157] Y con sus responsables |
 | `fn_pasar_insumo_de_proyecto_a_jornada(insumo, jornada)` | [00151] INVOKER. Mueve un insumo previsto del proyecto a una de sus jornadas, en una transaccion |
 | `fn_verificar_y_contar_limite(recurso, actor, maximo, ventana)` | [00134] Limite de peticiones sobre `limites_de_uso`; lanza si se paso del umbral. Lo envuelven `fn_verificar_limite_invitaciones` y `fn_verificar_limite_busqueda_pacientes` |
 | `fn_reporte_pacientes_atendidos(...)`   | Reporte agregado con agrupacion configurable. [00155] La comunidad es la del paciente (la de la jornada si no tiene) |
@@ -927,6 +972,7 @@ Del lado del cliente, estos valores nacen una sola vez en `packages/shared/enums
 | `impedir_retirar_sin_ser_administrador`    | `condiciones_cronicas`, `comunidades` | [00148] Retirar (`es_vigente`) es de la administradora |
 | `fn_proyecto_cancelado_no_se_modifica`     | `proyectos`                 | [00154] Un proyecto cancelado ya no se modifica |
 | `fn_proyecto_de_la_fila_no_esta_cancelado` | `proyecto_hitos`, `proyecto_seguimiento`, `proyecto_personal`, `proyecto_insumos`, `jornadas` (solo `proyecto_id`) | [00154] DEFINER. Rechaza escribir lo que cuelga de un proyecto cancelado, y asociarle o sacarle una jornada |
+| `fn_jornada_exige_proyecto`                | `jornadas`                  | [00169] Toda jornada nueva lleva proyecto, y a ninguna se le quita (23502) |
 
 La tabla recoge los triggers que explican una regla de negocio; hay 114 en total en `public`, 41 de
 ellos de auditoria. Los de
@@ -946,6 +992,7 @@ notificaciones (`fn_notificar_*`, `00138`), los de presupuesto por origen (`0013
 | `vista_cola_jornada`     | Quien esta esperando en la jornada y desde hace cuanto                    |
 | `vista_lotes_disponibles`| Lotes entregables (no vencidos, con existencia), por lote y bodega        |
 | `perfiles_directorio`    | Directorio de personal sin exponer la tabla completa                      |
+| `nombres_de_perfiles`    | [00161] Solo el nombre de cada persona (id, nombres, apellidos, activo), para toda persona activa |
 | `tablas_sin_rls`         | **Verificacion**: lista tablas sin RLS. Debe estar vacia                  |
 | `privilegios_de_anon`    | **Verificacion**: lista privilegios de `anon`. Debe estar vacia           |
 
@@ -1002,9 +1049,9 @@ Politicas por tabla (numero de politicas vigentes, sacado de `pg_policies`):
 | Pol. | Tablas |
 | ---- | ------ |
 | 4    | `jornada_insumos`, `jornada_personal`, `jornada_presupuesto_origen`, `padecimientos_cronicos`, `presentaciones`, `principios_activos`, `proyecto_hitos`, `proyecto_insumos`, `proyecto_personal`, `usuario_permiso` |
-| 3    | `atenciones`, `bodegas`, `comunidades`, `condiciones_cronicas`, `consulta_diagnostico`, `consultas`, `diagnosticos`, `donacion_detalle`, `donaciones`, `donantes`, `existencias`, `expedientes`, `gastos`, `jornadas`, `lotes`, `medicamentos`, `movimientos_inventario`, `notificaciones`, `pacientes`, `perfil_especialidad`, `perfiles`, `proveedores`, `proyectos`, `recetas`, `rol_modulo`, `triajes` |
-| 2    | `alertas_caducidad`, `fuentes_de_presupuesto`, `medicamento_principio`, `proyecto_seguimiento`, `receta_detalle` |
-| 1    | `alerta_caducidad_detalle`, `departamentos`, `eventos_auditoria`, `fusiones_pacientes`, `idiomas`, `jornada_estado_historial`, `municipios`, `permisos`, `proyecto_estado_historial`, `rol_permiso` |
+| 3    | `atenciones`, `bodegas`, `comunidades`, `condiciones_cronicas`, `consulta_diagnostico`, `consultas`, `diagnosticos`, `donacion_detalle`, `donaciones`, `donantes`, `existencias`, `expedientes`, `gastos`, `jornadas`, `lotes`, `medicamento_principio`, `medicamentos`, `movimientos_inventario`, `notificaciones`, `pacientes`, `perfil_especialidad`, `perfiles`, `proveedores`, `proyectos`, `recetas`, `rol_modulo`, `triajes` |
+| 2    | `alertas_caducidad`, `fuentes_de_presupuesto`, `proyecto_seguimiento`, `receta_detalle` |
+| 1    | `alerta_caducidad_detalle`, `departamentos`, `eventos_auditoria`, `fusiones_pacientes`, `idiomas`, `jornada_estado_historial`, `movimientos_de_caja`, `municipios`, `permisos`, `proyecto_estado_historial`, `rol_permiso` |
 | 0    | `limites_de_uso`: RLS activo y ninguna politica, a proposito. Solo la tocan funciones `SECURITY DEFINER` |
 
 Una tabla con **una** politica es de solo lectura desde el cliente: la escribe un trigger o una
@@ -1325,8 +1372,8 @@ distingue bodega -un lote puede repartirse en varias- y `medicamentos` no tiene 
 
 **`donantes`**: `nombre`/`tipo`/`contacto`/`telefono`/`email` completos (CRUD desde
 `DonantesPage.jsx`). `direccion` se captura y se corrige pero nunca se muestra (bajo impacto, sin
-issue propia). `activo`: `darDeBajaDonante()` existe en el hook pero la pantalla no le pone
-boton -bajo impacto, agrupado con el hueco de `donaciones.estado` si se retoma ese modulo.
+issue propia). `activo`: la ficha del donante tiene "Dar de baja" y "Reactivar" (solo administradora) y la
+lista filtra por estado; el registro de donaciones solo ofrece donantes activos.
 
 **`donaciones`**
 
@@ -1340,8 +1387,8 @@ boton -bajo impacto, agrupado con el hueco de `donaciones.estado` si se retoma e
 
 **`donacion_detalle`**: `descripcion`/`cantidad`/`monto` completos al registrar. Desde la #840 el
 renglon de una donacion de medicamentos elige `medicamento_id` del catalogo (con alta en linea si
-falta) y no pide descripcion ni unidad: las arma la base desde el catalogo. `unidad` queda como
-campo solo para insumos. Los campos de cada tipo salen de `camposDeRenglonDeDonacion()`. No hay campo de
+falta) y no pide descripcion ni unidad: las arma la base desde el catalogo. Desde la 00170 los
+insumos igual, con el selector filtrado a insumos y alta en linea de insumo. Los campos de cada tipo salen de `camposDeRenglonDeDonacion()`. No hay campo de
 `fechaVencimiento` en este formulario (se probo y se quito): no es una columna de la tabla y el
 vencimiento real se captura mas abajo, al generar el ingreso -pedirlo aqui tambien era una nota
 que nunca se guardaba en ningun lado. `lote_id` -el enlace real a un lote de farmacia-

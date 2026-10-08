@@ -176,6 +176,7 @@ export default function ModalCondicionesPaciente({ pacienteId, rol, onClose, onC
               <SelectorConAlta
                 key={campo.id}
                 label={campo.label}
+                requerido={campo.validacion?.requerido}
                 value={valores[campo.id]}
                 options={catalogos.condicionesCronicas}
                 onSelect={(valor) => setCampo(campo.id, valor)}

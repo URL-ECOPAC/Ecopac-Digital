@@ -10,6 +10,7 @@ import BandejaValidacionPage from "./BandejaValidacionPage";
 import {
   actualizarLote,
   actualizarMedicamento,
+  cambiarPrincipioDeMedicamento,
   describirVencimiento,
   filtrarCatalogoMedicamentos,
   FILTROS_CATALOGO_MEDICAMENTOS,
@@ -21,6 +22,7 @@ import {
   esAdministrador,
   ETIQUETAS_ORIGEN_LOTE,
   formatearMoneda,
+  hayErrores,
   listarBodegas,
   listarExistenciasDisponibles,
   listarLotes,
@@ -42,9 +44,11 @@ import {
   sumarExistenciasPorLote,
   ETIQUETAS_TIPO_ARTICULO,
   TIPOS_DE_ARTICULO,
+  pideDatosFarmacologicos,
   totalizarValorizacion,
   useAlertasVencimiento,
   usePendientesValidacion,
+  validarMedicamentoDelCatalogo,
 } from "@ecopac/shared";
 import { Form, Nav, Table } from "react-bootstrap";
 import PrimaryButton from "../components/PrimaryButton";
@@ -124,6 +128,8 @@ export default function InventarioPage() {
   const [advertenciaDuplicado, setAdvertenciaDuplicado] = useState(false);
   // Un fallo al guardar se pinta dentro del modal, no en un alert() del navegador (issue #762).
   const [errorGuardarMedicamento, setErrorGuardarMedicamento] = useState(null);
+  // Errores por campo del formulario (validarMedicamentoDelCatalogo, issue #911).
+  const [erroresMedicamento, setErroresMedicamento] = useState({});
   const [formData, setFormData] = useState({
     nombre: "",
     tipoArticulo: TIPOS_DE_ARTICULO.MEDICAMENTO,
@@ -294,6 +300,7 @@ export default function InventarioPage() {
     });
     setAdvertenciaDuplicado(false);
     setErrorGuardarMedicamento(null);
+    setErroresMedicamento({});
     setModalAbierto(true);
   };
 
@@ -315,6 +322,7 @@ export default function InventarioPage() {
     });
     setAdvertenciaDuplicado(false);
     setErrorGuardarMedicamento(null);
+    setErroresMedicamento({});
     setModalAbierto(true);
 
     const { principiosActivos: asociados } = await listarPrincipiosDeMedicamento(item.id);
@@ -343,6 +351,11 @@ export default function InventarioPage() {
 
   const handleGuardarMedicamento = async () => {
     setErrorGuardarMedicamento(null);
+    // Cada campo obligatorio vacio se marca debajo del suyo (issue #911): antes viajaba al
+    // servidor y solo volvia "Ocurrio un error inesperado".
+    const errores = validarMedicamentoDelCatalogo(formData);
+    setErroresMedicamento(errores);
+    if (hayErrores(errores)) return;
     // presentacionId (00144): se compara el id, no una etiqueta -- dos presentaciones podrian
     // compartir texto parecido, pero el catalogo real las distingue por id, no por como se
     // escriban.
@@ -358,17 +371,25 @@ export default function InventarioPage() {
       setAdvertenciaDuplicado(true);
       return;
     }
+    // Un insumo no lleva principio activo, concentracion, forma farmaceutica ni uso pediatrico
+    // (00164).
+    const esMedicamento = pideDatosFarmacologicos(formData.tipoArticulo);
+    const datosFarmacologicos = esMedicamento
+      ? {
+          concentracion: (formData.concentracion || "").trim(),
+          formaFarmaceutica: formData.formaFarmaceutica ? formData.formaFarmaceutica.trim() : null,
+          esPediatrico: Boolean(formData.esPediatrico),
+        }
+      : { concentracion: null, formaFarmaceutica: null, esPediatrico: false };
     try {
       setCargandoGuardar(true);
       if (modoEdicion) {
         const { error: errorUpdate } = await actualizarMedicamento(formData.id, {
           nombre: formData.nombre.trim(),
           tipoArticulo: formData.tipoArticulo,
-          concentracion: formData.concentracion.trim(),
           presentacionId: formData.presentacionId,
           marca: formData.marca.trim(),
-          formaFarmaceutica: formData.formaFarmaceutica ? formData.formaFarmaceutica.trim() : null,
-          esPediatrico: Boolean(formData.esPediatrico),
+          ...datosFarmacologicos,
         });
         if (errorUpdate) {
           setErrorGuardarMedicamento(
@@ -376,20 +397,25 @@ export default function InventarioPage() {
           );
           return;
         }
-      } else {
-        if (!formData.principio_activo_id) {
-          setErrorGuardarMedicamento("Debes seleccionar un principio activo.");
+        // El principio activo va aparte (00166); a un insumo se le quitan los que tenga.
+        const { error: errorPrincipio } = await cambiarPrincipioDeMedicamento(
+          formData.id,
+          esMedicamento ? formData.principio_activo_id : null,
+        );
+        if (errorPrincipio) {
+          setErrorGuardarMedicamento(
+            errorPrincipio.mensaje || "No se pudo cambiar el principio activo.",
+          );
           return;
         }
+      } else {
         const payload = {
           nombre: formData.nombre.trim(),
           tipoArticulo: formData.tipoArticulo,
-          concentracion: formData.concentracion.trim(),
           presentacionId: formData.presentacionId,
           marca: formData.marca.trim(),
-          formaFarmaceutica: formData.formaFarmaceutica ? formData.formaFarmaceutica.trim() : null,
-          esPediatrico: Boolean(formData.esPediatrico),
-          principiosActivosIds: [formData.principio_activo_id],
+          ...datosFarmacologicos,
+          principiosActivosIds: esMedicamento ? [formData.principio_activo_id] : [],
         };
         const { error: errorReg } = await registrarMedicamento(payload);
         if (errorReg) {
@@ -751,7 +777,7 @@ export default function InventarioPage() {
                           )}
                         </td>
                         <td>{ETIQUETAS_TIPO_ARTICULO[item.tipoArticulo] ?? item.tipoArticulo}</td>
-                        <td>{item.concentracion}</td>
+                        <td>{item.concentracion || "—"}</td>
                         {/* item.presentacion ya es la etiqueta resuelta (presentaciones.nombre,
                             00144), no un valor de enum que traducir. */}
                         <td>{item.presentacion}</td>
@@ -965,10 +991,9 @@ export default function InventarioPage() {
         </>
       )}
 
-      {/* Pestaña: Alertas completada mediante PanelAlertasVencimiento */}
-      {pestanaVisible === "alertas" && (
-        <PanelAlertasVencimiento usuarioId={usuarioActual?.id} rolUsuario={usuarioActual?.rol} />
-      )}
+      {/* Pestaña: Alertas. El rol decide si sincroniza al abrir y si puede atender (issue #899):
+          quien atiende lo fija la base con auth.uid(), por eso no viaja el id. */}
+      {pestanaVisible === "alertas" && <PanelAlertasVencimiento rolUsuario={rol} />}
 
       {/* Pestaña: Kardex Movimientos */}
       {pestanaVisible === "kardex" && <KardexMovimientosPage titulo="Historial de Movimientos" />}
@@ -1002,6 +1027,7 @@ export default function InventarioPage() {
           presentaciones={presentaciones}
           advertenciaDuplicado={advertenciaDuplicado}
           error={errorGuardarMedicamento}
+          errores={erroresMedicamento}
           onSubmit={handleGuardarMedicamento}
           onClose={() => setModalAbierto(false)}
           onCrearPrincipioActivo={() => setModalPrincipioActivoAbierto(true)}
@@ -1042,6 +1068,7 @@ export default function InventarioPage() {
           onExito={cargarDatos}
           medicamentos={inventarioRaw}
           usuarioId={usuarioActual?.id}
+          rol={rol}
         />
       )}
 

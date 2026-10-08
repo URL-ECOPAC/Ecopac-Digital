@@ -36,6 +36,8 @@ export const DEMO = Object.freeze({
   jornadaEnCurso: "de00000a-0000-0000-0000-000000000002",
   /** Comunidad de esa jornada. */
   comunidad: "de000004-0000-0000-0000-000000000002",
+  /** Proyecto de esa jornada. Toda jornada nueva lleva uno desde la 00169. */
+  proyecto: "de00000e-0000-0000-0000-000000000002",
   /** Paciente del seed, para las pruebas que necesitan uno y no lo estan registrando. */
   paciente: "de000005-0000-0000-0000-000000000002",
   /** Bodega movil que viaja con la jornada en curso. */

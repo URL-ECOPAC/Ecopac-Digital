@@ -11,8 +11,11 @@ vi.mock("../api/cliente.js", () => ({
   },
 }));
 
-const { agregarInsumoAJornada, listarInsumosDeLasJornadasDelProyecto } =
-  await import("./insumos.api.js");
+const {
+  agregarInsumoAJornada,
+  listarBodegasDeLasJornadasDelProyecto,
+  listarInsumosDeLasJornadasDelProyecto,
+} = await import("./insumos.api.js");
 const { resumirInsumosPrevistos } = await import("./useInsumosDeJornada.js");
 
 function doble(respuesta) {
@@ -30,6 +33,7 @@ function doble(respuesta) {
       return cadena;
     },
     order: () => cadena,
+    not: () => cadena,
     single: resolver,
     then: (alCumplir, alFallar) => resolver().then(alCumplir, alFallar),
   };
@@ -85,6 +89,42 @@ describe("listarInsumosDeLasJornadasDelProyecto", () => {
   it("sin proyecto no sale a la red", async () => {
     expect(await listarInsumosDeLasJornadasDelProyecto(undefined)).toEqual({
       insumos: [],
+      error: null,
+    });
+  });
+});
+
+describe("listarBodegasDeLasJornadasDelProyecto", () => {
+  it("deja fuera la bodega principal y lista aparte las jornadas que la usan (00181)", async () => {
+    const { cliente } = doble({
+      data: [
+        { id: "j-1", nombre: "Norte", bodegaId: "b-1", bodega: { nombre: "Botiquin A" } },
+        { id: "j-2", nombre: "Sur", bodegaId: "b-1", bodega: { nombre: "Botiquin A" } },
+        {
+          id: "j-3",
+          nombre: "Centro",
+          bodegaId: "b-p",
+          bodega: { nombre: "Bodega Principal", esPrincipal: true },
+        },
+      ],
+      error: null,
+    });
+    dobles.cliente = cliente;
+
+    const { bodegas, jornadasConBodegaPrincipal, error } =
+      await listarBodegasDeLasJornadasDelProyecto("p-1");
+
+    expect(error).toBeNull();
+    expect(bodegas).toEqual([
+      { bodegaId: "b-1", bodegaNombre: "Botiquin A", jornadas: ["Norte", "Sur"] },
+    ]);
+    expect(jornadasConBodegaPrincipal).toEqual([{ id: "j-3", nombre: "Centro" }]);
+  });
+
+  it("sin proyecto no consulta", async () => {
+    expect(await listarBodegasDeLasJornadasDelProyecto()).toEqual({
+      bodegas: [],
+      jornadasConBodegaPrincipal: [],
       error: null,
     });
   });

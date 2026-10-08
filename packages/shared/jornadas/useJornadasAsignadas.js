@@ -10,6 +10,7 @@ import { useCallback, useEffect, useState } from "react";
 import { aFechaLocal } from "../formato/fechas.js";
 import { ESTADOS_JORNADA } from "../enums.js";
 import { obtenerJornadasDePersona } from "./api.js";
+import { useCambiosEnTiempoReal } from "../hooks/useCambiosEnTiempoReal.js";
 
 /**
  * Dia de calendario de una fecha, como milisegundos UTC de su medianoche. Comparar por dia y no
@@ -105,6 +106,9 @@ export function useJornadasAsignadas({ perfilId } = {}) {
   }, [cargar]);
 
   const { proximas, pasadas } = separarProximasYPasadas(jornadas);
+
+  // Se recarga sola cuando cambian estas tablas (00163).
+  useCambiosEnTiempoReal(["jornadas", "jornada_personal"], cargar);
 
   return { proximas, pasadas, cargando, error, recargar: cargar };
 }

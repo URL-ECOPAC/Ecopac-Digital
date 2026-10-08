@@ -1,7 +1,148 @@
 import { obtenerSupabase } from "../api/cliente.js";
 import { normalizarError } from "../api/errores-de-supabase.js";
+import { obtenerTodasLasFilas } from "../api/paginacion.js";
+import { aCadenaFechaLocal } from "../formato/fechas.js";
 
 export const LIMITE_DE_EXISTENCIAS_POR_DEFECTO = 50;
+
+const COLUMNAS_DEL_CONTENIDO = [
+  "loteId:lote_id",
+  "bodegaId:bodega_id",
+  "cantidadDisponible:cantidad_disponible",
+  "bodega:bodegas(nombre)",
+  "lote:lotes(numeroLote:numero_lote, fechaVencimiento:fecha_vencimiento, " +
+    "medicamentoId:medicamento_id, costoUnitario:costo_unitario, " +
+    "articulo:medicamentos(nombre, concentracion, tipoArticulo:tipo_articulo))",
+].join(", ");
+
+/**
+ * Aplana una fila de existencias con su lote y su articulo. `vencido` se calcula contra `hoy`: un
+ * lote sin fecha (un insumo, 00171) no vence. Pura y exportada para probarla sin Supabase.
+ *
+ * @param {object} fila
+ * @param {string} [hoy] Fecha local AAAA-MM-DD; se inyecta en las pruebas.
+ * `costoUnitario` es el del lote (00121) y `valor` lo que vale lo que queda; los dos en null cuando
+ * no se conoce el costo, que no es lo mismo que cero.
+ *
+ * @returns {object} Con: loteId, bodegaId, bodega, numeroLote, fechaVencimiento, vencido, medicamentoId, articulo, tipoArticulo, cantidadDisponible, costoUnitario, valor.
+ */
+export function aContenidoDeBodega(fila, hoy = aCadenaFechaLocal()) {
+  const lote = fila.lote ?? {};
+  const articulo = lote.articulo ?? {};
+  const fechaVencimiento = lote.fechaVencimiento ?? null;
+  const tieneCosto = lote.costoUnitario !== null && lote.costoUnitario !== undefined;
+  return {
+    loteId: fila.loteId,
+    bodegaId: fila.bodegaId,
+    bodega: fila.bodega?.nombre ?? null,
+    numeroLote: lote.numeroLote ?? null,
+    fechaVencimiento,
+    vencido: Boolean(fechaVencimiento) && fechaVencimiento < hoy,
+    medicamentoId: lote.medicamentoId ?? null,
+    articulo: articulo.concentracion
+      ? `${articulo.nombre} (${articulo.concentracion})`
+      : (articulo.nombre ?? ""),
+    tipoArticulo: articulo.tipoArticulo ?? null,
+    cantidadDisponible: Number(fila.cantidadDisponible ?? 0),
+    costoUnitario: tieneCosto ? Number(lote.costoUnitario) : null,
+    valor: tieneCosto
+      ? Math.round(Number(lote.costoUnitario) * Number(fila.cantidadDisponible ?? 0) * 100) / 100
+      : null,
+  };
+}
+
+/**
+ * Valor de lo que hay en una o varias bodegas (listarContenidoDeBodegas()): la suma de lo que tiene
+ * costo y cuantos lotes no lo tienen. No se finge un total para los que no se conocen.
+ *
+ * @param {Array<{ valor: number|null }>} contenido
+ * @returns {{ valor: number, lotesSinCosto: number, unidades: number }}
+ */
+export function valorizarContenidoDeBodega(contenido = []) {
+  return {
+    valor: Math.round(contenido.reduce((suma, fila) => suma + (fila.valor ?? 0), 0) * 100) / 100,
+    lotesSinCosto: contenido.filter((fila) => fila.valor === null).length,
+    unidades: contenido.reduce((suma, fila) => suma + fila.cantidadDisponible, 0),
+  };
+}
+
+/** Por articulo y, dentro de el, el que vence antes primero; un lote sin fecha va al final. */
+function compararContenido(uno, otro) {
+  const porArticulo = uno.articulo.localeCompare(otro.articulo, "es");
+  if (porArticulo !== 0) return porArticulo;
+  if (uno.fechaVencimiento === otro.fechaVencimiento) return 0;
+  if (!uno.fechaVencimiento) return 1;
+  if (!otro.fechaVencimiento) return -1;
+  return uno.fechaVencimiento < otro.fechaVencimiento ? -1 : 1;
+}
+
+/**
+ * Lo que hay en una o varias bodegas: cada lote con existencia, con su articulo, su vencimiento y su
+ * bodega (issue #911). Es la pantalla "Ver contenido" de una bodega y lo que la bodega de botiquin
+ * le aporta a los insumos de su jornada y de su proyecto.
+ *
+ * A diferencia de listarExistenciasDisponibles(), los lotes vencidos SI aparecen, marcados con
+ * `vencido`: siguen fisicamente en la bodega y alguien tiene que darlos de baja. Lo que esta en
+ * cero no aparece.
+ *
+ * Trae todas las filas, no solo las primeras 1000 que corta PostgREST (issue #773).
+ *
+ * @param {string[]} bodegaIds
+ * @returns {Promise<{ contenido: object[], error: object|null }>}
+ */
+export async function listarContenidoDeBodegas(bodegaIds = []) {
+  const ids = [...new Set((bodegaIds ?? []).filter(Boolean))];
+  if (ids.length === 0) return { contenido: [], error: null };
+
+  try {
+    const { filas, error } = await obtenerTodasLasFilas(() =>
+      obtenerSupabase()
+        .from("existencias")
+        .select(COLUMNAS_DEL_CONTENIDO)
+        .in("bodega_id", ids)
+        .gt("cantidad_disponible", 0)
+        .order("lote_id", { ascending: true }),
+    );
+
+    if (error) return { contenido: [], error: normalizarError(error) };
+    const hoy = aCadenaFechaLocal();
+    return {
+      contenido: (filas ?? []).map((fila) => aContenidoDeBodega(fila, hoy)).sort(compararContenido),
+      error: null,
+    };
+  } catch (error) {
+    return { contenido: [], error: normalizarError(error) };
+  }
+}
+
+/**
+ * Si un articulo tiene existencia, pero solo en lotes vencidos. Lo usa "Cargar a la bodega" para
+ * no decir "no hay existencia" cuando si la hay y lo que pasa es que vencio (issue #925): eso se da
+ * de baja desde su alerta, no se registra de nuevo.
+ *
+ * @param {string} medicamentoId
+ * @returns {Promise<{ vencida: boolean, error: object|null }>}
+ */
+export async function tieneExistenciaVencida(medicamentoId) {
+  if (!medicamentoId) return { vencida: false, error: null };
+
+  try {
+    const { count, error } = await obtenerSupabase()
+      .from("existencias")
+      .select("lote_id, lotes!inner(medicamento_id, fecha_vencimiento)", {
+        count: "exact",
+        head: true,
+      })
+      .gt("cantidad_disponible", 0)
+      .eq("lotes.medicamento_id", medicamentoId)
+      .lt("lotes.fecha_vencimiento", aCadenaFechaLocal());
+
+    if (error) return { vencida: false, error: normalizarError(error) };
+    return { vencida: (count ?? 0) > 0, error: null };
+  } catch (error) {
+    return { vencida: false, error: normalizarError(error) };
+  }
+}
 
 function aExistencia(fila) {
   if (!fila) return null;

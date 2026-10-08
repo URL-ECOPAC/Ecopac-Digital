@@ -2,7 +2,7 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import * as matchers from "@testing-library/jest-dom/matchers";
 
 import BandejaValidacionPage from "./BandejaValidacionPage";
@@ -97,24 +97,92 @@ describe("BandejaValidacionPage", () => {
     expect(mockEstadoHook.aprobar).toHaveBeenCalledWith("mov-1");
   });
 
-  it("Rechazar pide el motivo por prompt y lo envia a rechazar()", () => {
+  // Issue #925: el motivo se pedia con prompt() del navegador; ahora es un dialogo como el del
+  // rechazo de gastos.
+  it("Rechazar abre el dialogo y envia el motivo a rechazar()", async () => {
     mockEstadoHook.pendientes = [MOVIMIENTO_DE_EJEMPLO];
-    vi.spyOn(window, "prompt").mockReturnValue("Documentacion incompleta");
     pantalla();
 
     fireEvent.click(screen.getByText("Rechazar"));
+    fireEvent.change(screen.getByLabelText(/Motivo de rechazo/), {
+      target: { value: "Documentacion incompleta" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Rechazar movimiento" }));
 
-    expect(mockEstadoHook.rechazar).toHaveBeenCalledWith("mov-1", "Documentacion incompleta");
+    await waitFor(() =>
+      expect(mockEstadoHook.rechazar).toHaveBeenCalledWith("mov-1", "Documentacion incompleta"),
+    );
   });
 
-  it("cancelar el prompt de rechazo no llama a rechazar()", () => {
+  it("sin motivo no rechaza y lo dice", () => {
     mockEstadoHook.pendientes = [MOVIMIENTO_DE_EJEMPLO];
-    vi.spyOn(window, "prompt").mockReturnValue(null);
     pantalla();
 
     fireEvent.click(screen.getByText("Rechazar"));
+    fireEvent.click(screen.getByRole("button", { name: "Rechazar movimiento" }));
+
+    expect(screen.getByText("El motivo de rechazo es obligatorio.")).toBeInTheDocument();
+    expect(mockEstadoHook.rechazar).not.toHaveBeenCalled();
+  });
+
+  it("cancelar el dialogo de rechazo no llama a rechazar()", () => {
+    mockEstadoHook.pendientes = [MOVIMIENTO_DE_EJEMPLO];
+    pantalla();
+
+    fireEvent.click(screen.getByText("Rechazar"));
+    fireEvent.click(screen.getByRole("button", { name: "Cancelar" }));
 
     expect(mockEstadoHook.rechazar).not.toHaveBeenCalled();
+  });
+
+  it("al rechazar la entrega de una receta, avisa que se anula la receta", () => {
+    mockEstadoHook.pendientes = [
+      {
+        ...MOVIMIENTO_DE_EJEMPLO,
+        tipo: "salida",
+        receta_id: "rec-1",
+        motivo: "Entrega por receta medica REC-1",
+      },
+    ];
+    pantalla();
+
+    fireEvent.click(screen.getByText("Rechazar receta"));
+
+    expect(screen.getByText(/Rechazarla anula la receta completa/)).toBeInTheDocument();
+  });
+
+  it("junta en una sola fila las salidas de una misma receta", () => {
+    const entrega = {
+      ...MOVIMIENTO_DE_EJEMPLO,
+      tipo: "salida",
+      receta_id: "rec-1",
+      motivo: "Entrega por receta medica REC-1",
+    };
+    mockEstadoHook.pendientes = [
+      entrega,
+      {
+        ...entrega,
+        id: "mov-2",
+        cantidad: 3,
+        lote: { numero_lote: "LOTE-2", medicamento: { nombre: "Amoxicilina" } },
+      },
+    ];
+    pantalla();
+
+    expect(screen.getByText("Receta REC-1")).toBeInTheDocument();
+    expect(screen.getByText(/Amoxicilina/)).toBeInTheDocument();
+    expect(screen.getAllByText("Aprobar receta")).toHaveLength(1);
+    expect(screen.getByText(/1 pendientes por revisar/)).toBeInTheDocument();
+  });
+
+  it("muestra el motivo del movimiento y no su id", () => {
+    mockEstadoHook.pendientes = [
+      { ...MOVIMIENTO_DE_EJEMPLO, motivo: "Entrega por receta medica REC-1" },
+    ];
+    pantalla();
+
+    expect(screen.getByText("Entrega por receta medica REC-1")).toBeInTheDocument();
+    expect(screen.queryByText("mov-1")).not.toBeInTheDocument();
   });
 
   // Camino de error (issue #759/#777): si la consulta de pendientes falla, la tabla tiene que

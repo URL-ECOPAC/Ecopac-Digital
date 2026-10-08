@@ -95,6 +95,7 @@ export default function ModalEdicionPaciente({ paciente, rol, onClose, onGuardad
               campo.id === "comunidad" ? (
                 <CascadaDeComunidad
                   label={campo.label}
+                  requerido={campo.validacion?.requerido}
                   comunidadId={valores.comunidad}
                   error={errores.comunidad}
                   catalogos={catalogos}

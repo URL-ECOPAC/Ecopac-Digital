@@ -73,6 +73,24 @@ export async function listarPosiblesDuplicados({ rolUsuario } = {}) {
 }
 
 /**
+ * Que decir despues de fusionar (issue #927): la fusion mueve las citas del absorbido, y si alguna
+ * queda a la misma hora que otra del sobreviviente se conservan las dos para que alguien decida.
+ *
+ * @param {{ citasTraslapadas?: number }|null} fusion
+ * @returns {string} El aviso, o el de una fusion sin novedades.
+ */
+export function mensajeDeFusion(fusion) {
+  const traslapadas = fusion?.citasTraslapadas ?? 0;
+  if (traslapadas > 0) {
+    return (
+      `Expedientes fusionados. ${traslapadas} citas del paciente quedaron a la misma hora que ` +
+      "otra suya: se conservaron todas; revisa su agenda y cancela las que sobren."
+    );
+  }
+  return "Expedientes fusionados.";
+}
+
+/**
  * Fusiona dos expedientes: el `absorbidoId` queda dado de baja y su historial se reasigna al
  * `sobrevivienteId` (fn_fusionar_pacientes, migracion 00101). Una fila puntual que chocaria con
  * una restriccion UNIQUE del sobreviviente (misma jornada ya atendida, misma condicion cronica
@@ -115,6 +133,8 @@ export async function fusionarPacientes(sobrevivienteId, absorbidoId, { rolUsuar
         pacienteSobrevivienteId: data.paciente_sobreviviente_id,
         realizadaPor: data.realizada_por,
         realizadaEn: data.realizada_en,
+        // 00184: citas del sobreviviente que quedaron traslapadas; se conservan y se avisa.
+        citasTraslapadas: Number(data.citas_traslapadas ?? 0),
       },
       error: null,
     };

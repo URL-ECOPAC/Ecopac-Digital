@@ -51,6 +51,7 @@ export default function ModalCondicionCronica({
     >
       <TextField
         label="Nombre de la condición"
+        requerido
         placeholder="Ej. Artritis reumatoide"
         maxLength={100}
         value={nombre}

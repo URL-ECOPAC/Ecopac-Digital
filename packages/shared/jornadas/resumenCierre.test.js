@@ -15,6 +15,8 @@ const dobles = vi.hoisted(() => ({
   contarRecetasDeJornada: vi.fn(),
   contarAtencionesIncompletas: vi.fn(),
   listarMovimientos: vi.fn(),
+  contarCitasPendientesDeJornada: vi.fn(),
+  listarConsumoDeInsumosDeJornada: vi.fn(),
 }));
 
 vi.mock("../atenciones/api.js", () => ({
@@ -29,21 +31,35 @@ vi.mock("../pacientes/recetas.api.js", () => ({
 vi.mock("../inventario/movimientos.api.js", () => ({
   listarMovimientos: dobles.listarMovimientos,
 }));
+vi.mock("../citas/api.js", () => ({
+  contarCitasPendientesDeJornada: dobles.contarCitasPendientesDeJornada,
+}));
 vi.mock("./api.js", () => ({
   contarAtencionesIncompletas: dobles.contarAtencionesIncompletas,
 }));
+// Lo que le queda a la jornada en su bodega (00186): el resto de bodega.api.js es real.
+vi.mock("./bodega.api.js", async (importOriginal) => ({
+  ...(await importOriginal()),
+  listarConsumoDeInsumosDeJornada: dobles.listarConsumoDeInsumosDeJornada,
+}));
 
-const { contarMovimientosPendientesDelBotiquin, hayAdvertenciasDeCierre, obtenerResumenCierre } =
-  await import("./resumenCierre.js");
+const {
+  contarMovimientosPendientesDelBotiquin,
+  hayAdvertenciasDeCierre,
+  mensajeDeCitasPendientesAlCerrar,
+  obtenerResumenCierre,
+} = await import("./resumenCierre.js");
 const { ROLES } = await import("../usuarios/roles.js");
 
 beforeEach(() => {
   vi.clearAllMocks();
+  dobles.listarConsumoDeInsumosDeJornada.mockResolvedValue({ consumo: [], error: null });
   dobles.contarPacientesDeJornada.mockResolvedValue({ cantidad: 0, error: null });
   dobles.contarConsultasDeJornada.mockResolvedValue({ cantidad: 0, error: null });
   dobles.contarRecetasDeJornada.mockResolvedValue({ cantidad: 0, error: null });
   dobles.contarAtencionesIncompletas.mockResolvedValue({ cantidad: 0, error: null });
   dobles.listarMovimientos.mockResolvedValue({ datos: [], error: null });
+  dobles.contarCitasPendientesDeJornada.mockResolvedValue({ cantidad: 0, error: null });
 });
 
 describe("contarMovimientosPendientesDelBotiquin", () => {
@@ -94,6 +110,8 @@ describe("obtenerResumenCierre", () => {
       },
       atencionesIncompletas: null,
       movimientosPendientes: 0,
+      citasPendientes: null,
+      inventarioQueQueda: null,
       error: null,
     });
     expect(dobles.contarPacientesDeJornada).not.toHaveBeenCalled();
@@ -105,6 +123,14 @@ describe("obtenerResumenCierre", () => {
     dobles.contarRecetasDeJornada.mockResolvedValue({ cantidad: 7, error: null });
     dobles.contarAtencionesIncompletas.mockResolvedValue({ cantidad: 2, error: null });
     dobles.listarMovimientos.mockResolvedValue({ datos: [{ id: "m1" }], error: null });
+    dobles.contarCitasPendientesDeJornada.mockResolvedValue({ cantidad: 3, error: null });
+    dobles.listarConsumoDeInsumosDeJornada.mockResolvedValue({
+      consumo: [
+        { queda: 4, costoUnitario: 2.5, valorQueda: 10 },
+        { queda: 0, costoUnitario: null, valorQueda: null },
+      ],
+      error: null,
+    });
 
     const resumen = await obtenerResumenCierre(
       { id: "jor-1", botiquinBodegaId: "bodega-1" },
@@ -115,8 +141,12 @@ describe("obtenerResumenCierre", () => {
       indicadores: { pacientesAtendidos: 12, consultasRealizadas: 9, tratamientosEntregados: 7 },
       atencionesIncompletas: 2,
       movimientosPendientes: 1,
+      citasPendientes: 3,
+      // 00186: el cierre dice lo que le queda a la jornada en su bodega movil.
+      inventarioQueQueda: { unidades: 4, valor: 10, lotesSinCosto: 0 },
       error: null,
     });
+    expect(dobles.contarCitasPendientesDeJornada).toHaveBeenCalledWith("jor-1");
     expect(dobles.contarPacientesDeJornada).toHaveBeenCalledWith("jor-1");
     expect(dobles.contarConsultasDeJornada).toHaveBeenCalledWith("jor-1", {
       rol: ROLES.ADMINISTRADOR,
@@ -129,6 +159,26 @@ describe("obtenerResumenCierre", () => {
       estado: "pendiente",
       bodega_id: "bodega-1",
     });
+  });
+
+  it("con la bodega principal no cuenta sus movimientos pendientes (00181)", async () => {
+    dobles.contarPacientesDeJornada.mockResolvedValue({ cantidad: 1, error: null });
+    dobles.contarConsultasDeJornada.mockResolvedValue({ cantidad: 1, error: null });
+    dobles.contarRecetasDeJornada.mockResolvedValue({ cantidad: 1, error: null });
+    dobles.contarAtencionesIncompletas.mockResolvedValue({ cantidad: 0, error: null });
+    dobles.listarMovimientos.mockResolvedValue({ datos: [{ id: "m1" }], error: null });
+
+    const resumen = await obtenerResumenCierre(
+      {
+        id: "jor-1",
+        botiquinBodegaId: "principal",
+        botiquinBodega: { nombre: "Bodega Principal", esPrincipal: true },
+      },
+      { rol: ROLES.ADMINISTRADOR },
+    );
+
+    expect(resumen.movimientosPendientes).toBe(0);
+    expect(dobles.listarMovimientos).not.toHaveBeenCalled();
   });
 
   it("medico ve pacientesAtendidos y atencionesIncompletas reales, igual que administrador", async () => {
@@ -231,5 +281,40 @@ describe("hayAdvertenciasDeCierre", () => {
   it("un resumen vacio no advierte nada", () => {
     expect(hayAdvertenciasDeCierre(undefined)).toBe(false);
     expect(hayAdvertenciasDeCierre({})).toBe(false);
+  });
+});
+
+describe("citas pendientes al cerrar (issue #927)", () => {
+  it("quien no ve citas recibe null, no un cero, y no se consulta", async () => {
+    const resumen = await obtenerResumenCierre(
+      { id: "jor-1", botiquinBodegaId: null },
+      { rol: ROLES.JUNTA_DIRECTIVA },
+    );
+    expect(resumen.citasPendientes).toBeNull();
+    expect(dobles.contarCitasPendientesDeJornada).not.toHaveBeenCalled();
+  });
+
+  it("las citas pendientes son una advertencia de cierre", () => {
+    expect(
+      hayAdvertenciasDeCierre({
+        atencionesIncompletas: 0,
+        movimientosPendientes: 0,
+        citasPendientes: 2,
+      }),
+    ).toBe(true);
+    expect(
+      hayAdvertenciasDeCierre({
+        atencionesIncompletas: 0,
+        movimientosPendientes: 0,
+        citasPendientes: null,
+      }),
+    ).toBe(false);
+  });
+
+  it("el aviso dice cuantas y que se cancelan al cerrar", () => {
+    expect(mensajeDeCitasPendientesAlCerrar(0)).toBeNull();
+    expect(mensajeDeCitasPendientesAlCerrar(null)).toBeNull();
+    expect(mensajeDeCitasPendientesAlCerrar(1)).toMatch(/^Hay 1 cita creada o en atención/);
+    expect(mensajeDeCitasPendientesAlCerrar(4)).toMatch(/^Hay 4 citas .* se cancelarán/);
   });
 });

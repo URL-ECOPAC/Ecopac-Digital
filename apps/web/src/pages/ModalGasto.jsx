@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import {
   CAMPOS_GASTO,
   ESTADOS_DE_GASTO,
@@ -32,16 +32,17 @@ export default function ModalGasto({
   usuarioId,
   rol,
   estadoInicial,
+  jornadaId = null,
   onClose,
   onGuardado,
 }) {
-  const [creandoCategoria, setCreandoCategoria] = useState(false);
+  const [altaDeCategoriaAbierta, setAltaDeCategoriaAbierta] = useState(false);
   const [nombreNuevaCategoria, setNombreNuevaCategoria] = useState("");
-  const [categoriasTemporales, setCategoriasTemporales] = useState([]);
 
   const {
     valores,
     errores,
+    erroresPorCampo = {},
     error,
     enviando,
     esEdicion,
@@ -51,34 +52,33 @@ export default function ModalGasto({
     mensajeExcedente,
     setCampo,
     enviar,
+    puedeCrearCategoria,
+    crearCategoria,
+    creandoCategoria,
+    errorCategoria,
+    limpiarErrorCategoria,
+    jornadaFija,
   } = useFormularioGasto({
     gasto,
     usuarioId,
     estadoInicial,
+    rol,
+    jornadaId,
   });
 
-  const categoriasDisponibles = useMemo(() => {
-    const desdeHook = catalogos.categorias || [];
-    const valoresExistentes = desdeHook.map((c) => String(c.value ?? c));
-    const soloNuevas = categoriasTemporales.filter(
-      (c) => !valoresExistentes.includes(String(c.value)),
-    );
-    return [...desdeHook, ...soloNuevas];
-  }, [catalogos.categorias, categoriasTemporales]);
+  // La categoria se guarda en el catalogo (00158) y queda elegida; si falla, el formulario de alta
+  // sigue abierto con el error.
+  const agregarCategoria = async () => {
+    if (await crearCategoria(nombreNuevaCategoria)) {
+      setAltaDeCategoriaAbierta(false);
+      setNombreNuevaCategoria("");
+    }
+  };
 
-  //  Agregar categoría y forzar valor como texto plano
-  const agregarCategoria = () => {
-    const nombreLimpio = nombreNuevaCategoria?.trim();
-    if (!nombreLimpio) return;
-
-    const nuevaOpcion = { value: nombreLimpio, label: nombreLimpio };
-    setCategoriasTemporales((anteriores) => [...anteriores, nuevaOpcion]);
-
-    //  Enviar SOLO el texto, NUNCA un objeto
-    setCampo("categoria", nombreLimpio);
-
-    setCreandoCategoria(false);
+  const cerrarAltaDeCategoria = () => {
+    setAltaDeCategoriaAbierta(false);
     setNombreNuevaCategoria("");
+    limpiarErrorCategoria();
   };
 
   const [pidiendoConfirmacionDeDescarte, setPidiendoConfirmacionDeDescarte] = useState(false);
@@ -166,35 +166,33 @@ export default function ModalGasto({
           </div>
         )}
 
+        {/* Cada error va bajo su campo (erroresPorCampo, issue #925); arriba solo el aviso. */}
         {errores.length > 0 && (
           <div className="alert alert-danger" role="alert">
-            <ul className="mb-0 ps-3">
-              {errores.map((mensaje) => (
-                <li key={mensaje}>{mensaje}</li>
-              ))}
-            </ul>
+            Revisa los campos marcados antes de guardar.
           </div>
         )}
 
         {esExcedente && (
-          <div className="alert alert-warning" role="alert">
+          <div className="alert alert-danger" role="alert">
             {mensajeExcedente}
           </div>
         )}
 
         {CAMPOS_GASTO.map((campo) => {
           if (campo.id === "categoria") {
-            const opciones = categoriasDisponibles;
+            const opciones = catalogos.categorias;
             return (
               <div key={campo.id} className="mb-3">
                 {/* Crear una opcion dentro de un formulario es una accion secundaria: boton en
                     contorno con "+" debajo del selector, el mismo de "Crear una comunidad"
                     (SelectorConAlta). El verde solido con icono de guardar es solo del boton que
                     guarda el formulario. */}
-                {!creandoCategoria ? (
+                {!altaDeCategoriaAbierta ? (
                   <>
                     <Selector
                       label={campo.label}
+                      requerido={campo.validacion?.requerido}
                       value={valores[campo.id] || null}
                       options={opciones}
                       onSelect={(valor) => {
@@ -204,13 +202,14 @@ export default function ModalGasto({
                       }}
                       placeholder={opciones.length === 0 ? "Cargando..." : "Seleccionar"}
                       disabled={bloqueado || (campo.validacion?.requerido && opciones.length === 0)}
+                      error={erroresPorCampo[campo.id]}
                     />
-                    {!bloqueado && (
+                    {!bloqueado && puedeCrearCategoria && (
                       <SecondaryButton
                         title="Crear categoría nueva"
                         size="sm"
                         icon={<Plus size={14} aria-hidden="true" />}
-                        onClick={() => setCreandoCategoria(true)}
+                        onClick={() => setAltaDeCategoriaAbierta(true)}
                       />
                     )}
                   </>
@@ -218,9 +217,12 @@ export default function ModalGasto({
                   <>
                     <TextField
                       label="Nueva categoría"
+                      requerido
                       value={nombreNuevaCategoria}
                       onChange={(e) => setNombreNuevaCategoria(e.target.value)}
                       placeholder="Escribe el nombre..."
+                      error={errorCategoria?.mensaje}
+                      disabled={creandoCategoria}
                       autoFocus
                     />
                     <div className="ec-acciones">
@@ -228,6 +230,7 @@ export default function ModalGasto({
                         title="Guardar"
                         size="sm"
                         onClick={agregarCategoria}
+                        loading={creandoCategoria}
                         disabled={!nombreNuevaCategoria.trim()}
                       />
                       <SecondaryButton
@@ -235,10 +238,8 @@ export default function ModalGasto({
                         variant="neutra"
                         size="sm"
                         icon={<X size={14} aria-hidden="true" />}
-                        onClick={() => {
-                          setCreandoCategoria(false);
-                          setNombreNuevaCategoria("");
-                        }}
+                        onClick={cerrarAltaDeCategoria}
+                        disabled={creandoCategoria}
                       />
                     </div>
                   </>
@@ -253,6 +254,7 @@ export default function ModalGasto({
               <Selector
                 key={campo.id}
                 label={campo.label}
+                requerido={campo.validacion?.requerido}
                 value={valores[campo.id] || null}
                 options={opciones}
                 onSelect={(valor) => {
@@ -260,7 +262,12 @@ export default function ModalGasto({
                   setCampo(campo.id, valorFinal);
                 }}
                 placeholder={opciones.length === 0 ? "Cargando..." : "Seleccionar"}
-                disabled={bloqueado || (campo.validacion?.requerido && opciones.length === 0)}
+                disabled={
+                  bloqueado ||
+                  (campo.id === "jornada_id" && jornadaFija) ||
+                  (campo.validacion?.requerido && opciones.length === 0)
+                }
+                error={erroresPorCampo[campo.id]}
               />
             );
           }
@@ -270,11 +277,13 @@ export default function ModalGasto({
               <NumberField
                 key={campo.id}
                 label={campo.label}
+                requerido={campo.validacion?.requerido}
                 value={valores[campo.id] === "" ? null : Number(valores[campo.id])}
                 min={campo.validacion?.minimo}
                 step={0.01}
                 onChange={(valor) => setCampo(campo.id, valor ?? "")}
                 disabled={bloqueado}
+                error={erroresPorCampo[campo.id]}
               />
             );
           }
@@ -284,9 +293,11 @@ export default function ModalGasto({
               <DateField
                 key={campo.id}
                 label={campo.label}
+                requerido={campo.validacion?.requerido}
                 value={valores[campo.id] || null}
                 onChange={(valor) => setCampo(campo.id, valor || "")}
                 disabled={bloqueado}
+                error={erroresPorCampo[campo.id]}
               />
             );
           }
@@ -295,10 +306,12 @@ export default function ModalGasto({
             <TextField
               key={campo.id}
               label={campo.label}
+              requerido={campo.validacion?.requerido}
               placeholder={campo.placeholder}
               value={valores[campo.id] ?? ""}
               onChange={(evento) => setCampo(campo.id, evento.target.value)}
               disabled={bloqueado}
+              error={erroresPorCampo[campo.id]}
             />
           );
         })}

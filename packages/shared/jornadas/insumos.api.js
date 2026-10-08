@@ -87,6 +87,110 @@ export async function listarInsumosDeLasJornadasDelProyecto(proyectoId) {
 }
 
 /**
+ * Las bodegas de botiquin de las jornadas de un proyecto, cada una con las jornadas que la usan
+ * (issue #911). Lo que hay en ellas es parte de los insumos del proyecto; dos jornadas pueden
+ * compartir bodega, y entonces se cuenta una vez.
+ *
+ * La bodega principal no entra en `bodegas` (00181): su existencia es la de toda la organizacion,
+ * no la del proyecto. Las jornadas que la usan salen aparte, en `jornadasConBodegaPrincipal`, para
+ * sumar solo lo que se entrego en ellas.
+ *
+ * @param {string} proyectoId UUID del proyecto.
+ * @returns {Promise<{ bodegas: { bodegaId: string, bodegaNombre: string|null,
+ *   jornadas: string[] }[], jornadasConBodegaPrincipal: { id: string, nombre: string }[],
+ *   error: object|null }>}
+ */
+export async function listarBodegasDeLasJornadasDelProyecto(proyectoId) {
+  if (!proyectoId) return { bodegas: [], jornadasConBodegaPrincipal: [], error: null };
+
+  try {
+    const { data, error } = await obtenerSupabase()
+      .from("jornadas")
+      .select(
+        "id, nombre, fecha, bodegaId:botiquin_bodega_id, bodega:bodegas(nombre, esPrincipal:es_principal)",
+      )
+      .eq("proyecto_id", proyectoId)
+      .not("botiquin_bodega_id", "is", null)
+      .order("fecha", { ascending: true });
+
+    if (error) {
+      return { bodegas: [], jornadasConBodegaPrincipal: [], error: normalizarError(error) };
+    }
+
+    const porBodega = new Map();
+    const jornadasConBodegaPrincipal = [];
+    for (const jornada of data ?? []) {
+      if (jornada.bodega?.esPrincipal) {
+        jornadasConBodegaPrincipal.push({ id: jornada.id, nombre: jornada.nombre });
+        continue;
+      }
+      if (!porBodega.has(jornada.bodegaId)) {
+        porBodega.set(jornada.bodegaId, {
+          bodegaId: jornada.bodegaId,
+          bodegaNombre: jornada.bodega?.nombre ?? null,
+          jornadas: [],
+        });
+      }
+      porBodega.get(jornada.bodegaId).jornadas.push(jornada.nombre);
+    }
+    return { bodegas: [...porBodega.values()], jornadasConBodegaPrincipal, error: null };
+  } catch (error) {
+    return { bodegas: [], jornadasConBodegaPrincipal: [], error: normalizarError(error) };
+  }
+}
+
+/**
+ * Una fila de fn_insumos_de_proyecto con la forma de listarContenidoDeBodegas() (aContenidoDeBodega),
+ * mas la jornada a la que le queda. `cantidadDisponible` es lo que le queda a la jornada, no lo que
+ * hay en la bodega. Pura y exportada para probarla sin Supabase.
+ *
+ * @param {object} fila
+ * @returns {object}
+ */
+export function aInsumoQueQuedaEnProyecto(fila) {
+  const tieneCosto = fila.costo_unitario !== null && fila.costo_unitario !== undefined;
+  const cantidad = Number(fila.queda ?? 0);
+  return {
+    jornadaId: fila.jornada_id,
+    jornada: fila.jornada ?? null,
+    loteId: fila.lote_id,
+    bodegaId: null,
+    bodega: fila.bodega ?? null,
+    numeroLote: fila.numero_lote ?? null,
+    fechaVencimiento: fila.fecha_vencimiento ?? null,
+    vencido: false,
+    articulo: fila.concentracion ? `${fila.articulo} (${fila.concentracion})` : fila.articulo,
+    cantidadDisponible: cantidad,
+    costoUnitario: tieneCosto ? Number(fila.costo_unitario) : null,
+    valor: tieneCosto ? Math.round(Number(fila.costo_unitario) * cantidad * 100) / 100 : null,
+  };
+}
+
+/**
+ * Lo que les queda a las jornadas de un proyecto en sus bodegas moviles, por jornada y lote
+ * (fn_insumos_de_proyecto, 00186). Antes el proyecto sumaba el contenido de toda bodega que alguna
+ * de sus jornadas hubiera usado, y una bodega compartida con otro proyecto contaba en los dos
+ * (issue #925).
+ *
+ * @param {string} proyectoId UUID del proyecto.
+ * @returns {Promise<{ insumos: object[], error: object|null }>}
+ */
+export async function listarInsumosQueQuedanEnElProyecto(proyectoId) {
+  if (!proyectoId) return { insumos: [], error: null };
+
+  try {
+    const { data, error } = await obtenerSupabase().rpc("fn_insumos_de_proyecto", {
+      p_proyecto_id: proyectoId,
+    });
+
+    if (error) return { insumos: [], error: normalizarError(error) };
+    return { insumos: (data ?? []).map(aInsumoQueQuedaEnProyecto), error: null };
+  } catch (error) {
+    return { insumos: [], error: normalizarError(error) };
+  }
+}
+
+/**
  * Agrega un insumo previsto a una jornada. Un articulo figura una sola vez por jornada: repetirlo
  * llega como violacion de unicidad ya normalizada.
  *

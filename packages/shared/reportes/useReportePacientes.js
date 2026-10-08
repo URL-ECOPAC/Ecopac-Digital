@@ -27,6 +27,7 @@ import {
   useFiltrosReportes,
 } from "./useFiltrosReportes.js";
 import { useOrdenYPagina } from "./useOrdenYPagina.js";
+import { useCambiosEnTiempoReal } from "../hooks/useCambiosEnTiempoReal.js";
 
 /**
  * Aplana un grupo para que DataList pueda leerlo.
@@ -141,6 +142,9 @@ export function useReportePacientes({ rol, valoresIniciales } = {}) {
 
   const { pagina, orden, alternarOrden, numeroDePagina, totalPaginas, irAPagina, total } =
     useOrdenYPagina(filas, { columnas: COLUMNAS_PACIENTES_ATENDIDOS });
+
+  // Se recarga sola cuando cambian estas tablas (00163).
+  useCambiosEnTiempoReal(["atenciones", "pacientes"], cargar);
 
   return {
     tieneAcceso,

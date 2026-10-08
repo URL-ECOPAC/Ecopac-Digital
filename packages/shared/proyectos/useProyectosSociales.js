@@ -19,7 +19,17 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CODIGOS_DE_ERROR_DE_SUPABASE } from "../api/errores-de-supabase.js";
 import { hayErrores } from "../validations/index.js";
 import { listarJornadas } from "../jornadas/api.js";
-import { listarInsumosDeLasJornadasDelProyecto } from "../jornadas/insumos.api.js";
+import {
+  listarBodegasDeLasJornadasDelProyecto,
+  listarInsumosDeLasJornadasDelProyecto,
+  listarInsumosQueQuedanEnElProyecto,
+} from "../jornadas/insumos.api.js";
+import {
+  listarConsumoDeInsumosDeJornada,
+  resumirConsumoDeJornada,
+} from "../jornadas/bodega.api.js";
+import { valorizarContenidoDeBodega } from "../inventario/existencias.api.js";
+import { ESTADOS_DE_GASTO } from "../enums.js";
 import { resumirInsumosPrevistos } from "../jornadas/useInsumosDeJornada.js";
 import { listarGastos, obtenerPresupuestoProyecto } from "../presupuestos/api.js";
 import { listarUsuarios } from "../usuarios/api.js";
@@ -32,6 +42,7 @@ import {
   listarProyectos,
 } from "./api.js";
 import {
+  COLUMNAS_ENTREGADO_DESDE_LA_PRINCIPAL,
   COLUMNAS_GASTO_DE_PROYECTO,
   COLUMNAS_INSUMO_PROYECTO,
   COLUMNAS_PROYECTO,
@@ -55,6 +66,7 @@ import {
   validarProyecto,
 } from "./validaciones.js";
 import { permisosDeProyectos, puedeVerProyectos } from "./permisos.js";
+import { useCambiosEnTiempoReal } from "../hooks/useCambiosEnTiempoReal.js";
 
 /** Mismo criterio que jornadas/useFormularioJornada.js: nombre completo para un <select>. */
 function nombreDePerfil(perfil) {
@@ -84,6 +96,27 @@ function nombreDePerfil(perfil) {
 export function validacionDeProyecto(valores) {
   const errores = validarProyecto(valores);
   return { ok: !hayErrores(errores), errores };
+}
+
+/**
+ * Total de los gastos de las jornadas de un proyecto: lo aprobado, lo que espera aprobacion y
+ * cuantos se rechazaron. Lo rechazado no se suma: no se gasto. Pura y exportada para probarla.
+ *
+ * @param {Array<{ monto: number|string, estado: string }>} gastos
+ * @returns {{ aprobado: number, pendiente: number, rechazados: number }}
+ */
+export function resumirGastosDeProyecto(gastos = []) {
+  const sumar = (estado) =>
+    Math.round(
+      gastos
+        .filter((gasto) => gasto.estado === estado)
+        .reduce((total, gasto) => total + Number(gasto.monto ?? 0), 0) * 100,
+    ) / 100;
+  return {
+    aprobado: sumar(ESTADOS_DE_GASTO.APROBADO),
+    pendiente: sumar(ESTADOS_DE_GASTO.PENDIENTE),
+    rechazados: gastos.filter((gasto) => gasto.estado === ESTADOS_DE_GASTO.RECHAZADO).length,
+  };
 }
 
 /**
@@ -135,6 +168,10 @@ export function useProyectosSociales({ usuarioRol } = {}) {
   const [insumosSinJornada, setInsumosSinJornada] = useState([]);
   const [cargandoInsumos, setCargandoInsumos] = useState(false);
   const [errorInsumos, setErrorInsumos] = useState(null);
+  // Lo que hay en las bodegas de botiquin de sus jornadas (issue #911).
+  const [bodegasDeJornadas, setBodegasDeJornadas] = useState([]);
+  const [existenciasEnBodegas, setExistenciasEnBodegas] = useState([]);
+  const [entregadoDesdeLaPrincipal, setEntregadoDesdeLaPrincipal] = useState([]);
   const [equipo, setEquipo] = useState([]);
   const [cargandoEquipo, setCargandoEquipo] = useState(false);
   const [errorEquipo, setErrorEquipo] = useState(null);
@@ -275,20 +312,55 @@ export function useProyectosSociales({ usuarioRol } = {}) {
   // jornada. Aparte van los que se habian planeado a nivel proyecto antes de la 00151 ("sin
   // jornada"), que se pueden pasar a una de sus jornadas. Planificacion con dinero: solo para quien
   // ve insumos y gastos (#864).
+  //
+  // Ademas, lo que le queda a cada jornada en su bodega de botiquin tambien es insumo del proyecto
+  // (issue #911; por jornada desde la 00186): se suma aparte, lote por lote, con jornada y bodega. De las jornadas que entregan de la
+  // bodega principal (00181) solo cuenta lo entregado en ellas: la existencia de la principal es de
+  // toda la organizacion.
   const cargarInsumos = useCallback(async () => {
     if (!proyectoSeleccionadoId || !permisos.puedeVerInsumosYGastos) {
       setInsumos([]);
       setInsumosSinJornada([]);
+      setBodegasDeJornadas([]);
+      setExistenciasEnBodegas([]);
+      setEntregadoDesdeLaPrincipal([]);
       return;
     }
     setCargandoInsumos(true);
-    const [deJornadas, sinJornada] = await Promise.all([
+    const [deJornadas, sinJornada, deBodegas] = await Promise.all([
       listarInsumosDeLasJornadasDelProyecto(proyectoSeleccionadoId),
       listarInsumosDelProyecto(proyectoSeleccionadoId),
+      listarBodegasDeLasJornadasDelProyecto(proyectoSeleccionadoId),
     ]);
+    // Lo que les queda a sus jornadas (00186), no el contenido de las bodegas: una bodega movil
+    // compartida con otro proyecto contaba en los dos (issue #925).
+    const [enBodegas, ...consumos] = await Promise.all([
+      listarInsumosQueQuedanEnElProyecto(proyectoSeleccionadoId).then(({ insumos, error }) => ({
+        contenido: insumos,
+        error,
+      })),
+      ...deBodegas.jornadasConBodegaPrincipal.map((jornada) =>
+        listarConsumoDeInsumosDeJornada(jornada.id),
+      ),
+    ]);
+    const entregado = deBodegas.jornadasConBodegaPrincipal.flatMap((jornada, indice) =>
+      consumos[indice].consumo
+        .filter((fila) => fila.entregado > 0)
+        .map((fila) => ({ ...fila, id: `${jornada.id}:${fila.loteId}`, jornada: jornada.nombre })),
+    );
     setInsumos(deJornadas.insumos);
     setInsumosSinJornada(sinJornada.insumos);
-    setErrorInsumos(deJornadas.error ?? sinJornada.error);
+    setBodegasDeJornadas(deBodegas.bodegas);
+    setExistenciasEnBodegas(enBodegas.contenido);
+    setEntregadoDesdeLaPrincipal(entregado);
+    setErrorInsumos(
+      deJornadas.error ??
+        sinJornada.error ??
+        deBodegas.error ??
+        enBodegas.error ??
+        consumos.find((respuesta) => respuesta.error)?.error ??
+        null,
+    );
     setCargandoInsumos(false);
   }, [proyectoSeleccionadoId, permisos.puedeVerInsumosYGastos]);
 
@@ -426,19 +498,19 @@ export function useProyectosSociales({ usuarioRol } = {}) {
   );
 
   /**
-   * Asocia una jornada al proyecto abierto, o la quita si `asociar` es false. Delega en
-   * asociarJornadaAProyecto() (api.js); aqui solo se filtra por permiso y se recargan las dos
-   * listas para que la jornada cambie de lado sin recargar la pantalla.
+   * Asocia una jornada sin proyecto al proyecto abierto. Delega en asociarJornadaAProyecto()
+   * (api.js); aqui solo se filtra por permiso y se recargan las dos listas para que la jornada
+   * cambie de lado sin recargar la pantalla.
+   *
+   * No hay contraparte para quitarla: desde la 00169 una jornada no se queda sin proyecto. Para
+   * pasarla a otro proyecto se edita la jornada.
    */
-  const cambiarAsociacionDeJornada = useCallback(
-    async (jornadaId, asociar) => {
+  const asociarJornada = useCallback(
+    async (jornadaId) => {
       if (!permisos.puedeAsociarJornadas || !proyectoSeleccionadoId) {
         return { ok: false, error: null };
       }
-      const { error: fallo } = await asociarJornadaAProyecto(
-        jornadaId,
-        asociar ? proyectoSeleccionadoId : null,
-      );
+      const { error: fallo } = await asociarJornadaAProyecto(jornadaId, proyectoSeleccionadoId);
       setErrorJornadas(fallo);
       if (fallo) return { ok: false, error: fallo };
 
@@ -518,6 +590,9 @@ export function useProyectosSociales({ usuarioRol } = {}) {
     [permisosDelRol.puedeCambiarEstado, cargarProyectos],
   );
 
+  // Se recarga sola cuando cambian estas tablas (00163).
+  useCambiosEnTiempoReal(["proyectos", "jornadas"], cargarProyectos);
+
   return {
     columnas: COLUMNAS_PROYECTO,
     filtros: FILTROS_PROYECTO,
@@ -537,6 +612,7 @@ export function useProyectosSociales({ usuarioRol } = {}) {
     presupuestoProyecto,
     columnasGastos: COLUMNAS_GASTO_DE_PROYECTO,
     gastosProyecto,
+    resumenDeGastos: resumirGastosDeProyecto(gastosProyecto),
     cargandoGastos,
     errorGastos,
     recargarGastos: cargarGastosDelProyecto,
@@ -544,6 +620,13 @@ export function useProyectosSociales({ usuarioRol } = {}) {
     errorJornadas,
     insumosPorJornada,
     insumosSinJornada,
+    bodegasDeJornadas,
+    existenciasEnBodegas,
+    valorDeBodegas: valorizarContenidoDeBodega(existenciasEnBodegas),
+    entregadoDesdeLaPrincipal,
+    valorEntregadoDesdeLaPrincipal:
+      resumirConsumoDeJornada(entregadoDesdeLaPrincipal).valorEntregado,
+    columnasEntregadoDesdeLaPrincipal: COLUMNAS_ENTREGADO_DESDE_LA_PRINCIPAL,
     cargandoInsumos,
     errorInsumos,
     columnasInsumos: COLUMNAS_INSUMO_PROYECTO,
@@ -556,8 +639,7 @@ export function useProyectosSociales({ usuarioRol } = {}) {
     personalDisponible,
     agregarAlEquipo,
     quitarDelEquipo,
-    asociarJornada: (jornadaId) => cambiarAsociacionDeJornada(jornadaId, true),
-    quitarJornada: (jornadaId) => cambiarAsociacionDeJornada(jornadaId, false),
+    asociarJornada,
     cambiarEtapaProyecto,
     guardarProyecto,
     recargar: cargarProyectos,

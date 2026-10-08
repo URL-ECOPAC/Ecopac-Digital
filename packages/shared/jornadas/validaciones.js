@@ -2,8 +2,9 @@
 //
 // Se aplican en el cliente antes de llamar al servidor, y web y movil las comparten para que
 // digan exactamente lo mismo. La politica real la sigue aplicando la base de datos: los NOT
-// NULL y el CHECK de fecha de la migracion 00012, y el UNIQUE (jornada_id, perfil_id) que
-// impide asignar dos veces a la misma persona en la misma jornada. Que esto pase no significa
+// NULL y el CHECK de fecha de la migracion 00012, los triggers que exigen proyecto (00169), y el
+// UNIQUE (jornada_id, perfil_id) que impide asignar dos veces a la misma persona en la misma
+// jornada. Que esto pase no significa
 // que el servidor vaya a aceptarlo.
 //
 // Las claves del objeto de errores son los ids de CAMPOS_JORNADA y CAMPOS_ASIGNACION_PERSONAL,

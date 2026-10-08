@@ -1,5 +1,6 @@
 import { forwardRef, useState } from "react";
 import { StyleSheet, Text, TextInput, View } from "react-native";
+import RotuloDeCampo from "./RotuloDeCampo";
 import { colors, radii, spacing, typography } from "@ecopac/ui-tokens";
 
 // El personal llena formularios con una mano y a veces con guantes,
@@ -13,12 +14,15 @@ const MIN_TOUCH_HEIGHT = 48;
  * Reenvia el ref al TextInput interno para que una pantalla pueda enfocarlo
  * a mano (por ejemplo, saltar al siguiente campo con returnKeyType="next").
  */
-const TextField = forwardRef(function TextField({ label, error, style, ...inputProps }, ref) {
+const TextField = forwardRef(function TextField(
+  { label, requerido, error, style, ...inputProps },
+  ref,
+) {
   const [isFocused, setIsFocused] = useState(false);
 
   return (
     <View style={[styles.container, style]}>
-      {label ? <Text style={styles.label}>{label}</Text> : null}
+      {label ? <RotuloDeCampo texto={label} requerido={requerido} style={styles.label} /> : null}
       <TextInput
         ref={ref}
         style={[styles.input, isFocused && styles.inputFocused, error && styles.inputError]}

@@ -10,6 +10,8 @@ import {
   useDonantesPage,
 } from "@ecopac/shared";
 import { Save, X } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 
 import BotonLimpiarFiltros from "../components/BotonLimpiarFiltros";
 import Card from "../components/Card";
@@ -36,7 +38,18 @@ function Dato({ etiqueta, valor }) {
   );
 }
 
-function FichaDonante({ donante, historico, onCerrar, onEditar, puedeEscribir }) {
+function FichaDonante({
+  donante,
+  historico,
+  onCerrar,
+  onEditar,
+  puedeEscribir,
+  onDarDeBaja,
+  onReactivar,
+  cambiandoEstado,
+  errorEstado,
+}) {
+  const [confirmandoBaja, setConfirmandoBaja] = useState(false);
   const donaciones = historico?.donaciones ?? [];
   const totales = historico?.totalesPorTipo ?? {};
 
@@ -54,10 +67,61 @@ function FichaDonante({ donante, historico, onCerrar, onEditar, puedeEscribir })
           {puedeEscribir && (
             <SecondaryButton title="Editar" size="sm" onClick={() => onEditar(donante)} />
           )}
+          {/* La baja es logica y se deshace con Reactivar, pero el donante deja de ofrecerse al
+              registrar una donacion: se confirma antes. */}
+          {puedeEscribir && donante.activo && !confirmandoBaja && (
+            <SecondaryButton
+              title="Dar de baja"
+              size="sm"
+              variant="peligro"
+              onClick={() => setConfirmandoBaja(true)}
+              disabled={cambiandoEstado}
+            />
+          )}
+          {puedeEscribir && donante.activo && confirmandoBaja && (
+            <>
+              <SecondaryButton
+                title="Confirmar baja"
+                size="sm"
+                variant="peligro"
+                onClick={async () => {
+                  await onDarDeBaja(donante.id);
+                  setConfirmandoBaja(false);
+                }}
+                disabled={cambiandoEstado}
+              />
+              <SecondaryButton
+                title="No"
+                size="sm"
+                variant="neutra"
+                onClick={() => setConfirmandoBaja(false)}
+                disabled={cambiandoEstado}
+              />
+            </>
+          )}
+          {puedeEscribir && !donante.activo && (
+            <SecondaryButton
+              title="Reactivar"
+              size="sm"
+              onClick={() => onReactivar(donante.id)}
+              disabled={cambiandoEstado}
+            />
+          )}
           <SecondaryButton title="Cerrar" size="sm" variant="neutra" onClick={onCerrar} />
         </>
       }
     >
+      {errorEstado && (
+        <div className="alert alert-danger" role="alert">
+          {errorEstado.mensaje}
+        </div>
+      )}
+      {confirmandoBaja && donante.activo && (
+        <p className="ec-cabecera-subtitulo">
+          Al darlo de baja ya no aparece al registrar una donación. Sus aportes se conservan y
+          puedes reactivarlo después.
+        </p>
+      )}
       <dl className="ec-ficha-datos">
         {!esPersona && <Dato etiqueta="Persona de contacto" valor={donante.contacto} />}
         <Dato etiqueta="Teléfono" valor={donante.telefono} />
@@ -100,6 +164,13 @@ function FichaDonante({ donante, historico, onCerrar, onEditar, puedeEscribir })
               value={totales.insumos || 0}
               caption="unidades"
               accent="var(--color-warning)"
+            />
+            {/* Un servicio no tiene unidades: se cuenta cada donacion de servicios. */}
+            <StatCard
+              label="Servicios"
+              value={totales.servicios || 0}
+              caption="donados"
+              accent="var(--color-success)"
             />
             <StatCard
               label="Donaciones"
@@ -167,6 +238,9 @@ export default function DonantesPage({ usuarioRol }) {
     setBusqueda,
     filtroTipo,
     setFiltroTipo,
+    filtroEstado,
+    setFiltroEstado,
+    opcionesFiltroEstado,
     modalAbierto,
     cerrarModal,
     donanteSeleccionado,
@@ -180,7 +254,23 @@ export default function DonantesPage({ usuarioRol }) {
     abrirEdicion,
     verFicha,
     guardarDonante,
+    darDeBaja,
+    reactivar,
+    cambiandoEstado,
+    errorEstado,
   } = useDonantesPage({ usuarioRol });
+
+  // ?editar=<id> abre la edicion de ese donante: es a donde lleva "Editar en Donantes" desde
+  // Inventario > Proveedores y donantes, porque el proveedor de un donante sigue al donante (00175,
+  // issue #911). El parametro se consume una vez, para que volver a la pantalla no lo reabra.
+  const [parametros, setParametros] = useSearchParams();
+  const donanteAEditar = parametros.get("editar");
+  useEffect(() => {
+    if (!donanteAEditar || cargando) return;
+    const donante = (donantes ?? []).find((fila) => fila.id === donanteAEditar);
+    if (donante && permisos?.puedeCorregir) abrirEdicion(donante);
+    setParametros({}, { replace: true });
+  }, [donanteAEditar, cargando, donantes, permisos?.puedeCorregir, abrirEdicion, setParametros]);
 
   if (!permisos?.tieneAccesoLectura) {
     return (
@@ -245,11 +335,25 @@ export default function DonantesPage({ usuarioRol }) {
             style={{ marginBottom: 0 }}
           />
         </div>
+        <div className="ec-filtro">
+          <Selector
+            label="Estado"
+            value={filtroEstado}
+            options={opcionesFiltroEstado}
+            onSelect={(valor) => setFiltroEstado(valor ?? opcionesFiltroEstado[0].value)}
+            style={{ marginBottom: 0 }}
+          />
+        </div>
         <BotonLimpiarFiltros
-          hayFiltros={Boolean(busqueda) || filtroTipo !== "todos"}
+          hayFiltros={
+            Boolean(busqueda) ||
+            filtroTipo !== "todos" ||
+            filtroEstado !== opcionesFiltroEstado[0].value
+          }
           onClick={() => {
             setBusqueda("");
             setFiltroTipo("todos");
+            setFiltroEstado(opcionesFiltroEstado[0].value);
           }}
         />
       </div>
@@ -272,11 +376,16 @@ export default function DonantesPage({ usuarioRol }) {
 
       {donanteSeleccionado && !modalAbierto && (
         <FichaDonante
+          key={donanteSeleccionado.id}
           donante={donanteSeleccionado}
           historico={historicoDelDonante}
           puedeEscribir={permisos?.puedeCorregir}
           onEditar={abrirEdicion}
           onCerrar={() => verFicha(null)}
+          onDarDeBaja={darDeBaja}
+          onReactivar={reactivar}
+          cambiandoEstado={cambiandoEstado}
+          errorEstado={errorEstado}
         />
       )}
 

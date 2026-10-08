@@ -21,6 +21,7 @@ import BotonLimpiarFiltros from "../components/BotonLimpiarFiltros";
 import Selector from "../components/Selector";
 import StatusChip from "../components/StatusChip";
 import DocumentoImprimible from "./DocumentoImprimible";
+import { imprimirCuandoEsteListo } from "../impresion";
 
 // Kardex de movimientos de inventario.
 //
@@ -152,11 +153,12 @@ export default function KardexMovimientosPage({
 
     const limpiar = () => setAImprimir(false);
     window.addEventListener("afterprint", limpiar);
-    const cuadro = window.requestAnimationFrame(() => window.print());
+    // Espera al logo: impreso un fotograma despues, el papel salia sin el.
+    const cancelarImpresion = imprimirCuandoEsteListo();
 
     return () => {
       window.removeEventListener("afterprint", limpiar);
-      window.cancelAnimationFrame(cuadro);
+      cancelarImpresion();
     };
   }, [aImprimir]);
 
@@ -310,10 +312,7 @@ export default function KardexMovimientosPage({
                   <td>
                     <EtiquetaTipo tipo={mov.tipo} />
                   </td>
-                  <td className="text-end fw-semibold">
-                    {mov.tipo === TIPO_MOVIMIENTO.INGRESO ? "+" : ""}
-                    {mov.cantidad}
-                  </td>
+                  <td className="text-end fw-semibold">{mov.cantidadConSigno}</td>
                   <td>{etiquetaDeMotivoDeMovimiento(mov.motivo)}</td>
                   <td>{mov.bodega_nombre || "—"}</td>
                   <td>{mov.registrado_por_nombre || "—"}</td>
@@ -388,10 +387,7 @@ export default function KardexMovimientosPage({
                 <tr key={mov.id}>
                   <td>{formatoFecha(mov.created_at)}</td>
                   <td>{ETIQUETAS_TIPO[mov.tipo] ?? mov.tipo}</td>
-                  <td>
-                    {mov.tipo === TIPO_MOVIMIENTO.INGRESO ? "+" : ""}
-                    {mov.cantidad}
-                  </td>
+                  <td>{mov.cantidadConSigno}</td>
                   <td>{etiquetaDeMotivoDeMovimiento(mov.motivo)}</td>
                   <td>{mov.bodega_nombre || "—"}</td>
                   <td>{mov.registrado_por_nombre || "—"}</td>

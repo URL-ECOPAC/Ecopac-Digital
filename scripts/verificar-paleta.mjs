@@ -48,7 +48,7 @@ const EXTENSIONES = [".js", ".jsx", ".css"];
 const HEX = /#[0-9a-fA-F]{6}(?:[0-9a-fA-F]{2})?\b|(?<=["'`])#[0-9a-fA-F]{3,4}(?=["'`])/g;
 // colors.primary / colors["primary"] / var(--color-primary) / statusColors.aprobado
 const TOKEN_JS = /\bcolors\.(\w+)/g;
-const TOKEN_CSS = /var\(\s*--color-([a-z-]+)/g;
+const TOKEN_CSS = /var\(\s*--color-([a-z0-9-]+)/g;
 const TOKEN_ESTADO = /\bstatusColors\[?\.?["']?([\w -]+)["']?\]?/g;
 
 function kebabAcamel(nombre) {
@@ -73,6 +73,18 @@ function lineaDe(texto, indice) {
   return texto.slice(0, indice).split("\n").length;
 }
 
+/**
+ * El valor de una variable `--color-*` de la web, o undefined si theme.js no la publica.
+ *
+ * Casi todas salen de `colors`. Las `--color-serie-N` salen de `chartSeries` (issue #916): son los
+ * colores de cada serie cuando una grafica compara varias jornadas o comunidades.
+ */
+function valorDeTokenCss(nombre, tokens) {
+  const serie = /^serie-(\d+)$/.exec(nombre);
+  if (serie) return tokens.chartSeries?.[Number(serie[1]) - 1];
+  return tokens.colors[kebabAcamel(nombre)];
+}
+
 export function coloresEfectivos(textoCrudo, tokens) {
   const { colors, statusColors } = tokens;
   const texto = sinComentarios(textoCrudo);
@@ -83,8 +95,8 @@ export function coloresEfectivos(textoCrudo, tokens) {
     if (colors[m[1]]) encontrados.add(colors[m[1]].toLowerCase());
   }
   for (const m of texto.matchAll(TOKEN_CSS)) {
-    const clave = kebabAcamel(m[1]);
-    if (colors[clave]) encontrados.add(colors[clave].toLowerCase());
+    const valor = valorDeTokenCss(m[1], tokens);
+    if (valor) encontrados.add(valor.toLowerCase());
   }
   for (const m of texto.matchAll(TOKEN_ESTADO)) {
     const valor = statusColors[m[1]];
@@ -125,8 +137,7 @@ export function tokensDesconocidos(textoCrudo, tokens) {
     if (!(m[1] in colors)) anota(m[1], `colors.${m[1]}`, m.index);
   }
   for (const m of texto.matchAll(TOKEN_CSS)) {
-    const clave = kebabAcamel(m[1]);
-    if (!(clave in colors)) anota(clave, `var(--color-${m[1]})`, m.index);
+    if (!valorDeTokenCss(m[1], tokens)) anota(kebabAcamel(m[1]), `var(--color-${m[1]})`, m.index);
   }
   for (const m of texto.matchAll(/\bstatusColors(?:\.(\w+)|\[\s*["'`]([\w -]+)["'`]\s*\])/g)) {
     const clave = m[1] ?? m[2];
@@ -222,6 +233,17 @@ const CASOS = [
     nombre: "pero el nombre real no se marca",
     texto: 'const s = { color: "var(--color-text-muted)" };',
     esperado: ["#7a7a8a"],
+  },
+  {
+    nombre: "el color de una serie de grafica sale de chartSeries (issue #916)",
+    texto: ".ec-gr-serie-2 { --ec-serie: var(--color-serie-2); }",
+    esperado: ["#29abe2"],
+  },
+  {
+    nombre: "una serie que chartSeries no tiene se detecta",
+    texto: ".x { fill: var(--color-serie-99); }",
+    esperado: [],
+    desconocidos: ["var(--color-serie-99)"],
   },
   {
     nombre: "statusColors con indice dinamico no se toca: es como lo usa StatusChip",

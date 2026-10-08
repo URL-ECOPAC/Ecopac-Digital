@@ -66,7 +66,6 @@
 // --- Alias de los enums del dominio ------------------------------------------------------
 
 /** @typedef {(typeof import("../enums.js").ACCIONES_DE_ALERTA)[keyof typeof import("../enums.js").ACCIONES_DE_ALERTA]} AccionAlerta */
-/** @typedef {(typeof import("../enums.js").CATEGORIAS_DE_GASTO)[keyof typeof import("../enums.js").CATEGORIAS_DE_GASTO]} CategoriaGasto */
 /** @typedef {(typeof import("../enums.js").ESTADOS_ALERTA)[keyof typeof import("../enums.js").ESTADOS_ALERTA]} EstadoAlerta */
 /** @typedef {(typeof import("../enums.js").CATEGORIAS_NOTIFICACION)[keyof typeof import("../enums.js").CATEGORIAS_NOTIFICACION]} CategoriaNotificacion */
 /** @typedef {(typeof import("../enums.js").ESTADOS_CONDICION_CRONICA)[keyof typeof import("../enums.js").ESTADOS_CONDICION_CRONICA]} EstadoCondicionCronica */
@@ -242,6 +241,63 @@
  * @property {TipoSanguineo|null} tipoSangre
  * @property {string|null} nombreResponsable
  * @property {string|null} parentescoResponsable
+ * @property {string|null} registradoPor Quien registro al paciente (00182); null en los anteriores.
+ */
+
+/**
+ * Fila de `areas_atencion` (00182_areas_de_atencion.sql): catalogo de areas de atencion
+ * (Odontologia, Psicologia, Medicina General, ...). Se retiran con `esVigente`, no se borran.
+ *
+ * @typedef {object} AreaAtencion
+ * @property {string} id
+ * @property {string} nombre
+ * @property {string|null} descripcion
+ * @property {boolean} esVigente
+ * @property {string} createdAt
+ * @property {string} updatedAt
+ */
+
+/**
+ * Fila de `paciente_area` (00182_areas_de_atencion.sql): un area en la que esta un paciente.
+ *
+ * @typedef {object} PacienteArea
+ * @property {string} pacienteId
+ * @property {string} areaId
+ * @property {string} createdAt
+ */
+
+/**
+ * Fila de `citas` (00184_citas.sql): un paciente en una jornada, una clinica y un area, a una hora.
+ *
+ * @typedef {object} Cita
+ * @property {string} id
+ * @property {string} pacienteId
+ * @property {string} jornadaId
+ * @property {string} clinicaId
+ * @property {string} areaId
+ * @property {string|null} profesionalId
+ * @property {string} iniciaEn
+ * @property {string} terminaEn
+ * @property {"creada"|"en_atencion"|"atendida"|"cancelada"} estado
+ * @property {string|null} notas
+ * @property {string|null} registradaPor
+ * @property {string|null} canceladaPor
+ * @property {string|null} canceladaEn
+ * @property {string|null} motivoCancelacion
+ * @property {string} createdAt
+ * @property {string} updatedAt
+ */
+
+/**
+ * Fila de `clinicas` (00183_clinicas.sql): donde se atienden las citas, con su numero de salas.
+ *
+ * @typedef {object} Clinica
+ * @property {string} id
+ * @property {string} nombre
+ * @property {number} salasDisponibles
+ * @property {boolean} esVigente
+ * @property {string} createdAt
+ * @property {string} updatedAt
  */
 
 /**
@@ -305,6 +361,7 @@
  * @property {string} pacienteSobrevivienteId
  * @property {string|null} realizadaPor
  * @property {string} realizadaEn
+ * @property {number} citasTraslapadas Citas del sobreviviente que quedaron traslapadas (00184).
  */
 
 // --- Jornadas -------------------------------------------------------------------------------
@@ -333,9 +390,9 @@
  */
 
 /**
- * Enum `origen_de_presupuesto` (00135).
+ * Enum `origen_de_presupuesto` (00135; 'caja' desde la 00167).
  *
- * @typedef {'donacion'|'fondos_propios'|'aporte_externo'|'sin_clasificar'} OrigenDePresupuesto
+ * @typedef {'donacion'|'fondos_propios'|'aporte_externo'|'sin_clasificar'|'caja'} OrigenDePresupuesto
  */
 
 /**
@@ -349,10 +406,31 @@
  * @property {string|null} donacionId Obligatoria si y solo si origen es 'donacion'.
  * @property {string|null} fuenteId Quien hizo un aporte externo (00149); solo con 'aporte_externo'.
  * @property {number} monto
+ * @property {number} devuelto Lo que salio de la jornada al liquidar su sobrante (00160). Lo que
+ *   cuenta del aporte es monto - devuelto.
+ * @property {string|null} traspasadoDesde Si es el sobrante de otra jornada, el aporte del que
+ *   salio (00160).
  * @property {string|null} descripcion
  * @property {string|null} registradoPor
  * @property {string} createdAt
  * @property {string} updatedAt
+ */
+
+/**
+ * Fila de `movimientos_de_caja` (00168): entra el sobrante de una jornada que no vuelve a una
+ * donacion y sale lo que se asigna a una jornada con origen 'caja'. Solo la escriben funciones de
+ * la base.
+ *
+ * @typedef {object} MovimientoDeCaja
+ * @property {string} id
+ * @property {'entrada'|'salida'} tipo
+ * @property {number} monto
+ * @property {string} aporteId En una entrada, el aporte cuyo sobrante se devolvio; en una salida,
+ *   el aporte con origen caja.
+ * @property {string} jornadaId
+ * @property {string|null} descripcion
+ * @property {string|null} registradoPor
+ * @property {string} createdAt
  */
 
 /**
@@ -452,6 +530,8 @@
  * @property {string|null} planSeguimiento
  * @property {string} createdAt
  * @property {string} updatedAt
+ * @property {string|null} citaId La cita de la que salio: la consulta agendada (00184).
+ * @property {string|null} areaId Area de atencion de la consulta (00184).
  */
 
 /**
@@ -584,6 +664,7 @@
  * @property {string|null} contacto
  * @property {TipoProveedor} tipo De donde viene el proveedor, no de donde vino un lote suyo
  *   (00090).
+ * @property {string|null} donanteId El donante del que sale (00175); null en uno comercial.
  * @property {string} createdAt
  * @property {string} updatedAt
  */
@@ -597,6 +678,8 @@
  * @property {string} nombre
  * @property {string|null} ubicacion
  * @property {boolean} esMovil
+ * @property {boolean} esPrincipal La bodega principal (00176): de ella sale lo que se receta en
+ *   una jornada sin botiquin.
  * @property {string} createdAt
  * @property {string} updatedAt
  */
@@ -664,6 +747,9 @@
  * @property {string} updatedAt
  * @property {boolean} aprobacionAutomatica
  * @property {string|null} motivoRechazo
+ * @property {string|null} jornadaId Jornada para la que se cargo su bodega movil (00178).
+ * @property {string|null} recetaId Receta de la que sale: su entrega, su ajuste o su devolucion
+ *   al anularla (00186).
  */
 
 /**
@@ -685,6 +771,38 @@
  * @property {AccionAlerta|null} accion
  * @property {string|null} atendidaPor
  * @property {string|null} atendidaEn
+ * @property {string} createdAt
+ * @property {string} updatedAt
+ * @property {number|null} umbralNotificadoDias Etapa mas cercana ya avisada: la antelacion en
+ *   dias, o 0 para el dia del vencimiento (00162, issue #899).
+ * @property {boolean} cerradaSinExistencia La cerro la rutina porque el lote se quedo sin
+ *   existencia; no tiene accion ni atendidaPor (00162).
+ */
+
+/**
+ * Fila de `avisos_caducidad` (00162_umbrales_configurables_de_alertas_de_caducidad.sql, issue
+ * #899): un aviso de vencimiento enviado, uno por alerta y por etapa. Su INSERT genera la
+ * notificacion; lo escribe solo fn_generar_alertas_caducidad() y lo lee la administracion.
+ *
+ * @typedef {object} AvisoCaducidad
+ * @property {string} id
+ * @property {string} alertaId
+ * @property {number} umbralDias Antelacion avisada en dias, o 0 para el dia del vencimiento.
+ * @property {number} diasRestantes Negativo si ya habia vencido al avisar.
+ * @property {number} cantidadEnExistencia
+ * @property {string} createdAt
+ */
+
+/**
+ * Fila de `configuracion_alertas_caducidad` (00162, issue #899): una sola fila con las
+ * antelaciones de los avisos de vencimiento. La leen todos los roles con sesion activa; solo la
+ * administracion cambia umbralesDias.
+ *
+ * @typedef {object} ConfiguracionAlertasCaducidad
+ * @property {string} id
+ * @property {boolean} unica Siempre true; garantiza la fila unica.
+ * @property {number[]} umbralesDias De 0 a 4 antelaciones distintas, de mayor a menor; vacio = solo el dia del vencimiento.
+ * @property {string|null} actualizadoPor
  * @property {string} createdAt
  * @property {string} updatedAt
  */
@@ -913,7 +1031,8 @@
  * @property {string} id
  * @property {string} jornadaId
  * @property {string} concepto
- * @property {CategoriaGasto} categoria
+ * @property {string} categoria Nombre de una fila de categorias_de_gasto (00158; antes el enum
+ *   categoria_gasto).
  * @property {number} monto
  * @property {string} fecha
  * @property {string|null} responsableId
@@ -925,6 +1044,17 @@
  * @property {string} createdAt
  * @property {string} updatedAt
  * @property {string|null} motivoRechazo
+ */
+
+/**
+ * Fila de `categorias_de_gasto` (00158): el catalogo de categorias de gasto, que crece desde el
+ * formulario de gasto.
+ *
+ * @typedef {object} CategoriaDeGasto
+ * @property {string} id
+ * @property {string} nombre
+ * @property {string|null} registradoPor
+ * @property {string} createdAt
  */
 
 // --- Auditoria ------------------------------------------------------------------------------

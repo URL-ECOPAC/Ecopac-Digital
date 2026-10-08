@@ -156,3 +156,64 @@ export const FILTROS_VENCIMIENTOS_VACIOS = {
   medicamento: null,
   estadoVencimiento: null,
 };
+
+/**
+ * Filtros del reporte de enfermedades (issue #916).
+ *
+ * Son exactamente los recortes que acepta obtenerReporteEnfermedades(). El territorio va de lo
+ * general a lo particular; la cascada (que municipio pertenece a que departamento) la resuelve el
+ * hook al armar los catalogos, no este descriptor. Departamento, municipio y comunidad recortan
+ * por la comunidad que se eligio contar -la de la jornada o la del paciente-.
+ *
+ * `jornada` es un solo valor: comparar varias jornadas se elige aparte, en la vista de
+ * comparacion, porque ahi el orden y la cantidad importan.
+ */
+export const FILTROS_ENFERMEDADES = [
+  {
+    id: "periodo",
+    tipo: TIPOS_DE_FILTRO.RANGO,
+    subtipo: SUBTIPOS_DE_RANGO.FECHA,
+    label: "Período",
+    desde: "desde",
+    hasta: "hasta",
+  },
+  {
+    id: "departamento",
+    tipo: TIPOS_DE_FILTRO.SELECT,
+    label: "Departamento",
+    opcionesDesde: "departamentos",
+  },
+  {
+    id: "municipio",
+    tipo: TIPOS_DE_FILTRO.SELECT,
+    label: "Municipio",
+    opcionesDesde: "municipios",
+  },
+  {
+    id: "comunidad",
+    tipo: TIPOS_DE_FILTRO.SELECT,
+    label: "Comunidad",
+    opcionesDesde: "comunidades",
+  },
+  {
+    id: "proyecto",
+    tipo: TIPOS_DE_FILTRO.SELECT,
+    label: "Proyecto",
+    opcionesDesde: "proyectos",
+  },
+  {
+    id: "jornada",
+    tipo: TIPOS_DE_FILTRO.SELECT,
+    label: "Jornada",
+    opcionesDesde: "jornadas",
+  },
+];
+
+export const FILTROS_ENFERMEDADES_VACIOS = {
+  periodo: { min: null, max: null },
+  departamento: null,
+  municipio: null,
+  comunidad: null,
+  proyecto: null,
+  jornada: null,
+};

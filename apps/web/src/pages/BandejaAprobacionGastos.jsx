@@ -87,6 +87,7 @@ function ModalRechazo({ gasto, onClose, onConfirmar, enviando }) {
       )}
       <TextField
         label="Motivo de rechazo"
+        requerido
         value={motivo}
         onChange={(evento) => {
           setMotivo(evento.target.value);

@@ -1,5 +1,6 @@
 import { Form, InputGroup } from "react-bootstrap";
 import { useId } from "react";
+import MarcaDeRequerido from "./MarcaDeRequerido";
 
 /**
  * Campo numerico.
@@ -13,6 +14,7 @@ import { useId } from "react";
  */
 export default function NumberField({
   label,
+  requerido,
   value = null,
   onChange,
   min,
@@ -39,6 +41,7 @@ export default function NumberField({
     <Form.Control
       id={id}
       type="number"
+      aria-required={requerido === true || undefined}
       value={value ?? ""}
       min={min}
       max={max}
@@ -52,6 +55,7 @@ export default function NumberField({
   return (
     <Form.Group className="mb-3" style={style}>
       {label && <Form.Label htmlFor={id}>{label}</Form.Label>}
+      {label && <MarcaDeRequerido requerido={requerido} />}
       {suffix ? (
         <InputGroup hasValidation>
           {control}

@@ -186,3 +186,26 @@ export function puedeDarDeAltaMedicamento(rol) {
   // 00148: tambien el colaborador, que crea en los catalogos de inventario.
   return esAdministrador(rol) || ROLES_DE_CAMPO.includes(rol);
 }
+
+/**
+ * Puede atender una alerta de vencimiento (issue #899). Espejo de la guarda de
+ * fn_atender_alerta_caducidad (00143), que rechaza a cualquier otro rol con 42501.
+ *
+ * @param {string} rol
+ * @returns {boolean}
+ */
+export function puedeAtenderAlertasVencimiento(rol) {
+  return esAdministrador(rol);
+}
+
+/**
+ * Puede cambiar las antelaciones de los avisos de vencimiento (issue #899): la administracion, o
+ * quien tenga el permiso fino inventario.configurar_alertas (se delega en Colaboradores). Espejo de
+ * la politica "Administracion o permiso configura alertas de caducidad" (00162). Solo desde la web.
+ *
+ * @param {string} rol
+ * @returns {boolean}
+ */
+export function puedeConfigurarAlertasVencimiento(rol) {
+  return tienePermisoFino(rol, "inventario.configurar_alertas");
+}

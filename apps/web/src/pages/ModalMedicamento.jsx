@@ -1,4 +1,8 @@
-import { ETIQUETAS_TIPO_ARTICULO, TIPOS_DE_ARTICULO } from "@ecopac/shared";
+import {
+  ETIQUETAS_TIPO_ARTICULO,
+  TIPOS_DE_ARTICULO,
+  pideDatosFarmacologicos,
+} from "@ecopac/shared";
 import { Form } from "react-bootstrap";
 import { Plus, Save, X } from "lucide-react";
 
@@ -35,9 +39,16 @@ export default function ModalMedicamento({
   advertenciaDuplicado,
   // Fallo al guardar, ya como texto apto para pantalla (normalizarError()).
   error,
+  // Errores por campo (validarMedicamentoDelCatalogo, issue #911): cada uno debajo del suyo.
+  errores = {},
   cargando,
 }) {
   const setCampo = (nombre, valor) => setFormData((prev) => ({ ...prev, [nombre]: valor }));
+
+  // Un insumo (guantes, jeringas, agujas) no tiene principio activo, concentracion, forma
+  // farmaceutica ni uso pediatrico (00164): esos campos solo aparecen para un medicamento.
+  const esMedicamento = pideDatosFarmacologicos(formData.tipoArticulo);
+  const articulo = esMedicamento ? "medicamento" : "insumo";
 
   const enviar = (evento) => {
     evento.preventDefault();
@@ -56,7 +67,7 @@ export default function ModalMedicamento({
     <Modal
       visible={Boolean(isOpen)}
       onClose={onClose}
-      title={modoEdicion ? "Editar medicamento" : "Nuevo medicamento"}
+      title={modoEdicion ? `Editar ${articulo}` : `Nuevo ${articulo}`}
       size="lg"
     >
       {advertenciaDuplicado && (
@@ -73,44 +84,47 @@ export default function ModalMedicamento({
           <div className="ec-form-seccion-cabecera">
             <h3 className="ec-form-seccion-titulo">Datos generales</h3>
             <p className="ec-form-seccion-descripcion">
-              Como se identifica el medicamento en el catalogo.
+              Como se identifica el {articulo} en el catalogo.
             </p>
           </div>
 
           <div className="ec-form-grid">
             <TextField
-              label="Nombre comercial *"
+              label="Nombre comercial"
+              requerido
               placeholder="Ej. Dolo Neurobion, Amoxicilina"
               value={formData.nombre || ""}
               onChange={(e) => setCampo("nombre", e.target.value)}
+              error={errores.nombre}
               disabled={cargando}
             />
 
             <Selector
-              label="Tipo de artículo *"
+              label="Tipo de artículo"
+              requerido
               value={formData.tipoArticulo || null}
               options={OPCIONES_TIPO_ARTICULO}
               onSelect={(valor) => setCampo("tipoArticulo", valor ?? "")}
               placeholder="Selecciona un tipo"
+              error={errores.tipoArticulo}
               disabled={cargando}
             />
 
-            <div>
-              <Selector
-                label="Principio activo *"
-                value={formData.principio_activo_id ? String(formData.principio_activo_id) : null}
-                options={opcionesPrincipio}
-                onSelect={(valor) => setCampo("principio_activo_id", valor ?? "")}
-                placeholder="Selecciona un principio activo"
-                disabled={modoEdicion || cargando}
-                style={{ marginBottom: "var(--spacing-xs)" }}
-              />
-              {modoEdicion ? (
-                <p className="form-text mt-0 mb-3">
-                  El principio activo no se puede cambiar desde aqui.
-                </p>
-              ) : (
-                onCrearPrincipioActivo && (
+            {esMedicamento && (
+              <div>
+                <Selector
+                  label="Principio activo"
+                  requerido
+                  value={formData.principio_activo_id ? String(formData.principio_activo_id) : null}
+                  options={opcionesPrincipio}
+                  onSelect={(valor) => setCampo("principio_activo_id", valor ?? "")}
+                  placeholder="Selecciona un principio activo"
+                  error={errores.principio_activo_id}
+                  disabled={cargando}
+                  style={{ marginBottom: "var(--spacing-xs)" }}
+                />
+                {/* Desde la 00166 tambien se cambia al editar. */}
+                {onCrearPrincipioActivo && (
                   <div className="mb-3">
                     <SecondaryButton
                       title="Crear un principio activo"
@@ -120,9 +134,9 @@ export default function ModalMedicamento({
                       disabled={cargando}
                     />
                   </div>
-                )
-              )}
-            </div>
+                )}
+              </div>
+            )}
           </div>
         </section>
 
@@ -130,25 +144,33 @@ export default function ModalMedicamento({
           <div className="ec-form-seccion-cabecera">
             <h3 className="ec-form-seccion-titulo">Especificaciones</h3>
             <p className="ec-form-seccion-descripcion">
-              Concentracion, presentacion y fabricante, que juntos no se pueden repetir.
+              {esMedicamento
+                ? "Concentracion, presentacion y fabricante, que juntos no se pueden repetir."
+                : "Presentacion y fabricante."}
             </p>
           </div>
 
           <div className="ec-form-grid">
-            <TextField
-              label="Concentración *"
-              placeholder="Ej. 500 mg"
-              value={formData.concentracion || ""}
-              onChange={(e) => setCampo("concentracion", e.target.value)}
-              disabled={cargando}
-            />
+            {esMedicamento && (
+              <TextField
+                label="Concentración"
+                requerido
+                placeholder="Ej. 500 mg"
+                value={formData.concentracion || ""}
+                onChange={(e) => setCampo("concentracion", e.target.value)}
+                error={errores.concentracion}
+                disabled={cargando}
+              />
+            )}
             <div>
               <Selector
-                label="Presentación *"
+                label="Presentación"
+                requerido
                 value={formData.presentacionId ? String(formData.presentacionId) : null}
                 options={opcionesPresentacion}
                 onSelect={(valor) => setCampo("presentacionId", valor ?? "")}
                 placeholder="Selecciona una presentación"
+                error={errores.presentacionId}
                 disabled={cargando}
                 style={{ marginBottom: onCrearPresentacion ? "var(--spacing-xs)" : undefined }}
               />
@@ -165,28 +187,35 @@ export default function ModalMedicamento({
               )}
             </div>
             <TextField
-              label="Marca / laboratorio *"
+              label="Marca / laboratorio"
+              requerido
               placeholder="Ej. Bayer"
               value={formData.marca || ""}
               onChange={(e) => setCampo("marca", e.target.value)}
+              error={errores.marca}
               disabled={cargando}
             />
-            <TextField
-              label="Forma farmacéutica"
-              placeholder="Ej. Solido oral"
-              value={formData.formaFarmaceutica || ""}
-              onChange={(e) => setCampo("formaFarmaceutica", e.target.value)}
-              disabled={cargando}
-            />
-            <Form.Check
-              className="ec-form-grid--ancho mb-3"
-              id="medicamento-es-pediatrico"
-              type="switch"
-              label="Es de uso pediatrico"
-              checked={Boolean(formData.esPediatrico)}
-              onChange={(e) => setCampo("esPediatrico", e.target.checked)}
-              disabled={cargando}
-            />
+            {esMedicamento && (
+              <TextField
+                label="Forma farmacéutica"
+                requerido={false}
+                placeholder="Ej. Solido oral"
+                value={formData.formaFarmaceutica || ""}
+                onChange={(e) => setCampo("formaFarmaceutica", e.target.value)}
+                disabled={cargando}
+              />
+            )}
+            {esMedicamento && (
+              <Form.Check
+                className="ec-form-grid--ancho mb-3"
+                id="medicamento-es-pediatrico"
+                type="switch"
+                label="Es de uso pediatrico"
+                checked={Boolean(formData.esPediatrico)}
+                onChange={(e) => setCampo("esPediatrico", e.target.checked)}
+                disabled={cargando}
+              />
+            )}
           </div>
         </section>
 

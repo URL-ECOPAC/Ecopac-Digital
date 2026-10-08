@@ -248,6 +248,7 @@ describe("registrarPaciente", () => {
         p_tipo_sangre: null,
         p_nombre_responsable: null,
         p_parentesco_responsable: null,
+        p_area_ids: null,
       },
     });
   });
@@ -283,6 +284,7 @@ describe("obtenerPaciente", () => {
         data: [{ id: "cond-1", estado: "activa", condicion: { nombre: "Diabetes" } }],
         error: null,
       },
+      paciente_area: { data: [], error: null },
     });
 
     const { paciente, error } = await obtenerPaciente("paciente-1");
@@ -294,6 +296,7 @@ describe("obtenerPaciente", () => {
       comunidad: { nombre: "Solola" },
       expediente: { id: "expediente-1", numeroFicha: "F-001" },
       condicionesCronicas: [{ id: "cond-1", estado: "activa", condicion: { nombre: "Diabetes" } }],
+      areas: [],
     });
   });
 
@@ -302,6 +305,7 @@ describe("obtenerPaciente", () => {
       pacientes: { data: null, error: null },
       expedientes: { data: null, error: null },
       padecimientos_cronicos: { data: [], error: null },
+      paciente_area: { data: [], error: null },
     });
 
     const { paciente, error } = await obtenerPaciente("paciente-ajeno");
@@ -315,6 +319,7 @@ describe("obtenerPaciente", () => {
       pacientes: { data: { id: "paciente-1" }, error: null },
       expedientes: { data: null, error: { code: "42501" } },
       padecimientos_cronicos: { data: [], error: null },
+      paciente_area: { data: [], error: null },
     });
 
     const { paciente, error } = await obtenerPaciente("paciente-1");
@@ -328,6 +333,7 @@ describe("obtenerPaciente", () => {
       pacientes: { data: { id: "paciente-1", nombres: "Maria" }, error: null },
       expedientes: { data: null, error: null },
       padecimientos_cronicos: { data: [], error: null },
+      paciente_area: { data: [], error: null },
     });
 
     const { paciente, error } = await obtenerPaciente("paciente-1");
@@ -837,6 +843,7 @@ describe("buscarPacientes", () => {
         p_sexo: null,
         p_edad_min: null,
         p_edad_max: null,
+        p_area_id: null,
       },
     });
   });
@@ -898,6 +905,7 @@ describe("buscarPacientes", () => {
         p_sexo: null,
         p_edad_min: null,
         p_edad_max: null,
+        p_area_id: null,
       },
     });
   });
@@ -923,6 +931,7 @@ describe("buscarPacientes", () => {
         p_sexo: null,
         p_edad_min: null,
         p_edad_max: null,
+        p_area_id: null,
       },
     });
   });

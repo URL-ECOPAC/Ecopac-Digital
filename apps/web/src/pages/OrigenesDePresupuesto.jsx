@@ -4,6 +4,7 @@ import { Plus, X } from "lucide-react";
 import {
   COLUMNAS_ORIGEN_PRESUPUESTO,
   formatearMoneda,
+  ORIGENES_DE_PRESUPUESTO,
   useOrigenesDePresupuesto,
 } from "@ecopac/shared";
 
@@ -61,11 +62,20 @@ function AltaDeFuente({ creando, error, onCrear, onCancelar }) {
   );
 }
 
-export default function OrigenesDePresupuesto({ jornadaId, proyectoId, rol, alCambiar }) {
+// `soloConsulta`: la jornada esta finalizada. El formulario queda a la vista, deshabilitado, y la
+// lista sin "Quitar".
+export default function OrigenesDePresupuesto({
+  jornadaId,
+  proyectoId,
+  rol,
+  alCambiar,
+  soloConsulta = false,
+}) {
   const {
     permisos,
     origenes,
     total,
+    saldoDeCaja,
     cargando,
     error,
     recargar,
@@ -110,7 +120,7 @@ export default function OrigenesDePresupuesto({ jornadaId, proyectoId, rol, alCa
           cargando={cargando}
           vacio="Esta jornada todavía no tiene presupuesto."
           accionSecundaria={
-            permisos?.puedeGestionar
+            permisos?.puedeGestionar && !soloConsulta
               ? {
                   label: "Quitar",
                   onClick: (fila) => {
@@ -139,21 +149,23 @@ export default function OrigenesDePresupuesto({ jornadaId, proyectoId, rol, alCa
                     valor={valores[campo.id]}
                     error={errores[campo.id]}
                     catalogos={catalogos}
-                    disabled={guardando}
+                    disabled={guardando || soloConsulta}
                     onChange={(valor) => setCampo(campo.id, valor)}
                   />
                   {campo.id === "origen" && !creandoFuenteNueva && (
-                    <div className="mt-2">
+                    // mb-3: el margen inferior que trae un campo. Sin el, la .ec-campo-nota de abajo
+                    // (que sube con margen negativo para pegarse al campo) se encima al boton.
+                    <div className="mt-2 mb-3">
                       <SecondaryButton
                         title="Crear quién aporta"
                         size="sm"
                         icon={<Plus size={14} aria-hidden="true" />}
                         onClick={() => setCreandoFuenteNueva(true)}
-                        disabled={guardando}
+                        disabled={guardando || soloConsulta}
                       />
                     </div>
                   )}
-                  {campo.id === "origen" && creandoFuenteNueva && (
+                  {campo.id === "origen" && creandoFuenteNueva && !soloConsulta && (
                     <AltaDeFuente
                       creando={creandoFuente}
                       error={errorFuente}
@@ -168,6 +180,12 @@ export default function OrigenesDePresupuesto({ jornadaId, proyectoId, rol, alCa
                 </div>
               ))}
             </div>
+            {valores.origen === ORIGENES_DE_PRESUPUESTO.CAJA && saldoDeCaja !== null && (
+              <p className="ec-campo-nota">
+                En la caja hay {formatearMoneda(saldoDeCaja)}: el sobrante de las jornadas que no
+                vuelve a una donación.
+              </p>
+            )}
             {campos.some((campo) => campo.id === "donacionId") &&
               catalogos?.donacionesDisponibles?.length === 0 && (
                 <p className="ec-campo-nota">
@@ -175,7 +193,12 @@ export default function OrigenesDePresupuesto({ jornadaId, proyectoId, rol, alCa
                 </p>
               )}
             <div className="ec-form-pie">
-              <PrimaryButton title="Agregar aporte" onClick={registrar} loading={guardando} />
+              <PrimaryButton
+                title="Agregar aporte"
+                onClick={registrar}
+                loading={guardando}
+                disabled={soloConsulta}
+              />
             </div>
           </EnFormulario>
         </Card>

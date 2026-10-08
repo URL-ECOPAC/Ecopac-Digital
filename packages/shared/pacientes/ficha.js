@@ -1,6 +1,7 @@
 import { calcularEdad, formatearFechaConHora, formatearFechaCorta } from "../formato/fechas.js";
 import { TIPOS_DE_PRESENTACION } from "../descriptores.js";
 import { OPCIONES_TIPO_SANGRE } from "./campos.js";
+import { etiquetaDeArea } from "./areas.campos.js";
 import { OPCIONES_ESTADO_CONDICION } from "./condiciones.campos.js";
 import { ESTADOS_CONDICION_CRONICA } from "../enums.js";
 import {
@@ -103,6 +104,12 @@ export function cabeceraDePaciente(paciente) {
     edad: calcularEdad(paciente.fechaNacimiento)?.texto ?? null,
     comunidad: paciente.comunidad?.nombre ?? null,
     condiciones: condicionesDestacadas(paciente),
+    // Areas de atencion (00182): una retirada sigue apareciendo, marcada.
+    areas: (paciente.areas ?? []).map((area) => ({
+      id: area.id,
+      etiqueta: etiquetaDeArea(area),
+      vigente: area.esVigente !== false,
+    })),
   };
 }
 
@@ -122,6 +129,7 @@ export function valoresDeFichaPaciente(paciente) {
     fechaNacimiento: paciente.fechaNacimiento ?? null,
     sexo: paciente.sexo ?? null,
     tipoSangre: etiquetaDeOpcion(OPCIONES_TIPO_SANGRE, paciente.tipoSangre),
+    areas: (paciente.areas ?? []).map(etiquetaDeArea).join(", ") || null,
     // El nombre lo trae el catalogo embebido (00110); el codigo crudo queda de respaldo por si
     // la consulta no pidio el embebido.
     idioma: paciente.catalogoIdioma?.nombre ?? paciente.idioma ?? null,

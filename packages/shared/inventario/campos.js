@@ -23,6 +23,7 @@
 
 import { TIPOS_DE_CAMPO } from "../descriptores.js";
 import { camposDeEdicion } from "../formularios.js";
+import { formatearFechaCorta } from "../formato/fechas.js";
 import {
   ACCIONES_DE_ALERTA,
   ESTADOS_MOVIMIENTO,
@@ -86,6 +87,34 @@ export function etiquetaDeMotivoDeMovimiento(motivo) {
 }
 
 /**
+ * Nombre de un articulo con su concentracion entre parentesis, si la tiene. Un insumo no tiene
+ * concentracion (00164) y se mostraba "Guantes de nitrilo ()" (issue #925).
+ *
+ * @param {{ nombre?: string, concentracion?: string|null }} articulo
+ * @returns {string}
+ */
+export function etiquetaDeArticulo(articulo) {
+  const nombre = articulo?.nombre ?? "";
+  return articulo?.concentracion ? `${nombre} (${articulo.concentracion})` : nombre;
+}
+
+/**
+ * Una opcion del selector de lote de "Registrar salida": "Lote: L-1 · Bodega Principal ·
+ * vence 16/02/2028 · 280 disponibles". El vencimiento salia en ISO ("2028-02-16"), distinto del
+ * resto de la app (issue #925).
+ *
+ * @param {{ numeroLote?: string, bodega?: string, fechaVencimiento?: string|null,
+ *   cantidadDisponible?: number }} lote
+ * @returns {string}
+ */
+export function etiquetaDeLoteDeSalida(lote) {
+  const vence = lote?.fechaVencimiento
+    ? `vence ${formatearFechaCorta(lote.fechaVencimiento)}`
+    : "no vence";
+  return `Lote: ${lote?.numeroLote ?? "—"} · ${lote?.bodega ?? "—"} · ${vence} · ${lote?.cantidadDisponible ?? 0} disponibles`;
+}
+
+/**
  * Alta y edicion de un principio activo del catalogo (principios_activos, 00016).
  * nombreNormalizado no es un campo del formulario: lo calcula la base de datos
  * (columna generada de 00046) para la unicidad y la busqueda sin acentos.
@@ -118,6 +147,41 @@ export const CAMPOS_PRESENTACION = [
  * lo envia como principiosActivosIds a fn_registrar_medicamento (00050), que inserta el
  * medicamento y sus principios activos en una sola transaccion.
  */
+/**
+ * Campos que solo tienen sentido para un medicamento: un insumo (guantes, jeringas, agujas) no
+ * tiene principio activo, concentracion, forma farmaceutica ni uso pediatrico (00164).
+ */
+export const CAMPOS_SOLO_DE_MEDICAMENTO = Object.freeze([
+  "principiosActivos",
+  "concentracion",
+  "formaFarmaceutica",
+  "esPediatrico",
+]);
+
+/**
+ * Si el articulo pide datos farmacologicos (principio activo, concentracion, forma farmaceutica y
+ * uso pediatrico): solo un medicamento. Sin tipo, se trata como medicamento, que es el default de
+ * la base (00142).
+ *
+ * @param {string|null|undefined} tipoArticulo Uno de TIPOS_DE_ARTICULO.
+ * @returns {boolean}
+ */
+export function pideDatosFarmacologicos(tipoArticulo) {
+  return (tipoArticulo || TIPOS_DE_ARTICULO.MEDICAMENTO) === TIPOS_DE_ARTICULO.MEDICAMENTO;
+}
+
+/**
+ * Si un lote del articulo tiene que llevar fecha de vencimiento: un medicamento si, un insumo no
+ * (00171). Sin tipo, se trata como medicamento: es lo seguro, y lo mismo que exige la base.
+ * Espejo del trigger trg_lotes_medicamento_con_vencimiento.
+ *
+ * @param {string|null|undefined} tipoArticulo Uno de TIPOS_DE_ARTICULO.
+ * @returns {boolean}
+ */
+export function exigeFechaDeVencimiento(tipoArticulo) {
+  return (tipoArticulo || TIPOS_DE_ARTICULO.MEDICAMENTO) === TIPOS_DE_ARTICULO.MEDICAMENTO;
+}
+
 export const CAMPOS_MEDICAMENTO = [
   {
     id: "nombre",

@@ -119,6 +119,7 @@ export default function AjustesScreen({ navigation }) {
               <TextField
                 key={campo.id}
                 label={campo.label}
+                requerido={campo.validacion?.requerido}
                 value={etiquetaDeRol(valores.rol)}
                 editable={false}
               />
@@ -130,6 +131,7 @@ export default function AjustesScreen({ navigation }) {
               <Selector
                 key={campo.id}
                 label={campo.label}
+                requerido={campo.validacion?.requerido}
                 value={valores[campo.id]}
                 options={campo.opciones}
                 onSelect={(valor) => setCampo(campo.id, valor)}
@@ -143,6 +145,7 @@ export default function AjustesScreen({ navigation }) {
             <TextField
               key={campo.id}
               label={campo.label}
+              requerido={campo.validacion?.requerido}
               value={valores[campo.id] ?? ""}
               onChangeText={campo.editable ? (texto) => setCampo(campo.id, texto) : undefined}
               error={erroresDeCampo?.[campo.id]}

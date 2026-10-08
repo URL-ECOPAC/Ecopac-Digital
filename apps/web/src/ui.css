@@ -565,6 +565,18 @@ textarea.form-control {
   padding-left: var(--spacing-sm);
 }
 
+/* Marca de obligatorio u opcional en el rotulo de un campo (MarcaDeRequerido.jsx). */
+.ec-requerido {
+  color: var(--color-danger);
+  font-weight: var(--peso-bold);
+}
+
+.ec-opcional {
+  color: var(--color-text-muted);
+  font-size: var(--texto-xs);
+  font-weight: var(--peso-regular);
+}
+
 .ec-form-seccion-titulo {
   color: var(--color-text);
   font-size: var(--texto-sm);
@@ -1437,6 +1449,56 @@ textarea.form-control {
   margin: 0;
   padding: var(--spacing-lg);
   text-align: center;
+}
+
+/* Una serie por jornada o comunidad comparada (issue #916). La clase de la serie fija --ec-serie y
+   cada pieza -barra, linea, punto, muestra de la leyenda- la lee. Los colores son chartSeries de
+   @ecopac/ui-tokens, publicados por theme.js. */
+.ec-gr-serie-1 {
+  --ec-serie: var(--color-serie-1);
+}
+
+.ec-gr-serie-2 {
+  --ec-serie: var(--color-serie-2);
+}
+
+.ec-gr-serie-3 {
+  --ec-serie: var(--color-serie-3);
+}
+
+.ec-gr-serie-4 {
+  --ec-serie: var(--color-serie-4);
+}
+
+.ec-gr-serie-5 {
+  --ec-serie: var(--color-serie-5);
+}
+
+.ec-gr-serie-6 {
+  --ec-serie: var(--color-serie-6);
+}
+
+.ec-gr-barra--serie {
+  fill: var(--ec-serie);
+}
+
+.ec-gr-muestra--serie {
+  background-color: var(--ec-serie);
+}
+
+/* Grafica de lineas (GraficaDeLineas.jsx): la evolucion en el tiempo. */
+.ec-gr-linea {
+  stroke: var(--ec-serie, var(--color-primary));
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.5;
+}
+
+.ec-gr-punto {
+  fill: var(--ec-serie, var(--color-primary));
+  stroke: var(--color-surface);
+  stroke-width: 2;
 }
 
 /* Fila de "elegir y agregar" (equipo y jornadas del proyecto): los controles comparten la fila y

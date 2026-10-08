@@ -30,10 +30,9 @@ const COLUMNAS_DEL_SEGUIMIENTO = [
   "porcentajeNuevo:porcentaje_nuevo",
   "registradoPor:registrado_por",
   "createdAt:created_at",
-  // Mismo patron que responsable:perfiles(...) en api.js. Solo el administrador lee esta tabla
-  // (00141) y el administrador lee perfiles completo (00038), asi que el join no queda vacio por
-  // RLS. Sin el, la pantalla solo tenia el UUID de registrado_por para pintar.
-  "registradoPorPerfil:perfiles(nombres, apellidos)",
+  // Mismo patron que el responsable en api.js: el nombre sale de nombres_de_perfiles (00161). Sin
+  // el, la pantalla solo tenia el UUID de registrado_por para pintar.
+  "registradoPorPerfil:nombres_de_perfiles(nombres, apellidos)",
 ].join(", ");
 
 export const ETIQUETA_USUARIO_ELIMINADO = "Usuario eliminado";

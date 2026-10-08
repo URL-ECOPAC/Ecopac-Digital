@@ -70,8 +70,10 @@ export default function ModalGeneracionReceta({
     catalogo,
     cargandoCatalogo,
     lotesPorMedicamento,
+    bodegaDeEntrega,
     renglones,
     problemas,
+    avisosDeReparto,
     indicacionesGenerales,
     setIndicacionesGenerales,
     error,
@@ -115,6 +117,7 @@ export default function ModalGeneracionReceta({
           {!consultaFijada && (
             <Selector
               label="Consulta sobre la que se receta"
+              requerido
               value={consultaId}
               options={opcionesDeConsulta}
               onSelect={setConsultaElegida}
@@ -131,6 +134,13 @@ export default function ModalGeneracionReceta({
           <section className="ec-form-seccion" style={{ "--ec-acento": "var(--accent-pacientes)" }}>
             <div className="ec-form-seccion-cabecera">
               <h3 className="ec-form-seccion-titulo">Medicamentos</h3>
+              {/* 00176, issue #911: solo se ofrecen los lotes de esta bodega, el que vence antes
+                  primero. */}
+              {bodegaDeEntrega?.nombre && (
+                <p className="ec-form-seccion-descripcion">
+                  Salen de la bodega {bodegaDeEntrega.nombre}, primero el lote que vence antes.
+                </p>
+              )}
             </div>
 
             <TextField
@@ -220,6 +230,7 @@ export default function ModalGeneracionReceta({
                     />
                     <TextField
                       label="Dosis"
+                      requerido
                       value={renglon.dosis}
                       onChange={(evento) =>
                         editarRenglon(renglon.clave, "dosis", evento.target.value)
@@ -227,6 +238,7 @@ export default function ModalGeneracionReceta({
                     />
                     <TextField
                       label="Frecuencia"
+                      requerido
                       value={renglon.frecuencia}
                       onChange={(evento) =>
                         editarRenglon(renglon.clave, "frecuencia", evento.target.value)
@@ -234,6 +246,7 @@ export default function ModalGeneracionReceta({
                     />
                     <TextField
                       label="Duración"
+                      requerido
                       value={renglon.duracion}
                       onChange={(evento) =>
                         editarRenglon(renglon.clave, "duracion", evento.target.value)
@@ -241,6 +254,7 @@ export default function ModalGeneracionReceta({
                     />
                     <NumberField
                       label="Cantidad a entregar"
+                      requerido
                       min={1}
                       value={
                         renglon.cantidadEntregada === "" ? null : Number(renglon.cantidadEntregada)
@@ -254,6 +268,11 @@ export default function ModalGeneracionReceta({
                   {problemas[renglon.clave] && (
                     <p className="text-danger small mb-0">{problemas[renglon.clave]}</p>
                   )}
+                  {!problemas[renglon.clave] && avisosDeReparto[renglon.clave] && (
+                    <p className="small mb-0" style={{ color: "var(--color-text-muted)" }}>
+                      {avisosDeReparto[renglon.clave]}
+                    </p>
+                  )}
                 </div>
               );
             })}
@@ -265,6 +284,7 @@ export default function ModalGeneracionReceta({
             </div>
             <TextField
               label="Indicaciones generales"
+              requerido={false}
               as="textarea"
               rows={3}
               value={indicacionesGenerales}

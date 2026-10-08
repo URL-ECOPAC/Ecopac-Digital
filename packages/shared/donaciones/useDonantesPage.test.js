@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 
 import { TIPOS_DE_DONANTE } from "../enums.js";
-import { TIPO_DONANTE_TODOS, filtrarDonantes } from "./useDonantesPage.js";
+import { FILTRO_ESTADO_DONANTE, TIPO_DONANTE_TODOS, filtrarDonantes } from "./useDonantesPage.js";
 
 const DONANTES = [
   { id: "1", nombre: "Farmacia Galeno", tipo: TIPOS_DE_DONANTE.ORGANIZACION },
@@ -53,5 +53,28 @@ describe("filtrarDonantes (#598)", () => {
   it("aguanta una lista vacia o ausente", () => {
     expect(filtrarDonantes([], "algo", TIPO_DONANTE_TODOS)).toEqual([]);
     expect(filtrarDonantes(undefined, "algo", TIPO_DONANTE_TODOS)).toEqual([]);
+  });
+});
+
+describe("filtrarDonantes por estado", () => {
+  const CON_BAJA = [
+    { id: "1", nombre: "Farmacia Galeno", activo: true },
+    { id: "2", nombre: "Ana Perez", activo: false },
+  ];
+  const ids = (estado) =>
+    filtrarDonantes(CON_BAJA, "", TIPO_DONANTE_TODOS, estado).map((donante) => donante.id);
+
+  it("activos esconde a los dados de baja", () => {
+    expect(ids(FILTRO_ESTADO_DONANTE.ACTIVOS)).toEqual(["1"]);
+  });
+
+  // Sin esto, un donante dado de baja no se podia volver a encontrar para reactivarlo.
+  it("dados de baja muestra solo a esos", () => {
+    expect(ids(FILTRO_ESTADO_DONANTE.INACTIVOS)).toEqual(["2"]);
+  });
+
+  it("todos no filtra por estado, y es lo que se aplica si no se pasa", () => {
+    expect(ids(FILTRO_ESTADO_DONANTE.TODOS)).toEqual(["1", "2"]);
+    expect(filtrarDonantes(CON_BAJA, "", TIPO_DONANTE_TODOS)).toHaveLength(2);
   });
 });

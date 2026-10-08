@@ -13,9 +13,9 @@ function fechaDeVencimientoDe(lote) {
  * que usa el campo `vencido` de lotes.api.js, para que la pantalla y el servidor nunca
  * discrepen sobre el mismo lote.
  *
- * Un lote sin fecha de vencimiento legible devuelve false. La columna es NOT NULL desde la
- * 00020, asi que no deberia ocurrir; si ocurre, no se entrega un medicamento cuya vigencia no
- * se puede determinar.
+ * Un lote SIN fecha de vencimiento es un insumo que no vence (00171): se entrega. Solo un lote de
+ * insumo puede no tenerla; a uno de medicamento la base se la exige. Uno con una fecha que no se
+ * puede leer devuelve false: no se entrega algo cuya vigencia no se puede determinar.
  *
  * Esta validacion es de experiencia de usuario: la garantia real la da la base de datos
  * (fn_aplicar_ajuste_existencias, 00047, rechaza la salida de un lote vencido).
@@ -25,9 +25,34 @@ function fechaDeVencimientoDe(lote) {
  * @returns {boolean}
  */
 export function esLoteEntregable(lote, hoy = new Date()) {
-  const dias = diasHastaVencimiento(fechaDeVencimientoDe(lote), hoy);
+  const fecha = fechaDeVencimientoDe(lote);
+  if (!lote || esSinVencimiento(fecha)) return Boolean(lote);
+  const dias = diasHastaVencimiento(fecha, hoy);
   if (dias === null) return false;
   return dias >= 0;
+}
+
+/** Sin fecha de vencimiento: null, undefined o cadena vacia. */
+function esSinVencimiento(fecha) {
+  return fecha === null || fecha === undefined || fecha === "";
+}
+
+/**
+ * Comparador FEFO (First Expire, First Out) para Array#sort: primero el que vence antes, y al
+ * final los lotes sin fecha, que no vencen (00171). Restar las dos fechas, como se hacia, da NaN
+ * con un lote sin fecha y deja el orden en manos del motor.
+ *
+ * @param {string|null|undefined} fechaA Fecha de vencimiento AAAA-MM-DD, o nada.
+ * @param {string|null|undefined} fechaB
+ * @returns {number}
+ */
+export function compararPorVencimiento(fechaA, fechaB) {
+  const a = aFechaLocal(fechaA);
+  const b = aFechaLocal(fechaB);
+  if (!a && !b) return 0;
+  if (!a) return 1;
+  if (!b) return -1;
+  return a - b;
 }
 
 /**
@@ -43,6 +68,7 @@ export function esLoteEntregable(lote, hoy = new Date()) {
  */
 export function motivoLoteNoEntregable(lote, hoy = new Date()) {
   const fecha = fechaDeVencimientoDe(lote);
+  if (lote && esSinVencimiento(fecha)) return null;
   const dias = diasHastaVencimiento(fecha, hoy);
 
   if (dias === null) return "El lote no tiene una fecha de vencimiento valida.";
@@ -76,7 +102,7 @@ export function sugerirLote(lotes = [], cantidadSolicitada = 0, fechaReferencia 
       (lote) =>
         lote && esLoteEntregable(lote, fechaReferencia) && Number(lote.cantidad_disponible) > 0,
     )
-    .sort((a, b) => aFechaLocal(a.fecha_vencimiento) - aFechaLocal(b.fecha_vencimiento));
+    .sort((a, b) => compararPorVencimiento(a.fecha_vencimiento, b.fecha_vencimiento));
 
   let restante = cantidadSolicitada;
   const lotesSugeridos = [];

@@ -153,6 +153,7 @@ export default function PerfilPage() {
                   <TextField
                     key={campo.id}
                     label={campo.label}
+                    requerido={campo.validacion?.requerido}
                     value={etiquetaDeRol(valores.rol)}
                     disabled
                   />
@@ -164,6 +165,7 @@ export default function PerfilPage() {
                   <Selector
                     key={campo.id}
                     label={campo.label}
+                    requerido={campo.validacion?.requerido}
                     value={valores[campo.id]}
                     options={campo.opciones}
                     onSelect={(valor) => setCampo(campo.id, valor)}
@@ -177,6 +179,7 @@ export default function PerfilPage() {
                 <TextField
                   key={campo.id}
                   label={campo.label}
+                  requerido={campo.validacion?.requerido}
                   value={valores[campo.id] ?? ""}
                   onChange={
                     campo.editable ? (evento) => setCampo(campo.id, evento.target.value) : undefined

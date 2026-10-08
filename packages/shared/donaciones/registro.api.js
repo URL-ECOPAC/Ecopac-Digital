@@ -1,31 +1,23 @@
-// Registro y anulacion de donaciones (issue #635).
+// Registro de donaciones (issue #635).
 //
 // La #191 se cerro sin entregar este archivo: existia lectura (donantes.api.js,
 // historial.api.js, ingreso.api.js) pero ningun `.insert()` sobre `donaciones` ni
-// `donacion_detalle` en todo el repo. `registrarDonacion()` y `anularDonacion()` son las dos
-// escrituras que faltaban.
+// `donacion_detalle` en todo el repo. `registrarDonacion()` es la escritura que faltaba.
 //
-// Las dos llaman a una funcion de base (fn_registrar_donacion / fn_anular_donacion, migracion
-// 00114) en vez de encadenar varias sentencias desde el cliente: supabase-js no soporta
-// transacciones multi-sentencia, y una donacion con detalle necesita que el INSERT de la
-// donacion y el de cada renglon vivan o mueran juntos (criterio 1 de #635). Mismo patron que
-// fn_registrar_paciente (00057) y fn_generar_receta (00066). Ninguna de las dos funciones es
-// SECURITY DEFINER: quien puede escribir lo deciden las politicas de la 00083
+// Llama a una funcion de base (fn_registrar_donacion, migracion 00114) en vez de encadenar varias
+// sentencias desde el cliente: supabase-js no soporta transacciones multi-sentencia, y una
+// donacion con detalle necesita que el INSERT de la donacion y el de cada renglon vivan o mueran
+// juntos (criterio 1 de #635). Mismo patron que fn_registrar_paciente (00057) y fn_generar_receta
+// (00066). No es SECURITY DEFINER: quien puede escribir lo deciden las politicas de la 00083
 // (es_administrador()), igual que en esos dos precedentes.
+//
+// Aqui vivia tambien anularDonacion(). Desde la 00173 una donacion ya no se anula -no hay proceso
+// para devolver lo donado- y fn_anular_donacion ya no existe (issue #911).
 
 import { obtenerSupabase } from "../api/cliente.js";
 import { normalizarError } from "../api/errores-de-supabase.js";
-import { validarDonacion, validarAnulacionDeDonacion } from "./validaciones.js";
+import { validarDonacion } from "./validaciones.js";
 import { puedeRegistrarDonaciones } from "./permisos.js";
-
-/**
- * Codigo SQLSTATE que deja un `RAISE EXCEPTION` de PL/pgSQL sin `USING ERRCODE` (el que usa
- * fn_anular_donacion cuando la donacion no existe o ya esta anulada). No esta en el switch de
- * `clasificarPostgrest()` (errores-de-supabase.js), asi que normalizarError() lo dejaria caer en
- * el mensaje generico de error inesperado; se traduce aqui a un mensaje especifico sin
- * reimplementar la condicion que ya decide la funcion de base.
- */
-const SQLSTATE_RAISE_EXCEPTION = "P0001";
 
 function validarRolEscritura(rolUsuario) {
   if (!puedeRegistrarDonaciones(rolUsuario)) {
@@ -66,8 +58,8 @@ export function aDetalleParaGuardar(detalles = []) {
 }
 
 /**
- * Fila de `donaciones` (columnas snake_case, tal como la devuelve `fn_registrar_donacion`/
- * `fn_anular_donacion`) en la forma camelCase que usa el resto del modulo, mismo criterio que
+ * Fila de `donaciones` (columnas snake_case, tal como la devuelve `fn_registrar_donacion`) en la
+ * forma camelCase que usa el resto del modulo, mismo criterio que
  * `aDonacion()` en historial.api.js. Sin donante embebido: la funcion de base no lo trae, y quien
  * llama ya conoce el donante que envio.
  */
@@ -143,61 +135,6 @@ export async function registrarDonacion(donacion = {}, { rolUsuario } = {}) {
       datos: { ...aDonacionRegistrada(data.donacion), detalleIds: data.detalleIds ?? [] },
       error: null,
     };
-  } catch (error) {
-    return { datos: null, error: normalizarError(error) };
-  }
-}
-
-/**
- * Anula una donacion en vez de borrarla, indicando el motivo (issue #635, criterio 7).
- *
- * Sin consumidor de pantalla todavia (no hay issue de UI de anulacion en alcance): queda como
- * capacidad de la API, igual que `CAMPOS_ANULACION_DONACION`/`validarAnulacionDeDonacion`, que
- * ya existian sin consumidor.
- *
- * @param {string} idDonacion
- * @param {{ motivo?: string }} datosDeAnulacion
- * @param {{ rolUsuario: string }} contexto
- * @returns {Promise<{ datos: object|null, error: object|null }>}
- */
-export async function anularDonacion(idDonacion, datosDeAnulacion = {}, { rolUsuario } = {}) {
-  const errorRol = validarRolEscritura(rolUsuario);
-  if (errorRol) return errorRol;
-
-  const erroresDeValidacion = validarAnulacionDeDonacion(datosDeAnulacion);
-  if (Object.keys(erroresDeValidacion).length > 0) {
-    return {
-      datos: null,
-      error: {
-        mensaje: "Revisa el motivo antes de anular la donación.",
-        campos: erroresDeValidacion,
-      },
-    };
-  }
-
-  if (!idDonacion) {
-    return { datos: null, error: { mensaje: "Falta el identificador de la donación." } };
-  }
-
-  try {
-    const { data, error } = await obtenerSupabase()
-      .rpc("fn_anular_donacion", {
-        p_donacion_id: idDonacion,
-        p_motivo: datosDeAnulacion.motivo,
-      })
-      .single();
-
-    if (error) {
-      if (error.code === SQLSTATE_RAISE_EXCEPTION) {
-        return {
-          datos: null,
-          error: { mensaje: "La donación no existe o ya fue anulada." },
-        };
-      }
-      return { datos: null, error: normalizarError(error) };
-    }
-
-    return { datos: aDonacionRegistrada(data), error: null };
   } catch (error) {
     return { datos: null, error: normalizarError(error) };
   }

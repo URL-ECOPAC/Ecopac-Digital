@@ -23,6 +23,9 @@ export * from "./inventario.api.js";
 export * from "./vencimientos.api.js";
 export * from "./pacientes.api.js";
 export * from "./jornada.api.js";
+// Reporte de enfermedades (issue #916).
+export * from "./enfermedades.api.js";
+export * from "./enfermedades.js";
 export * from "./permisos.js";
 export * from "./useFiltrosReportes.js";
 
@@ -34,6 +37,7 @@ export * from "./useDashboardMetricas.js";
 export * from "./useReporteInventario.js";
 export * from "./useReporteJornada.js";
 export * from "./useReportePacientes.js";
+export * from "./useReporteEnfermedades.js";
 
 // Exportacion de reportes a CSV (issue #207). Funcion pura: no depende de Supabase ni de
 // ninguna API web-only, por eso vive junto al resto de utilidades de este modulo.

@@ -31,8 +31,12 @@ export default function HistorialPacienteScreen() {
       <VisitasPacienteSeccion
         pacienteId={pacienteId}
         rol={rol}
-        onAbrirConsulta={(visita) =>
-          navigation.navigate(ROUTES.CONSULTA, { pacienteId, jornadaId: visita.jornadaId })
+        onAbrirConsulta={(visita, consultaId = null) =>
+          navigation.navigate(ROUTES.CONSULTA, {
+            pacienteId,
+            jornadaId: visita.jornadaId,
+            ...(consultaId ? { consultaId } : {}),
+          })
         }
       />
     </ScreenContainer>

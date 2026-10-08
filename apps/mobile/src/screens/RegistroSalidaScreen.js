@@ -3,7 +3,7 @@ import { StyleSheet, Text } from "react-native";
 import {
   formatearFechaCorta,
   listarMedicamentos,
-  OPCIONES_MOTIVO_SALIDA,
+  MOTIVO_TRASLADO,
   useRegistroSalida,
 } from "@ecopac/shared";
 import { colors, moduleAccents, spacing, typography } from "@ecopac/ui-tokens";
@@ -32,25 +32,34 @@ function etiquetaDeLote(lote) {
 }
 
 export default function RegistroSalidaScreen({ navigation }) {
-  const { perfil } = useSesionCompartida();
+  const { perfil, rol } = useSesionCompartida();
   const [medicamentos, setMedicamentos] = useState([]);
   const [errorCatalogo, setErrorCatalogo] = useState(null);
 
   const {
+    motivos,
     motivo,
     setMotivo,
+    bodegasDestino,
+    bodegaDestinoId,
+    setBodegaDestinoId,
     medicamentoId,
     setMedicamentoId,
     loteSeleccionado,
-    seleccionarLote,
+    claveLoteSeleccionado,
+    seleccionarLotePorClave,
     cantidad,
     setCantidad,
     lotesDisponibles,
+    sinExistencia,
+    avisoCantidad,
+    puedeGuardar,
     error,
     cargando,
     guardarSalida,
   } = useRegistroSalida({
     usuarioId: perfil?.id,
+    rol,
     onExito: () => navigation?.goBack(),
   });
 
@@ -68,8 +77,6 @@ export default function RegistroSalidaScreen({ navigation }) {
     };
   }, []);
 
-  const listo = motivo && medicamentoId && loteSeleccionado && Number(cantidad) > 0;
-
   return (
     <ScreenContainer>
       <PageHeader
@@ -83,8 +90,9 @@ export default function RegistroSalidaScreen({ navigation }) {
 
       <Selector
         label="Motivo de la salida"
+        requerido
         value={motivo}
-        options={OPCIONES_MOTIVO_SALIDA}
+        options={motivos}
         onSelect={setMotivo}
         placeholder="Elegir motivo"
         disabled={cargando}
@@ -92,6 +100,7 @@ export default function RegistroSalidaScreen({ navigation }) {
 
       <Selector
         label="Medicamento"
+        requerido
         value={medicamentoId}
         options={medicamentos.map((medicamento) => ({
           value: medicamento.id,
@@ -102,20 +111,27 @@ export default function RegistroSalidaScreen({ navigation }) {
         disabled={cargando}
       />
 
+      {/* El valor es lote Y bodega: un lote en dos bodegas daba dos opciones con el mismo valor. */}
       <Selector
         label="Lote"
-        value={loteSeleccionado?.loteId ?? ""}
+        requerido
+        value={claveLoteSeleccionado}
         options={lotesDisponibles.map((lote) => ({
-          value: lote.loteId,
+          value: `${lote.loteId}|${lote.bodegaId ?? ""}`,
           label: etiquetaDeLote(lote),
         }))}
-        onSelect={(valor) => {
-          const elegido = lotesDisponibles.find((lote) => lote.loteId === valor);
-          if (elegido) seleccionarLote(elegido);
-        }}
+        onSelect={seleccionarLotePorClave}
         placeholder={medicamentoId ? "Elegir lote" : "Primero elige un medicamento"}
-        disabled={cargando || !medicamentoId}
+        disabled={cargando || !medicamentoId || sinExistencia}
       />
+
+      {/* Issue #911: sin existencia se dice, y el boton no se habilita. */}
+      {sinExistencia ? (
+        <Text style={estilos.error}>
+          No hay existencia de este medicamento. Puede que su ingreso esté pendiente de aprobación,
+          que sus lotes ya vencieron, o que ya no quede.
+        </Text>
+      ) : null}
 
       {loteSeleccionado ? (
         <Text style={estilos.nota}>
@@ -123,13 +139,28 @@ export default function RegistroSalidaScreen({ navigation }) {
         </Text>
       ) : null}
 
+      {/* 00179: un traslado entra a otra bodega; sin ella el inventario desapareceria. */}
+      {motivo === MOTIVO_TRASLADO ? (
+        <Selector
+          label="Bodega destino"
+          requerido
+          value={bodegaDestinoId || null}
+          options={bodegasDestino}
+          onSelect={setBodegaDestinoId}
+          placeholder="Elegir bodega"
+          disabled={cargando}
+        />
+      ) : null}
+
       <NumberField
         label="Cantidad a retirar"
+        requerido
         value={cantidad}
         onChangeText={setCantidad}
         min={1}
         max={loteSeleccionado?.cantidadDisponible}
-        editable={!cargando}
+        editable={!cargando && !sinExistencia}
+        error={avisoCantidad}
       />
 
       <EnFormulario>
@@ -137,7 +168,7 @@ export default function RegistroSalidaScreen({ navigation }) {
           title="Registrar salida"
           onPress={guardarSalida}
           loading={cargando}
-          disabled={!listo || cargando}
+          disabled={!puedeGuardar}
           style={estilos.accion}
         />
         <SecondaryButton

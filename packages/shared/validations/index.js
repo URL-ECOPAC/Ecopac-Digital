@@ -80,7 +80,10 @@ export function validarConDescriptores(campos, valores) {
     const etiqueta = campo.label ?? campo.id;
 
     if (reglas.requerido && esTextoVacio(valor)) {
-      errores[campo.id] = `${etiqueta} es obligatorio.`;
+      // "Fecha es obligatorio" no concuerda; "Fecha: dato obligatorio." vale para cualquier
+      // etiqueta y conserva el nombre del campo para las pantallas que listan los errores juntos
+      // (issue #925).
+      errores[campo.id] = `${etiqueta}: dato obligatorio.`;
       continue;
     }
 

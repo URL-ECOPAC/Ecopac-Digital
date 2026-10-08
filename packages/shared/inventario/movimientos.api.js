@@ -1,6 +1,7 @@
 import { obtenerSupabase } from "../api/cliente.js";
-import { normalizarError } from "../api/errores-de-supabase.js";
+import { normalizarError, normalizarErrorConReglas } from "../api/errores-de-supabase.js";
 import { esLoteEntregable } from "./lotes.validaciones.js";
+import { REGLAS_DE_RECHAZO_DE_INVENTARIO } from "./rechazos.js";
 import { ESTADOS_MOVIMIENTO, ORIGENES_DE_LOTE, TIPOS_DE_MOVIMIENTO } from "../enums.js";
 
 /**
@@ -95,7 +96,7 @@ export async function listarMovimientos({
  * @param {string} opciones.medicamento_id
  * @param {string} opciones.lote_id
  * @param {string} opciones.numero_lote
- * @param {string} opciones.fecha_vencimiento AAAA-MM-DD.
+ * @param {string} [opciones.fecha_vencimiento] AAAA-MM-DD. Opcional para un insumo (00171).
  * @param {string} opciones.proveedor_id
  * @param {number} opciones.cantidad
  * @param {string} opciones.motivo
@@ -145,12 +146,13 @@ export async function registrarIngreso({
     // de cantidad desde la 00047 (issue #369): la cantidad vive en existencias, particionada
     // por (lote_id, bodega_id), y la crea/ajusta el trigger al aprobar el movimiento.
     if (!idLoteFinal) {
-      if (!numero_lote || !fecha_vencimiento) {
+      // La fecha de vencimiento ya no se exige aqui: un lote de insumo puede no tenerla (00171).
+      // A uno de medicamento se la exige la base (trg_lotes_medicamento_con_vencimiento, 23502),
+      // y useRegistroIngreso la pide antes de agregar el item.
+      if (!numero_lote) {
         return {
           datos: null,
-          error: {
-            mensaje: "Se requiere número de lote y fecha de vencimiento para crear un nuevo lote.",
-          },
+          error: { mensaje: "Se requiere número de lote para crear un nuevo lote." },
         };
       }
 
@@ -170,7 +172,8 @@ export async function registrarIngreso({
       const columnasDelLote = {
         medicamento_id,
         numero_lote,
-        fecha_vencimiento,
+        // '' (el campo de fecha vacio) no es una fecha valida para Postgres: sin fecha es NULL.
+        fecha_vencimiento: fecha_vencimiento || null,
         proveedor_id,
         origen,
         // La cantidad con la que nace el lote es la del ingreso que lo crea. No se confunde
@@ -391,3 +394,41 @@ export async function editarMovimiento(idMovimiento, datosNuevos, usuarioActualI
 // funcionalidad a disenar entera: valor nuevo en el enum via migracion, politica RLS que lo
 // permita -- la de UPDATE de hoy solo admite administrador o `inventario.aprobar` (00086) -- y su
 // fila en la matriz de permisos.
+
+/**
+ * Traslada `cantidad` de un lote de una bodega a otra (fn_trasladar_entre_bodegas, 00179): un
+ * ingreso en la destino y una salida del origen, aprobados en una sola transaccion. Antes un
+ * "traslado" era solo la salida del origen, y el inventario desaparecia del sistema. Solo la
+ * administradora; la base comprueba ademas que el lote no este vencido y que haya existencia.
+ *
+ * @param {{ loteId: string, bodegaOrigenId: string, bodegaDestinoId: string,
+ *   cantidad: number|string }} datos
+ * @returns {Promise<{ ingresoId: string|null, error: object|null }>}
+ */
+export async function trasladarEntreBodegas({
+  loteId,
+  bodegaOrigenId,
+  bodegaDestinoId,
+  cantidad,
+} = {}) {
+  if (!loteId || !bodegaOrigenId || !bodegaDestinoId) return { ingresoId: null, error: null };
+
+  try {
+    const { data, error } = await obtenerSupabase().rpc("fn_trasladar_entre_bodegas", {
+      p_lote_id: loteId,
+      p_bodega_origen_id: bodegaOrigenId,
+      p_bodega_destino_id: bodegaDestinoId,
+      p_cantidad: Number(cantidad),
+    });
+
+    if (error) {
+      return {
+        ingresoId: null,
+        error: normalizarErrorConReglas(error, REGLAS_DE_RECHAZO_DE_INVENTARIO),
+      };
+    }
+    return { ingresoId: data ?? null, error: null };
+  } catch (error) {
+    return { ingresoId: null, error: normalizarError(error) };
+  }
+}

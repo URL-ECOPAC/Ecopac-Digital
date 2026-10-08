@@ -19,6 +19,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 
+import { mayusculaInicial } from "../formato/texto.js";
 import { listarUsuarios } from "../usuarios/api.js";
 import { TODOS_LOS_ROLES, etiquetaDeRol } from "../usuarios/roles.js";
 import { nombreCompletoDe } from "../usuarios/useUsuariosListado.js";
@@ -165,6 +166,61 @@ export function contarPersonalPorRol(personal) {
     etiqueta: etiquetaDeRol(rol),
     cantidad: conteos.get(rol),
   }));
+}
+
+/** Lo que dice la columna Responsabilidad en la fila del responsable de la jornada. */
+export const RESPONSABILIDAD_DEL_RESPONSABLE = "Responsable de la jornada";
+
+/**
+ * El equipo de una jornada tal como se muestra: su cuadro de turnos (`jornada.personal`) mas su
+ * responsable (`jornadas.responsable_id`), que es parte del equipo aunque no tenga turno. RLS ya lo
+ * cuenta como parte de la jornada (pertenece_a_jornada(), 00141) y equipo_de_proyecto() como parte
+ * del equipo del proyecto (00157).
+ *
+ * No se le inventa un turno: jornada_personal exige horario y rol, y un turno de mentira entraria
+ * en los traslapes y en el cuadro impreso. Si ya tiene turno, se marca esa fila; si no, va primero
+ * una fila sin horario ni rol, con `tieneTurno: false` para que la pantalla no ofrezca editar un
+ * turno que no existe.
+ *
+ * @param {{ responsableId?: string, responsable?: object|null, personal?: object[] }|null} jornada
+ *   Jornada de obtenerJornada() (api.js).
+ * @returns {object[]} Filas de `jornada.personal` con `esResponsable` y `tieneTurno`; en la del
+ *   responsable, `responsabilidad` empieza con RESPONSABILIDAD_DEL_RESPONSABLE.
+ */
+export function equipoDeJornada(jornada) {
+  const responsableId = jornada?.responsableId ?? null;
+
+  const filas = (jornada?.personal ?? []).map((fila) => {
+    const esResponsable = Boolean(responsableId) && fila.perfilId === responsableId;
+    return {
+      ...fila,
+      esResponsable,
+      tieneTurno: true,
+      responsabilidad: esResponsable
+        ? [RESPONSABILIDAD_DEL_RESPONSABLE, mayusculaInicial(fila.responsabilidad)]
+            .filter(Boolean)
+            .join(" · ")
+        : fila.responsabilidad,
+    };
+  });
+
+  if (!responsableId || filas.some((fila) => fila.esResponsable)) return filas;
+
+  return [
+    {
+      id: `responsable-${responsableId}`,
+      perfilId: responsableId,
+      perfil: jornada.responsable ?? null,
+      rolEnJornada: null,
+      horaInicio: null,
+      horaFin: null,
+      responsabilidad: RESPONSABILIDAD_DEL_RESPONSABLE,
+      asistio: null,
+      esResponsable: true,
+      tieneTurno: false,
+    },
+    ...filas,
+  ];
 }
 
 /**

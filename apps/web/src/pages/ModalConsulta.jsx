@@ -9,6 +9,7 @@ import {
 } from "@ecopac/shared";
 
 import { almacenamientoWeb } from "../almacenamiento";
+import CampoDeFormulario from "../components/CampoDeFormulario";
 import FormularioSignosVitales from "../components/FormularioSignosVitales";
 import LoadingState from "../components/LoadingState";
 import Modal from "../components/Modal";
@@ -44,20 +45,25 @@ function Seccion({ titulo, descripcion, children }) {
 export default function ModalConsulta({
   paciente,
   visita = null,
+  cita = null,
+  consultaId = null,
   rol,
   perfilId,
   onClose,
   onGuardada,
 }) {
-  // La jornada solo se elige para una consulta nueva: una visita existente ya tiene la suya.
-  const captura = useCapturaClinica({ habilitado: !visita });
+  // La jornada solo se elige para una consulta nueva sin cita: una visita existente ya tiene la
+  // suya, y una cita trae la de ella (issue #927).
+  const captura = useCapturaClinica({ habilitado: !visita && !cita });
   const [recetando, setRecetando] = useState(false);
 
   const c = useConsulta({
     paciente,
     visita,
-    jornadaId: captura.jornadaId,
-    estadoDeJornada: visita ? undefined : captura.jornada?.estado,
+    cita,
+    consultaId,
+    jornadaId: cita ? cita.jornadaId : captura.jornadaId,
+    estadoDeJornada: visita || cita ? undefined : captura.jornada?.estado,
     perfilId,
     rol,
     almacenamiento: almacenamientoWeb,
@@ -68,9 +74,11 @@ export default function ModalConsulta({
     if (resultado.ok) await onGuardada?.();
   };
 
-  const titulo = c.esNueva
-    ? "Nueva consulta"
-    : `Consulta del ${formatearFechaCorta(c.visita?.fecha)}${c.visita?.jornada ? ` · ${c.visita.jornada}` : ""}`;
+  const titulo = cita
+    ? "Consulta agendada"
+    : c.esNueva
+      ? "Nueva consulta"
+      : `Consulta del ${formatearFechaCorta(c.visita?.fecha)}${c.visita?.jornada ? ` · ${c.visita.jornada}` : ""}`;
 
   if (recetando) {
     return (
@@ -91,7 +99,14 @@ export default function ModalConsulta({
 
   return (
     <Modal visible onClose={onClose} title={titulo} size="lg">
-      {!visita && <SelectorDeJornada captura={captura} />}
+      {!visita && !cita && <SelectorDeJornada captura={captura} />}
+
+      {c.agendada && (
+        <p className="mb-3 d-flex flex-wrap align-items-center gap-2">
+          <span className="ec-chip pac-chip--presente">Agendada</span>
+          {c.agendada.detalle && <span className="pac-dato-mono">{c.agendada.detalle}</span>}
+        </p>
+      )}
 
       {c.esNueva && c.jornadaId && !c.bloqueo.puede && (
         <div className="alert alert-warning" role="status">
@@ -105,9 +120,13 @@ export default function ModalConsulta({
         </div>
       )}
 
+      {/* Con solo signos vitales no se crea la consulta (el motivo es lo que la registra), y
+          decir "Consulta guardada" hacia creer que si (issue #925). */}
       {c.guardadaAlMenosUnaVez && !c.error && (
         <div className="alert alert-success" role="status">
-          Consulta guardada.
+          {c.consultaActual
+            ? "Consulta guardada."
+            : "Signos vitales guardados. La consulta se registra al escribir su motivo."}
         </div>
       )}
 
@@ -135,10 +154,13 @@ export default function ModalConsulta({
         />
       </Seccion>
 
-      <Seccion titulo="2. Consulta">
+      <Seccion
+        titulo="2. Consulta"
+        descripcion="El motivo es lo que registra la consulta; los signos vitales se pueden guardar solos."
+      >
         {!c.permisos.consulta && (
           <p className="ec-campo-nota">
-            {c.visita?.consulta
+            {c.consultaActual
               ? "Solo quien registro la consulta, o la administracion, puede cambiarla."
               : "La consulta la registra el personal medico."}
           </p>
@@ -151,6 +173,7 @@ export default function ModalConsulta({
                 <MultiSelector
                   key={campo.id}
                   label={campo.label}
+                  requerido={campo.validacion?.requerido}
                   value={c.consulta[campo.id] ?? []}
                   options={c.catalogos[campo.opcionesDesde] ?? []}
                   onChange={(elegidos) => c.setCampoDeConsulta(campo.id, elegidos)}
@@ -160,10 +183,24 @@ export default function ModalConsulta({
                   error={c.errorDiagnostico?.mensaje}
                   disabled={c.enviando || !c.permisos.consulta}
                 />
+              ) : campo.tipo === TIPOS_DE_CAMPO.SELECT ? (
+                // El area (issue #927): fija cuando la consulta sale de una cita.
+                <CampoDeFormulario
+                  key={campo.id}
+                  campo={campo}
+                  valor={c.consulta[campo.id] || null}
+                  onChange={(valor) => c.setCampoDeConsulta(campo.id, valor)}
+                  error={c.errores.consulta[campo.id]}
+                  catalogos={c.catalogos}
+                  disabled={c.enviando || !c.permisos.consulta}
+                />
               ) : (
+                // `requerido` y no un "*" escrito en el texto: asi lleva aria-required y los demas
+                // dicen "(opcional)", como en el resto de formularios (issue #925).
                 <TextField
                   key={campo.id}
-                  label={campo.validacion?.requerido ? `${campo.label} *` : campo.label}
+                  label={campo.label}
+                  requerido={campo.validacion?.requerido ?? false}
                   as="textarea"
                   rows={campo.id === "motivoConsulta" ? 2 : 3}
                   value={c.consulta[campo.id] ?? ""}

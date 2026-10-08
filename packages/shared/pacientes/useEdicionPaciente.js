@@ -4,32 +4,50 @@ import { useAltaDeComunidadEnLinea } from "../territorio/useAltaDeComunidadEnLin
 import { useCascadaTerritorial } from "../territorio/useCascadaTerritorial.js";
 import { actualizarPaciente } from "./api.js";
 import { listarIdiomas } from "./idiomas.api.js";
+import { obtenerCatalogoDeAreas } from "./areas.api.js";
+import { opcionesDeAreas } from "./areas.campos.js";
 import { CAMPOS_REGISTRO_PACIENTE, OPCIONES_SEXO } from "./campos.js";
 
 export const CAMPOS_EDICION_PACIENTE = CAMPOS_REGISTRO_PACIENTE;
 
 /**
  * Valores iniciales del formulario de edicion a partir del paciente. La comunidad se toma de
- * `comunidadId`.
+ * `comunidadId`; las areas (00182), de los ids de `paciente.areas`.
  *
  * @param {object|null} paciente
- * @returns {Record<string, string>} Valor por id de campo; `""` donde no hay dato.
+ * @returns {Record<string, string|string[]>} Valor por id de campo; `""` donde no hay dato.
  */
 export function valoresDesdePaciente(paciente) {
   return CAMPOS_EDICION_PACIENTE.reduce((valores, campo) => {
+    if (campo.id === "areas") {
+      valores.areas = (paciente?.areas ?? []).map((area) => area.id);
+      return valores;
+    }
     const valor = campo.id === "comunidad" ? paciente?.comunidadId : paciente?.[campo.id];
     valores[campo.id] = valor ?? "";
     return valores;
   }, {});
 }
 
+/** Dos valores de campo iguales; una lista se compara sin importar el orden. */
+function mismoValor(uno, otro) {
+  if (Array.isArray(uno) || Array.isArray(otro)) {
+    const a = [...(uno ?? [])].sort();
+    const b = [...(otro ?? [])].sort();
+    return a.length === b.length && a.every((valor, indice) => valor === b[indice]);
+  }
+  return uno === otro;
+}
+
 /**
- * @param {Record<string, string>} valores Valores actuales del formulario.
- * @param {Record<string, string>} iniciales Los de `valoresDesdePaciente`.
+ * @param {Record<string, string|string[]>} valores Valores actuales del formulario.
+ * @param {Record<string, string|string[]>} iniciales Los de `valoresDesdePaciente`.
  * @returns {boolean} Si algun campo editable cambio.
  */
 export function hayCambiosPendientes(valores, iniciales) {
-  return CAMPOS_EDICION_PACIENTE.some((campo) => valores[campo.id] !== iniciales[campo.id]);
+  return CAMPOS_EDICION_PACIENTE.some(
+    (campo) => !mismoValor(valores[campo.id], iniciales[campo.id]),
+  );
 }
 
 /**
@@ -52,6 +70,7 @@ export function useEdicionPaciente(paciente, { rol } = {}) {
   const [error, setError] = useState(null);
   const [enviando, setEnviando] = useState(false);
   const [idiomas, setIdiomas] = useState([]);
+  const [areas, setAreas] = useState([]);
 
   useEffect(() => {
     setValores(iniciales);
@@ -67,6 +86,11 @@ export function useEdicionPaciente(paciente, { rol } = {}) {
     // value/label, igual que en useRegistroPaciente.
     listarIdiomas().then(({ idiomas: opciones }) => {
       if (vigente) setIdiomas(opciones);
+    });
+    // Todas, tambien las retiradas: el paciente puede conservar una, y opcionesDeAreas() la deja
+    // visible y marcada mientras siga elegida (00182).
+    obtenerCatalogoDeAreas().then(({ areas: filas }) => {
+      if (vigente) setAreas(filas);
     });
     return () => {
       vigente = false;
@@ -162,6 +186,7 @@ export function useEdicionPaciente(paciente, { rol } = {}) {
       comunidades: catalogosDeTerritorio.comunidades,
       idiomas,
       sexo: OPCIONES_SEXO,
+      areasAtencion: opcionesDeAreas(areas, valores.areas),
     },
   };
 }

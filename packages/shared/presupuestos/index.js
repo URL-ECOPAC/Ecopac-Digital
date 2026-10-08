@@ -15,7 +15,11 @@
 
 export * from "./api.js";
 export * from "./origenes.api.js";
+export * from "./caja.api.js";
+export * from "./useCajaDePresupuesto.js";
 export * from "./useOrigenesDePresupuesto.js";
+export * from "./sobrante.api.js";
+export * from "./useSobranteDeJornada.js";
 export * from "./campos.js";
 export * from "./columnas.js";
 export * from "./filtros.js";
@@ -25,4 +29,5 @@ export * from "./aprobacionGastosApi.js";
 export * from "./useEjecucionPresupuestal.js";
 export * from "./useDetalleProyectoPresupuesto.js";
 export * from "./useFormularioGasto.js";
+export * from "./useGastosDeJornada.js";
 export * from "./usePendientesAprobacionGastos.js";

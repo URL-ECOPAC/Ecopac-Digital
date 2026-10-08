@@ -20,6 +20,7 @@ import { ESTADOS_JORNADA } from "../enums.js";
 import { listarJornadas } from "../jornadas/api.js";
 import { puedeVerJornadas } from "../jornadas/permisos.js";
 import { modulosVisibles, rolesDelModulo } from "../navegacion.js";
+import { useCambiosEnTiempoReal } from "./useCambiosEnTiempoReal.js";
 
 /**
  * Datos de la pantalla de inicio para un rol.
@@ -90,6 +91,9 @@ export function usePanelDeInicio({ rol, plataforma = "web" } = {}) {
   useEffect(() => {
     cargar();
   }, [cargar]);
+
+  // Se recarga sola cuando cambian estas tablas (00163).
+  useCambiosEnTiempoReal(["jornadas", "jornada_personal"], cargar);
 
   return {
     accesos,

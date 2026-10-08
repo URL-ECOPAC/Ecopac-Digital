@@ -30,7 +30,7 @@ import { ROUTES } from "../navigation/rutas";
  */
 export default function InventarioResumenAlertasScreen() {
   const navigation = useNavigation();
-  const { perfil, rol } = useSesionCompartida();
+  const { rol } = useSesionCompartida();
 
   const [lotes, setLotes] = useState([]);
   const [totalMedicamentos, setTotalMedicamentos] = useState(0);
@@ -63,7 +63,8 @@ export default function InventarioResumenAlertasScreen() {
     cargando: cargandoAlertas,
     error: errorAlertas,
     recargar: recargarAlertas,
-  } = useAlertasVencimiento({ usuarioId: perfil?.id, rolUsuario: rol });
+    textoSinPorVencer,
+  } = useAlertasVencimiento({ rolUsuario: rol });
 
   const cargando = cargandoResumen || cargandoAlertas;
   const error = errorResumen ?? errorAlertas;
@@ -106,7 +107,7 @@ export default function InventarioResumenAlertasScreen() {
         <>
           <Text style={estilos.tituloSeccion}>Por vencer ({porVencer.length})</Text>
           {porVencer.length === 0 ? (
-            <EmptyState message="Ningún lote vence en los próximos 30 días." />
+            <EmptyState message={`${textoSinPorVencer}.`} />
           ) : (
             porVencer.map((alerta) => (
               <Card

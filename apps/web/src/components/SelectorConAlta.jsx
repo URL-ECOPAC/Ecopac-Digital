@@ -32,6 +32,7 @@ import TextField from "./TextField";
  */
 export default function SelectorConAlta({
   label,
+  requerido,
   value,
   options = [],
   onSelect,
@@ -71,6 +72,7 @@ export default function SelectorConAlta({
     <div className="ec-form-subgrid ec-form-grid--ancho">
       <Selector
         label={label}
+        requerido={requerido}
         value={value || null}
         options={options}
         onSelect={onSelect}

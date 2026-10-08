@@ -37,9 +37,20 @@ export const COLUMNAS_ORIGEN_PRESUPUESTO = [
   { id: "etiqueta", label: "Origen", tipo: TIPOS_DE_PRESENTACION.TEXTO, principal: true },
   { id: "detalle", label: "Detalle", tipo: TIPOS_DE_PRESENTACION.TEXTO },
   { id: "monto", label: "Monto", tipo: TIPOS_DE_PRESENTACION.MONEDA },
+  // Lo que salio de la jornada al liquidar su sobrante (00160); vacio si no hubo.
+  { id: "devueltoMostrado", label: "Devuelto", tipo: TIPOS_DE_PRESENTACION.MONEDA },
   // Quien asigno el aporte y cuando: jornada_presupuesto_origen lo guarda desde la 00135.
   { id: "registradoPorNombre", label: "Registrado por", tipo: TIPOS_DE_PRESENTACION.TEXTO },
   { id: "createdAt", label: "Fecha", tipo: TIPOS_DE_PRESENTACION.FECHA },
+];
+
+/** Movimientos de la caja (00168); campos ya resueltos por aMovimientoDeCaja() (caja.api.js). */
+export const COLUMNAS_MOVIMIENTO_CAJA = [
+  { id: "createdAt", label: "Fecha", tipo: TIPOS_DE_PRESENTACION.FECHA },
+  { id: "tipoEtiqueta", label: "Movimiento", tipo: TIPOS_DE_PRESENTACION.TEXTO, principal: true },
+  { id: "descripcion", label: "Detalle", tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  { id: "importe", label: "Monto", tipo: TIPOS_DE_PRESENTACION.MONEDA },
+  { id: "registradoPorNombre", label: "Registrado por", tipo: TIPOS_DE_PRESENTACION.TEXTO },
 ];
 
 export const COLUMNAS_GASTO = [
@@ -67,6 +78,14 @@ export const COLUMNAS_GASTO = [
   },
   { id: "estado", label: "Estado", tipo: TIPOS_DE_PRESENTACION.CHIP },
 ];
+
+/**
+ * Gastos dentro del detalle de una jornada: las de COLUMNAS_GASTO menos "Proyecto" y "Jornada",
+ * que ahi son siempre los mismos.
+ */
+export const COLUMNAS_GASTO_DE_JORNADA = COLUMNAS_GASTO.filter(
+  (columna) => columna.id !== "proyecto_id" && columna.id !== "jornada_id",
+);
 
 /** Datos de la ficha de un gasto, en el orden en que el diseno los presenta. */
 export const CAMPOS_FICHA_GASTO = [

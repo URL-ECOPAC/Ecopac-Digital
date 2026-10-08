@@ -3,6 +3,7 @@ import { ChevronDown, ChevronUp, LineChart } from "lucide-react";
 
 import {
   anularReceta,
+  detalleDeConsultaAgendada,
   formatearFechaCorta,
   partesDeVisita,
   puedeAnularReceta,
@@ -26,6 +27,9 @@ import TarjetaReceta, { useImpresionDeReceta } from "./TarjetaReceta";
 // las recetas ademas en pestanas hermanas. Ahora cada visita es una unidad: se abre y trae dentro
 // sus signos, su consulta y su receta. Editarla abre el mismo formulario con el que se registro
 // (ModalConsulta), no uno distinto por pieza.
+//
+// Desde la issue #927 una visita puede tener varias consultas -una por cita-: se muestran todas,
+// la agendada con su etiqueta, y cada una se edita por separado.
 
 const ETIQUETAS_DE_SIGNOS = [
   ["presion", "Presión"],
@@ -73,8 +77,22 @@ function Consulta({ consulta }) {
     ["Plan de seguimiento", consulta.planSeguimiento],
   ].filter(([, valor]) => valor);
 
+  const detalleDeCita = detalleDeConsultaAgendada(consulta);
+
   return (
     <>
+      {consulta.agendada && (
+        <p className="mb-2 d-flex flex-wrap align-items-center gap-2">
+          <span className="ec-chip pac-chip--presente">Agendada</span>
+          {detalleDeCita && <span className="pac-dato-mono">{detalleDeCita}</span>}
+        </p>
+      )}
+      {consulta.area && (
+        <p className="mb-2">
+          <span className="pac-rotulo">Área </span>
+          {consulta.area}
+        </p>
+      )}
       {consulta.diagnosticos?.length > 0 && (
         <p className="mb-2">
           <span className="pac-rotulo">Diagnósticos </span>
@@ -107,6 +125,8 @@ function ParteDeVisita({ titulo, children }) {
 
 function Visita({ visita, abierta, onAlternar, onEditar, recetasPorId, receta }) {
   const partes = partesDeVisita(visita);
+  // aVisita() trae `consultas`; una visita armada a mano puede traer solo `consulta`.
+  const consultas = visita.consultas ?? (visita.consulta ? [visita.consulta] : []);
 
   return (
     <Card style={{ marginBottom: "1rem" }}>
@@ -167,13 +187,30 @@ function Visita({ visita, abierta, onAlternar, onEditar, recetasPorId, receta })
             )}
           </ParteDeVisita>
 
-          <ParteDeVisita titulo="Consulta">
-            {visita.consulta ? (
-              <Consulta consulta={visita.consulta} />
-            ) : (
+          {consultas.length === 0 && (
+            <ParteDeVisita titulo="Consulta">
               <p className="text-body-secondary mb-0">Sin consulta registrada.</p>
-            )}
-          </ParteDeVisita>
+            </ParteDeVisita>
+          )}
+          {consultas.map((consulta, indice) => (
+            <ParteDeVisita
+              key={consulta.id}
+              titulo={
+                consultas.length > 1 ? `Consulta ${indice + 1} de ${consultas.length}` : "Consulta"
+              }
+            >
+              <Consulta consulta={consulta} />
+              {onEditar && consultas.length > 1 && (
+                <div className="mt-2">
+                  <SecondaryButton
+                    title="Editar esta consulta"
+                    size="sm"
+                    onClick={() => onEditar(visita, consulta.id)}
+                  />
+                </div>
+              )}
+            </ParteDeVisita>
+          ))}
 
           <ParteDeVisita titulo="Receta">
             {visita.recetas.length === 0 && <p className="text-body-secondary mb-0">Sin receta.</p>}

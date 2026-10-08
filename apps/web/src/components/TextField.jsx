@@ -1,5 +1,6 @@
 import { Form } from "react-bootstrap";
 import { useId } from "react";
+import MarcaDeRequerido from "./MarcaDeRequerido";
 
 /**
  * Campo de texto controlado.
@@ -11,13 +12,19 @@ import { useId } from "react";
  * El resto de props pasa al input subyacente (`value`, `placeholder`, `type`, `maxLength`...),
  * igual que en movil.
  */
-export default function TextField({ label, error, style, ...inputProps }) {
+export default function TextField({ label, requerido, error, style, ...inputProps }) {
   const id = useId();
 
   return (
     <Form.Group className="mb-3" style={style}>
       {label && <Form.Label htmlFor={id}>{label}</Form.Label>}
-      <Form.Control id={id} isInvalid={Boolean(error)} {...inputProps} />
+      {label && <MarcaDeRequerido requerido={requerido} />}
+      <Form.Control
+        id={id}
+        isInvalid={Boolean(error)}
+        aria-required={requerido === true || undefined}
+        {...inputProps}
+      />
       {error && <Form.Control.Feedback type="invalid">{error}</Form.Control.Feedback>}
     </Form.Group>
   );

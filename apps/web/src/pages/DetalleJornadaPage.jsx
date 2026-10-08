@@ -7,6 +7,7 @@ import {
   COLUMNAS_PACIENTES_ATENDIDOS_JORNADA,
   COLUMNAS_PERSONAL_JORNADA,
   contarPersonalPorRol,
+  equipoDeJornada,
   ESTADOS_JORNADA,
   formatearFechaConHora,
   formatearFechaCorta,
@@ -15,9 +16,13 @@ import {
   puedeVerModulo,
   puedeVerReporteJornada,
   puedeVerRosterCompleto,
+  puedeVerTodosLosGastos,
   seccionesDeDetalleJornada,
   mayusculaInicial,
+  mensajeDeCitasPendientesAlCerrar,
   puedeVerInsumosDeJornada,
+  jornadaUsaBodegaPrincipal,
+  motivoParaNoCargarBodega,
   useCuadroTurnos,
   useDetalleJornada,
   useResumenCierreJornada,
@@ -43,8 +48,12 @@ import ModalAsignarPersonal from "./ModalAsignarPersonal";
 import ModalEdicionTurno from "./ModalEdicionTurno";
 import ModalJornada from "./ModalJornada";
 import NotFoundPage from "./NotFoundPage";
+import GastosDeJornada from "./GastosDeJornada";
+import ConsumoDeJornada from "./ConsumoDeJornada";
 import InsumosDeJornada from "./InsumosDeJornada";
 import OrigenesDePresupuesto from "./OrigenesDePresupuesto";
+import SobranteDeJornada from "./SobranteDeJornada";
+import { imprimirCuandoEsteListo } from "../impresion";
 
 const PESTANIAS = [
   { id: "resumen", label: "Resumen" },
@@ -52,7 +61,9 @@ const PESTANIAS = [
   { id: "pacientes", label: "Pacientes atendidos" },
   { id: "historial", label: "Historial" },
   { id: "presupuesto", label: "Presupuesto" },
+  { id: "gastos", label: "Gastos" },
   { id: "insumos", label: "Insumos" },
+  { id: "consumo", label: "Consumo" },
   { id: "cierre", label: "Cierre" },
 ];
 
@@ -89,7 +100,8 @@ const INDICADORES_DEL_DIA = [
 const INDICADORES_DEL_CIERRE = [
   { clave: "pacientesAtendidos", etiqueta: "Pacientes atendidos" },
   { clave: "consultasRealizadas", etiqueta: "Consultas registradas" },
-  { clave: "tratamientosEntregados", etiqueta: "Medicamentos entregados" },
+  // Son recetas emitidas (contarRecetasDeJornada), no unidades: las unidades estan en Consumo.
+  { clave: "tratamientosEntregados", etiqueta: "Recetas emitidas" },
 ];
 
 /** Componente auxiliar para datos de ficha */
@@ -106,7 +118,7 @@ function Dato({ etiqueta, valor, mono = false }) {
 export default function DetalleJornadaPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { rol } = useSesionCompartida();
+  const { perfil, rol } = useSesionCompartida();
 
   const {
     jornada,
@@ -152,11 +164,12 @@ export default function DetalleJornadaPage() {
 
     const limpiar = () => setAImprimir(false);
     window.addEventListener("afterprint", limpiar);
-    const cuadro = window.requestAnimationFrame(() => window.print());
+    // Espera al logo: impreso un fotograma despues, el papel salia sin el.
+    const cancelarImpresion = imprimirCuandoEsteListo();
 
     return () => {
       window.removeEventListener("afterprint", limpiar);
-      window.cancelAnimationFrame(cuadro);
+      cancelarImpresion();
     };
   }, [aImprimir]);
 
@@ -190,10 +203,11 @@ export default function DetalleJornadaPage() {
     return <NotFoundPage />;
   }
 
-  const esReapertura = jornada.estado === ESTADOS_JORNADA.FINALIZADA;
+  // Una jornada finalizada se consulta: el detalle no ofrece reabrirla (eso queda en el tablero) y
+  // deja a la vista, deshabilitado, lo que la modificaria.
+  const jornadaFinalizada = jornada.estado === ESTADOS_JORNADA.FINALIZADA;
   const [destino] = destinos;
-  const puedeMover =
-    (esReapertura ? permisos.puedeReabrir : permisos.puedeEditar) && Boolean(destino);
+  const puedeMover = !jornadaFinalizada && permisos.puedeEditar && Boolean(destino);
 
   // 00148: el personal de campo solo ve Equipo y Pacientes atendidos (seccionesDeDetalleJornada).
   const seccionesDelRol = seccionesDeDetalleJornada(rol);
@@ -202,7 +216,9 @@ export default function DetalleJornadaPage() {
     if (pestania.id === "pacientes") return permisos.puedeVerDatosClinicos;
     if (pestania.id === "historial") return permisos.puedeVerHistorial;
     if (pestania.id === "presupuesto") return permisosPresupuesto.puedeVer;
+    if (pestania.id === "gastos") return puedeVerTodosLosGastos(rol);
     if (pestania.id === "insumos") return puedeVerInsumosDeJornada(rol);
+    if (pestania.id === "consumo") return puedeVerInsumosDeJornada(rol);
     // ISSUE #864: "Cierre" no tenia filtro, asi que la veia cualquier rol que llegara al
     // detalle. Finalizar una jornada es puedeAdministrarJornadas() -- solo la administradora --,
     // y la pestaña es justo la que finaliza (useResumenCierreJornada, issue #183).
@@ -217,16 +233,21 @@ export default function DetalleJornadaPage() {
   const puedeVerEquipoCompleto = puedeVerRosterCompleto(rol);
   const conteoPorRol = contarPersonalPorRol(jornada.personal);
 
+  // El equipo es el cuadro de turnos mas el responsable de la jornada (equipoDeJornada). Quien no
+  // ve el cuadro completo solo ve su propia asignacion, asi que ahi se queda el cuadro tal cual.
+  const equipo = puedeVerEquipoCompleto ? equipoDeJornada(jornada) : (jornada.personal ?? []);
+
   // Mapeo del personal aplicando capitalización al rol en la jornada
-  const filasPersonal = (jornada.personal ?? []).map((fila) => ({
+  const filasPersonal = equipo.map((fila) => ({
     id: fila.id,
     perfilId: fila.perfilId,
     perfil: nombreDePerfil(fila.perfil) ?? "—",
-    rolEnJornada: capitalizar(fila.rolEnJornada),
+    rolEnJornada: fila.rolEnJornada ? capitalizar(fila.rolEnJornada) : null,
     horaInicio: fila.horaInicio,
     horaFin: fila.horaFin,
     responsabilidad: mayusculaInicial(fila.responsabilidad) || null,
     asistio: fila.asistio,
+    tieneTurno: fila.tieneTurno !== false,
   }));
 
   const filasConAdvertencia = filasPersonal.filter((fila) => {
@@ -305,22 +326,15 @@ export default function DetalleJornadaPage() {
             <Card>
               <div className="d-flex justify-content-between align-items-start gap-2 mb-3">
                 <StatusChip status={capitalizar(jornada.estado)} />
-                {puedeMover && esReapertura && (
-                  <SecondaryButton
-                    title="← Atrás"
-                    onClick={() => cambiarEstado(destino)}
-                    disabled={moviendo}
-                  />
-                )}
                 <div className="d-flex gap-2">
                   {permisos.puedeEditar && (
                     <SecondaryButton
                       title="Editar jornada"
                       onClick={() => setEditandoJornada(true)}
-                      disabled={moviendo}
+                      disabled={moviendo || jornadaFinalizada}
                     />
                   )}
-                  {puedeMover && !esReapertura && destino !== ESTADOS_JORNADA.FINALIZADA && (
+                  {puedeMover && destino !== ESTADOS_JORNADA.FINALIZADA && (
                     <PrimaryButton
                       title={destino === ESTADOS_JORNADA.EN_CURSO ? "Iniciar jornada" : "Avanzar →"}
                       onClick={() => cambiarEstado(destino)}
@@ -332,6 +346,7 @@ export default function DetalleJornadaPage() {
 
               <dl className="ec-ficha-datos">
                 <Dato etiqueta={ETIQUETAS.codigo} valor={jornada.codigo} mono />
+                <Dato etiqueta={ETIQUETAS.proyecto} valor={jornada.proyecto?.nombre} />
                 <Dato
                   etiqueta={ETIQUETAS.responsable}
                   valor={nombreDePerfil(jornada.responsable)}
@@ -382,7 +397,9 @@ export default function DetalleJornadaPage() {
                 {puedeVerEquipoCompleto ? (
                   <div className="d-flex flex-wrap gap-2">
                     {conteoPorRol.length === 0 ? (
-                      <span className="text-muted small">Todavía no hay personal asignado.</span>
+                      <span className="text-muted small">
+                        Todavía no hay personal con turno asignado.
+                      </span>
                     ) : (
                       conteoPorRol.map((fila) => (
                         <span key={fila.rol} className="badge text-bg-light border">
@@ -403,6 +420,7 @@ export default function DetalleJornadaPage() {
                     <PrimaryButton
                       title="Asignar personal"
                       onClick={() => setMostrarAsignar(true)}
+                      disabled={jornadaFinalizada}
                     />
                   )}
                 </div>
@@ -434,7 +452,12 @@ export default function DetalleJornadaPage() {
                 columnas={COLUMNAS_PERSONAL_JORNADA}
                 datos={filasPersonal}
                 vacio="Todavía no hay personal asignado a esta jornada."
-                onRowPress={permisos.puedeEditar ? (fila) => setFilaEnEdicion(fila) : undefined}
+                // El responsable sin turno no tiene turno que editar; una jornada finalizada, ninguno.
+                onRowPress={
+                  permisos.puedeEditar && !jornadaFinalizada
+                    ? (fila) => fila.tieneTurno && setFilaEnEdicion(fila)
+                    : undefined
+                }
               />
             </>
           )}
@@ -461,75 +484,138 @@ export default function DetalleJornadaPage() {
               proyectoId={jornada.proyectoId}
               rol={rol}
               alCambiar={recargar}
+              soloConsulta={jornadaFinalizada}
             />
           )}
 
-          {pestaniaMostrada === "insumos" && <InsumosDeJornada jornadaId={jornada.id} rol={rol} />}
+          {pestaniaMostrada === "gastos" && (
+            <GastosDeJornada
+              jornadaId={jornada.id}
+              rol={rol}
+              usuarioId={perfil?.id}
+              soloConsulta={jornadaFinalizada}
+            />
+          )}
+
+          {pestaniaMostrada === "insumos" && (
+            <InsumosDeJornada
+              jornadaId={jornada.id}
+              bodega={
+                jornada.botiquinBodegaId
+                  ? {
+                      id: jornada.botiquinBodegaId,
+                      nombre: jornada.botiquinBodega?.nombre ?? "",
+                      esPrincipal: jornadaUsaBodegaPrincipal(jornada),
+                    }
+                  : null
+              }
+              rol={rol}
+              soloConsulta={jornadaFinalizada}
+              motivoSinCarga={motivoParaNoCargarBodega(jornada)}
+            />
+          )}
+
+          {pestaniaMostrada === "consumo" && (
+            <ConsumoDeJornada
+              jornadaId={jornada.id}
+              rol={rol}
+              usaBodegaPrincipal={jornadaUsaBodegaPrincipal(jornada)}
+            />
+          )}
 
           {pestaniaMostrada === "cierre" && (
-            <Card>
-              {cargandoResumenCierre ? (
-                <LoadingState />
-              ) : (
-                <>
-                  <div className="ec-kpis mb-3">
-                    {INDICADORES_DEL_CIERRE.map(({ clave, etiqueta }) => (
-                      <StatCard
-                        key={clave}
-                        label={etiqueta}
-                        value={resumenCierre.indicadores?.[clave] ?? "—"}
-                        accent="var(--accent-jornadas)"
-                      />
-                    ))}
-                  </div>
-
-                  {resumenCierre.atencionesIncompletas === null && (
-                    <div className="alert alert-secondary" role="alert">
-                      No se pudo comprobar si hay atenciones sin consulta: tu rol no tiene acceso a
-                      esa información clínica.
+            <>
+              <Card>
+                {cargandoResumenCierre ? (
+                  <LoadingState />
+                ) : (
+                  <>
+                    <div className="ec-kpis mb-3">
+                      {INDICADORES_DEL_CIERRE.map(({ clave, etiqueta }) => (
+                        <StatCard
+                          key={clave}
+                          label={etiqueta}
+                          value={resumenCierre.indicadores?.[clave] ?? "—"}
+                          accent="var(--accent-jornadas)"
+                        />
+                      ))}
                     </div>
-                  )}
-                  {resumenCierre.atencionesIncompletas !== null &&
-                    resumenCierre.atencionesIncompletas > 0 && (
+
+                    {resumenCierre.atencionesIncompletas === null && (
+                      <div className="alert alert-secondary" role="alert">
+                        No se pudo comprobar si hay atenciones sin consulta: tu rol no tiene acceso
+                        a esa información clínica.
+                      </div>
+                    )}
+                    {resumenCierre.atencionesIncompletas !== null &&
+                      resumenCierre.atencionesIncompletas > 0 && (
+                        <div className="alert alert-warning" role="alert">
+                          {resumenCierre.atencionesIncompletas === 1
+                            ? "Hay 1 atención registrada sin consulta todavía."
+                            : `Hay ${resumenCierre.atencionesIncompletas} atenciones registradas sin consulta todavía.`}
+                        </div>
+                      )}
+                    {resumenCierre.movimientosPendientes > 0 && (
                       <div className="alert alert-warning" role="alert">
-                        {resumenCierre.atencionesIncompletas === 1
-                          ? "Hay 1 atención registrada sin consulta todavía."
-                          : `Hay ${resumenCierre.atencionesIncompletas} atenciones registradas sin consulta todavía.`}
+                        {resumenCierre.movimientosPendientes === 1
+                          ? "Hay 1 movimiento de inventario de la bodega de esta jornada pendiente de validar."
+                          : `Hay ${resumenCierre.movimientosPendientes} movimientos de inventario de la bodega de esta jornada pendientes de validar.`}
                       </div>
                     )}
-                  {resumenCierre.movimientosPendientes > 0 && (
-                    <div className="alert alert-warning" role="alert">
-                      {resumenCierre.movimientosPendientes === 1
-                        ? "Hay 1 movimiento de inventario del botiquín de esta jornada pendiente de validar."
-                        : `Hay ${resumenCierre.movimientosPendientes} movimientos de inventario del botiquín de esta jornada pendientes de validar.`}
-                    </div>
-                  )}
-                  {!hayAdvertenciasDeCierre &&
-                    resumenCierre.atencionesIncompletas !== null &&
-                    jornada.estado === ESTADOS_JORNADA.EN_CURSO && (
-                      <div className="alert alert-success" role="alert">
-                        No hay atenciones sin consulta ni movimientos pendientes de validar.
+                    {resumenCierre.inventarioQueQueda?.unidades > 0 && (
+                      <div className="alert alert-warning" role="alert">
+                        <div>
+                          A la jornada le quedan {resumenCierre.inventarioQueQueda.unidades}{" "}
+                          unidad(es) en su bodega móvil
+                          {resumenCierre.inventarioQueQueda.valor > 0 &&
+                            ` (${formatearMoneda(resumenCierre.inventarioQueQueda.valor)})`}
+                          . Lo que no se devuelva pasa a la próxima jornada que use la bodega.
+                        </div>
+                        {puedeVerInsumosDeJornada(rol) && (
+                          <SecondaryButton
+                            title="Ir a Insumos para devolver"
+                            size="sm"
+                            className="mt-2"
+                            onClick={() => setPestaniaActiva("insumos")}
+                          />
+                        )}
+                      </div>
+                    )}
+                    {mensajeDeCitasPendientesAlCerrar(resumenCierre.citasPendientes) && (
+                      <div className="alert alert-warning" role="alert">
+                        {mensajeDeCitasPendientesAlCerrar(resumenCierre.citasPendientes)}
+                      </div>
+                    )}
+                    {!hayAdvertenciasDeCierre &&
+                      resumenCierre.atencionesIncompletas !== null &&
+                      jornada.estado === ESTADOS_JORNADA.EN_CURSO && (
+                        <div className="alert alert-success" role="alert">
+                          No hay atenciones sin consulta ni movimientos pendientes de validar.
+                        </div>
+                      )}
+
+                    {errorCierre && (
+                      <div className="alert alert-danger" role="alert">
+                        {errorCierre}
                       </div>
                     )}
 
-                  {errorCierre && (
-                    <div className="alert alert-danger" role="alert">
-                      {errorCierre}
-                    </div>
-                  )}
-
-                  {jornada.estado === ESTADOS_JORNADA.EN_CURSO && permisos.puedeEditar && (
-                    <div className="d-flex justify-content-end mt-3">
-                      <PrimaryButton
-                        title="Confirmar cierre"
-                        onClick={confirmarCierre}
-                        loading={confirmandoCierre}
-                      />
-                    </div>
-                  )}
-                </>
-              )}
-            </Card>
+                    {jornada.estado === ESTADOS_JORNADA.EN_CURSO && permisos.puedeEditar && (
+                      <div className="d-flex justify-content-end mt-3">
+                        <PrimaryButton
+                          title="Confirmar cierre"
+                          onClick={confirmarCierre}
+                          loading={confirmandoCierre}
+                        />
+                      </div>
+                    )}
+                  </>
+                )}
+              </Card>
+              {/* 00160: con la jornada finalizada, lo que sobro de su presupuesto se devuelve o se
+                pasa a otra jornada del proyecto. */}
+              <SobranteDeJornada jornada={jornada} rol={rol} alLiquidar={recargar} />
+            </>
           )}
         </Tabs>
       )}

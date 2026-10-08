@@ -20,6 +20,7 @@ import {
   opcionesConClave,
 } from "../enums.js";
 import { AGRUPACIONES_DE_IMPACTO } from "./api.js";
+import { COMUNIDAD_DE, VISTAS_DE_ENFERMEDADES } from "./enfermedades.api.js";
 import { ESTADOS_DE_VENCIMIENTO } from "./inventario.api.js";
 
 /**
@@ -175,3 +176,51 @@ export const NIVELES_DE_ALERTA_VENCIMIENTO = opcionesConClave(
   NIVELES_ALERTA_VENCIMIENTO,
   ETIQUETAS_NIVEL_ALERTA_VENCIMIENTO,
 );
+
+/**
+ * Las cuatro vistas del reporte de enfermedades (issue #916), con su etiqueta.
+ */
+export const OPCIONES_DE_VISTA_ENFERMEDADES = [
+  { value: VISTAS_DE_ENFERMEDADES.RANKING, label: "Más frecuentes" },
+  { value: VISTAS_DE_ENFERMEDADES.JORNADAS, label: "Comparar jornadas" },
+  { value: VISTAS_DE_ENFERMEDADES.COMUNIDADES, label: "Comparar comunidades" },
+  { value: VISTAS_DE_ENFERMEDADES.EVOLUCION, label: "Evolución en el tiempo" },
+];
+
+/**
+ * Que comunidad cuenta en el reporte de enfermedades. La etiqueta larga es la que el reporte
+ * repite en pantalla y en papel, para que nunca quede duda de cual se uso.
+ */
+export const OPCIONES_DE_COMUNIDAD_DE = [
+  {
+    value: COMUNIDAD_DE.JORNADA,
+    label: "Donde se atendió (jornada)",
+    rotulo: "Comunidad de la jornada",
+  },
+  {
+    value: COMUNIDAD_DE.PACIENTE,
+    label: "De donde viene (paciente)",
+    rotulo: "Comunidad del paciente (la de la jornada si no tiene)",
+  },
+];
+
+/**
+ * Que diagnosticos se cuentan. El valor es texto y no booleano porque lo consume un Selector.
+ */
+export const CONTEO_DE_DIAGNOSTICOS = Object.freeze({
+  PRINCIPALES: "principales",
+  TODOS: "todos",
+});
+
+export const OPCIONES_DE_CONTEO_DE_DIAGNOSTICOS = [
+  {
+    value: CONTEO_DE_DIAGNOSTICOS.PRINCIPALES,
+    label: "Solo diagnóstico principal",
+    rotulo: "Solo diagnósticos principales",
+  },
+  {
+    value: CONTEO_DE_DIAGNOSTICOS.TODOS,
+    label: "Principal y secundarios",
+    rotulo: "Diagnósticos principales y secundarios",
+  },
+];

@@ -32,6 +32,7 @@ export { default as DataList } from "./DataList";
 export { default as StatusChip } from "./StatusChip";
 export { default as Card } from "./Card";
 export { default as StatCard } from "./StatCard";
+export { default as ContenidoDeBodega } from "./ContenidoDeBodega";
 
 export { default as KanbanBoard } from "./KanbanBoard";
 export { default as Tabs } from "./Tabs";

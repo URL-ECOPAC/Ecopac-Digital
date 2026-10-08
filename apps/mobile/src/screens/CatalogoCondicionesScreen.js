@@ -70,7 +70,7 @@ export default function CatalogoCondicionesScreen() {
 
   const guardar = async () => {
     const condicion = enEdicion?.condicion;
-    const resultado = condicion ? await editar(condicion.id, { nombre }) : await crear({ nombre });
+    const resultado = condicion ? await editar(condicion.id, { nombre }) : await crear(nombre);
     if (resultado.ok) setEnEdicion(null);
   };
 

@@ -33,6 +33,7 @@ import SeleccionJornadaScreen from "../screens/SeleccionJornadaScreen";
 import JornadaEnCursoScreen from "../screens/JornadaEnCursoScreen";
 import JornadasAsignadasScreen from "../screens/JornadasAsignadasScreen";
 import KanbanJornadasScreen from "../screens/KanbanJornadasScreen";
+import DetalleJornadaScreen from "../screens/DetalleJornadaScreen";
 import BusquedaPacienteScreen from "../screens/BusquedaPacienteScreen";
 import FichaPacienteScreen from "../screens/FichaPacienteScreen";
 import HistorialPacienteScreen from "../screens/HistorialPacienteScreen";
@@ -52,6 +53,7 @@ import EntregaMedicamentosScreen from "../screens/EntregaMedicamentosScreen";
 import PacientesCronicosScreen from "../screens/PacientesCronicosScreen";
 import CatalogoCondicionesScreen from "../screens/CatalogoCondicionesScreen";
 import CatalogoDiagnosticosScreen from "../screens/CatalogoDiagnosticosScreen";
+import AgendaCitasScreen from "../screens/AgendaCitasScreen";
 import ProyectosScreen from "../screens/ProyectosScreen";
 import NotificacionesScreen from "../screens/NotificacionesScreen";
 
@@ -204,6 +206,11 @@ const PANTALLAS_PACIENTES = [
     componente: conGuardaDeRol(CatalogoDiagnosticosScreen, "pacientes"),
     titulo: "Diagnosticos",
   },
+  {
+    name: ROUTES.AGENDA_CITAS,
+    componente: conGuardaDeRol(AgendaCitasScreen, "pacientes"),
+    titulo: "Citas",
+  },
 ];
 
 const PANTALLAS_JORNADAS = [
@@ -226,6 +233,11 @@ const PANTALLAS_JORNADAS = [
     name: ROUTES.KANBAN_JORNADAS,
     componente: conGuardaDeRol(KanbanJornadasScreen, "jornadas"),
     titulo: "Tablero de Jornadas",
+  },
+  {
+    name: ROUTES.DETALLE_JORNADA,
+    componente: conGuardaDeRol(DetalleJornadaScreen, "jornadas"),
+    titulo: "Detalle de la jornada",
   },
   {
     name: ROUTES.PROYECTOS,

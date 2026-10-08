@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { esRespuestaVigente } from "../hooks/useBusquedaPacientes.js";
 import { consultarExistencias } from "./existencias.api.js";
+import { useCambiosEnTiempoReal } from "../hooks/useCambiosEnTiempoReal.js";
 
 /**
  * View model de la pantalla de existencias de inventario (issue #152, RF-17), compartido por
@@ -74,6 +75,9 @@ export function useInventario({ bodega, busqueda, limite } = {}) {
   }, [consultar]);
 
   const recargar = useCallback(() => consultar(pagina), [consultar, pagina]);
+
+  // Se recarga sola cuando cambian estas tablas (00163).
+  useCambiosEnTiempoReal(["medicamentos", "lotes", "existencias"], recargar);
 
   return {
     existencias,

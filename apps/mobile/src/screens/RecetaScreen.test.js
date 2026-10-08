@@ -40,6 +40,7 @@ const mockEstadoReceta = {
   lotesPorMedicamento: {},
   renglones: [],
   problemas: {},
+  avisosDeReparto: {},
   indicacionesGenerales: "",
   setIndicacionesGenerales: jest.fn(),
   error: null,
@@ -71,6 +72,7 @@ describe("RecetaScreen", () => {
     mockEstadoReceta.catalogo = [MEDICAMENTO_DISPONIBLE];
     mockEstadoReceta.renglones = [];
     mockEstadoReceta.problemas = {};
+    mockEstadoReceta.avisosDeReparto = {};
     mockEstadoReceta.error = null;
     mockEstadoReceta.receta = null;
     mockEstadoReceta.cargandoCatalogo = false;
@@ -117,6 +119,16 @@ describe("RecetaScreen", () => {
     pantalla();
 
     expect(screen.getByText("Elige un lote antes de guardar.")).toBeTruthy();
+  });
+
+  it("si el lote elegido no alcanza, dice de que lotes sale la cantidad", () => {
+    mockEstadoReceta.renglones = [RENGLON_DE_EJEMPLO];
+    mockEstadoReceta.avisosDeReparto = {
+      "r-1": "El lote elegido no alcanza: se entregan 10 del lote LOT1 y 10 del lote LOT2.",
+    };
+    pantalla();
+
+    expect(screen.getByText(/se entregan 10 del lote LOT1 y 10 del lote LOT2/)).toBeTruthy();
   });
 
   it("tras generar con exito, muestra el folio y los medicamentos entregados", () => {

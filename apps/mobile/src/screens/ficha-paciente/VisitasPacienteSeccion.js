@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import {
   describirEntrega,
+  detalleDeConsultaAgendada,
   describirMedicamento,
   describirPosologia,
   formatearFechaCorta,
@@ -48,8 +49,17 @@ function Consulta({ consulta }) {
     ["Tratamiento", consulta.tratamiento],
     ["Seguimiento", consulta.planSeguimiento],
   ].filter(([, valor]) => valor);
+  const detalleDeCita = detalleDeConsultaAgendada(consulta);
   return (
     <View>
+      {/* Issue #927: la consulta agendada, con la clinica, la hora y el profesional de la cita. */}
+      {consulta.agendada ? (
+        <View style={styles.chips}>
+          <Chip presente>Agendada</Chip>
+          {detalleDeCita ? <Text style={styles.tenue}>{detalleDeCita}</Text> : null}
+        </View>
+      ) : null}
+      {consulta.area ? <Text style={styles.texto}>Área: {consulta.area}</Text> : null}
       {consulta.diagnosticos?.length > 0 ? (
         <Text style={styles.textoFuerte}>
           {consulta.diagnosticos
@@ -124,6 +134,8 @@ function Visita({
   imprimiendo,
 }) {
   const partes = partesDeVisita(visita);
+  // aVisita() trae `consultas`; una visita armada a mano puede traer solo `consulta`.
+  const consultas = visita.consultas ?? (visita.consulta ? [visita.consulta] : []);
   return (
     <Card style={styles.tarjeta}>
       <Pressable
@@ -158,13 +170,29 @@ function Visita({
               <Text style={styles.tenue}>No se tomaron signos en esta visita.</Text>
             )}
           </Parte>
-          <Parte titulo="Consulta">
-            {visita.consulta ? (
-              <Consulta consulta={visita.consulta} />
-            ) : (
+          {consultas.length === 0 ? (
+            <Parte titulo="Consulta">
               <Text style={styles.tenue}>Sin consulta registrada.</Text>
-            )}
-          </Parte>
+            </Parte>
+          ) : null}
+          {/* Issue #927: una visita puede tener una consulta por cita; se muestran todas. */}
+          {consultas.map((consulta, indice) => (
+            <Parte
+              key={consulta.id}
+              titulo={
+                consultas.length > 1 ? `Consulta ${indice + 1} de ${consultas.length}` : "Consulta"
+              }
+            >
+              <Consulta consulta={consulta} />
+              {onAbrirConsulta && consultas.length > 1 ? (
+                <SecondaryButton
+                  title="Abrir esta consulta"
+                  onPress={() => onAbrirConsulta(visita, consulta.id)}
+                  style={styles.accion}
+                />
+              ) : null}
+            </Parte>
+          ))}
           <Parte titulo="Receta">
             {visita.recetas.length === 0 ? (
               <Text style={styles.tenue}>Sin receta.</Text>

@@ -1,14 +1,32 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import ErrorState from "../components/ErrorState";
-import { useAdministracionBodegasProveedores, TIPO_BODEGA, TIPO_PROVEEDOR } from "@ecopac/shared";
+import {
+  esProveedorDeDonante,
+  useAdministracionBodegasProveedores,
+  TIPO_PROVEEDOR,
+} from "@ecopac/shared";
 import { Nav } from "react-bootstrap";
+import ContenidoDeBodega from "../components/ContenidoDeBodega";
+import Modal from "../components/Modal";
 import PrimaryButton from "../components/PrimaryButton";
 import SecondaryButton from "../components/SecondaryButton";
 import { EnFormulario } from "../components/contextoDeFormulario";
 import SectionHeader from "../components/SectionHeader";
 import { useCerrarAlTocarFuera } from "../hooks/useCerrarAlTocarFuera";
 
+/** Estilo de los botones de accion de cada fila, el mismo para Editar y Ver contenido. */
+const ESTILO_BOTON_DE_FILA = {
+  padding: "4px 10px",
+  fontSize: "var(--texto-xs)",
+  border: "none",
+  backgroundColor: "var(--color-border)",
+  borderRadius: "6px",
+  cursor: "pointer",
+};
+
 export default function AdministracionBodegasProveedoresPage() {
+  const navigate = useNavigate();
   const [pestañaActiva, setPestañaActiva] = useState("bodegas");
   const [modalBodega, setModalBodega] = useState(null);
   const [modalProveedor, setModalProveedor] = useState(null);
@@ -26,6 +44,9 @@ export default function AdministracionBodegasProveedoresPage() {
     cargarBodegas,
     guardarBodega,
     existenciaPorBodega,
+    contenidoBodega,
+    verContenidoBodega,
+    cerrarContenidoBodega,
     proveedores,
     cargandoProveedores,
     errorProveedores,
@@ -42,14 +63,17 @@ export default function AdministracionBodegasProveedoresPage() {
   // ──────────────────────────────────────────────
   // FORMULARIO BODEGA
   // ──────────────────────────────────────────────
+  // `esMovil` y no `es_movil`: es la clave que devuelve listarBodegas() y la que lee
+  // guardarBodega(). Con es_movil la tabla decia "Fija" para todas y la casilla de bodega movil
+  // nunca se guardaba.
   const [formBodega, setFormBodega] = useState({
     nombre: "",
     ubicacion: "",
-    es_movil: false,
+    esMovil: false,
   });
 
   const abrirNuevaBodega = () => {
-    setFormBodega({ nombre: "", ubicacion: "", es_movil: false });
+    setFormBodega({ nombre: "", ubicacion: "", esMovil: false });
     setErrorGuardarBodega(null);
     setModalBodega({ modo: "crear" });
   };
@@ -59,7 +83,7 @@ export default function AdministracionBodegasProveedoresPage() {
       id: b.id,
       nombre: b.nombre || "",
       ubicacion: b.ubicacion || "",
-      es_movil: Boolean(b.es_movil),
+      esMovil: Boolean(b.esMovil),
     });
     setErrorGuardarBodega(null);
     setModalBodega({ modo: "editar" });
@@ -95,6 +119,12 @@ export default function AdministracionBodegasProveedoresPage() {
   };
 
   const abrirEditarProveedor = (p) => {
+    // El proveedor de un donante se edita en Donantes: la base lo mantiene a partir del donante
+    // (00175, issue #911).
+    if (esProveedorDeDonante(p)) {
+      navigate(`/donantes?editar=${p.donanteId}`);
+      return;
+    }
     setFormProveedor({
       id: p.id,
       nombre: p.nombre || "",
@@ -238,7 +268,26 @@ export default function AdministracionBodegasProveedoresPage() {
               <tbody>
                 {bodegas.map((b) => (
                   <tr key={b.id} style={{ borderBottom: "1px solid var(--color-border)" }}>
-                    <td style={{ padding: "10px 12px", fontWeight: 500 }}>{b.nombre}</td>
+                    <td style={{ padding: "10px 12px", fontWeight: 500 }}>
+                      {b.nombre}
+                      {/* 00176: de ella sale lo que se receta en una jornada sin botiquin. */}
+                      {b.esPrincipal && (
+                        <span
+                          style={{
+                            marginLeft: "8px",
+                            padding: "2px 8px",
+                            borderRadius: "9999px",
+                            fontSize: "var(--texto-xxs)",
+                            fontWeight: 600,
+                            backgroundColor:
+                              "color-mix(in srgb, var(--color-primary) 18%, var(--color-surface))",
+                            color: "var(--color-primary)",
+                          }}
+                        >
+                          Principal
+                        </span>
+                      )}
+                    </td>
                     <td style={{ padding: "10px 12px" }}>
                       <span
                         style={{
@@ -246,13 +295,13 @@ export default function AdministracionBodegasProveedoresPage() {
                           borderRadius: "9999px",
                           fontSize: "var(--texto-xxs)",
                           fontWeight: 600,
-                          backgroundColor: b.es_movil
+                          backgroundColor: b.esMovil
                             ? "color-mix(in srgb, var(--color-info) 18%, var(--color-surface))"
                             : "color-mix(in srgb, var(--color-success) 18%, var(--color-surface))",
-                          color: b.es_movil ? "var(--color-info)" : "var(--color-success)",
+                          color: b.esMovil ? "var(--color-info)" : "var(--color-success)",
                         }}
                       >
-                        {b.es_movil ? " Móvil" : " Fija"}
+                        {b.esMovil ? " Móvil" : " Fija"}
                       </span>
                     </td>
                     <td style={{ padding: "10px 12px", color: "var(--color-text-muted)" }}>
@@ -264,19 +313,23 @@ export default function AdministracionBodegasProveedoresPage() {
                       {existenciaPorBodega[b.id] ?? 0}
                     </td>
                     <td style={{ padding: "10px 12px", textAlign: "center" }}>
-                      <button
-                        onClick={() => abrirEditarBodega(b)}
-                        style={{
-                          padding: "4px 10px",
-                          fontSize: "var(--texto-xs)",
-                          border: "none",
-                          backgroundColor: "var(--color-border)",
-                          borderRadius: "6px",
-                          cursor: "pointer",
-                        }}
-                      >
-                        Editar
-                      </button>
+                      <div style={{ display: "inline-flex", gap: "6px", flexWrap: "wrap" }}>
+                        {/* Issue #911: la tabla solo daba el total; esto dice que hay. */}
+                        <button
+                          type="button"
+                          onClick={() => verContenidoBodega(b)}
+                          style={ESTILO_BOTON_DE_FILA}
+                        >
+                          Ver contenido
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => abrirEditarBodega(b)}
+                          style={ESTILO_BOTON_DE_FILA}
+                        >
+                          Editar
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -293,7 +346,8 @@ export default function AdministracionBodegasProveedoresPage() {
             <p style={{ fontSize: "var(--texto-xs)", color: "var(--color-text-muted)", margin: 0 }}>
               {errorProveedores
                 ? "No se pudo cargar el listado"
-                : `${proveedores.length} proveedores y donantes`}
+                : `${proveedores.length} proveedores y donantes. Los donantes se registran en ` +
+                  "Donaciones > Donantes y aparecen aquí solos."}
             </p>
             <PrimaryButton title="Nuevo proveedor" size="sm" onClick={abrirNuevoProveedor} />
           </div>
@@ -394,18 +448,13 @@ export default function AdministracionBodegasProveedoresPage() {
                       )}
                     </td>
                     <td style={{ padding: "10px 12px", textAlign: "center" }}>
+                      {/* El de un donante lleva a Donantes (00175, issue #911). */}
                       <button
+                        type="button"
                         onClick={() => abrirEditarProveedor(p)}
-                        style={{
-                          padding: "4px 10px",
-                          fontSize: "var(--texto-xs)",
-                          border: "none",
-                          backgroundColor: "var(--color-border)",
-                          borderRadius: "6px",
-                          cursor: "pointer",
-                        }}
+                        style={ESTILO_BOTON_DE_FILA}
                       >
-                        Editar
+                        {esProveedorDeDonante(p) ? "Editar en Donantes" : "Editar"}
                       </button>
                     </td>
                   </tr>
@@ -515,8 +564,8 @@ export default function AdministracionBodegasProveedoresPage() {
             >
               <input
                 type="checkbox"
-                checked={formBodega.es_movil}
-                onChange={(e) => setFormBodega((f) => ({ ...f, es_movil: e.target.checked }))}
+                checked={formBodega.esMovil}
+                onChange={(e) => setFormBodega((f) => ({ ...f, esMovil: e.target.checked }))}
               />
               Es bodega móvil (viaja a jornadas)
             </label>
@@ -623,32 +672,12 @@ export default function AdministracionBodegasProveedoresPage() {
               />
             </div>
 
-            <div>
-              <label
-                style={{
-                  display: "block",
-                  fontSize: "var(--texto-xs)",
-                  fontWeight: 500,
-                  marginBottom: "4px",
-                }}
-              >
-                Tipo <span style={{ color: "var(--color-danger)" }}>*</span>
-              </label>
-              <select
-                value={formProveedor.tipo}
-                onChange={(e) => setFormProveedor((f) => ({ ...f, tipo: e.target.value }))}
-                style={{
-                  width: "100%",
-                  padding: "10px 14px",
-                  borderRadius: "8px",
-                  border: "1px solid var(--color-border)",
-                  fontSize: "var(--texto-xs)",
-                }}
-              >
-                <option value={TIPO_PROVEEDOR.COMERCIAL}> Comercial (Compra)</option>
-                <option value={TIPO_PROVEEDOR.DONANTE}> Donante</option>
-              </select>
-            </div>
+            {/* Sin selector de tipo (issue #911): aqui solo se dan de alta proveedores comerciales.
+                Un donante se registra en Donaciones > Donantes y su proveedor lo crea la base
+                (00175); crearlo aqui dejaba un "donante" de inventario que no era ningun donante. */}
+            <p style={{ fontSize: "var(--texto-xs)", color: "var(--color-text-muted)", margin: 0 }}>
+              Proveedor comercial (compra). Los donantes se registran en Donaciones &gt; Donantes.
+            </p>
 
             <div className="ec-form-pie">
               <EnFormulario>
@@ -662,6 +691,20 @@ export default function AdministracionBodegasProveedoresPage() {
           </form>
         </div>
       )}
+
+      {/* ═══════════ CONTENIDO DE UNA BODEGA ═══════════ */}
+      <Modal
+        visible={Boolean(contenidoBodega.bodega)}
+        onClose={cerrarContenidoBodega}
+        title={contenidoBodega.bodega ? `Contenido: ${contenidoBodega.bodega.nombre}` : ""}
+        size="lg"
+      >
+        <ContenidoDeBodega
+          contenido={contenidoBodega.contenido}
+          cargando={contenidoBodega.cargando}
+          error={contenidoBodega.error}
+        />
+      </Modal>
     </div>
   );
 }

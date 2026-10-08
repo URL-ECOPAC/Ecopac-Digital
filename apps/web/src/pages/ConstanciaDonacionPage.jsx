@@ -8,6 +8,7 @@ import {
 import { organizacion } from "@ecopac/ui-tokens";
 import { Container, Row, Col, Card, Badge, Alert } from "react-bootstrap";
 import BotonImprimir from "../components/BotonImprimir";
+import LoadingState from "../components/LoadingState";
 import { AccionesDeCabecera } from "../components/PageHeader";
 import DocumentoImprimible, { LineaDeFirma } from "./DocumentoImprimible";
 import { ACCION_VOLVER_A_DONACIONES } from "./donacionesNavegacion";
@@ -72,13 +73,18 @@ function DatosDeLaDonacion({ donacion }) {
   );
 }
 
-export default function ConstanciaDonacionPage({ usuarioRol, donacion }) {
+export default function ConstanciaDonacionPage({ usuarioRol, donacion, cargando = false }) {
   const { tieneAccesoLectura, esValidaParaConstancia, correlativo, manejarImpresion } =
     useConstanciaDonacion({
       usuarioRol,
       donacion,
       onImprimir: () => window.print(),
     });
+
+  // Antes que el acceso: el rol de la sesion tambien puede estar llegando todavia.
+  if (cargando && !donacion) {
+    return <LoadingState />;
+  }
 
   if (!tieneAccesoLectura) {
     return (
@@ -93,7 +99,7 @@ export default function ConstanciaDonacionPage({ usuarioRol, donacion }) {
   if (!donacion) {
     return (
       <Container className="my-4">
-        <Alert variant="secondary">No se ha seleccionado ninguna donación.</Alert>
+        <Alert variant="secondary">No se encontró la donación.</Alert>
       </Container>
     );
   }

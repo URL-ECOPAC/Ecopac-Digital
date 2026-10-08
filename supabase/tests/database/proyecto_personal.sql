@@ -8,7 +8,13 @@
 
 BEGIN;
 
-SELECT plan(20);
+SELECT plan(23);
+
+-- Desde la 00178 toda jornada nueva lleva una bodega movil. Estas pruebas no tratan de bodegas:
+-- sus jornadas reciben una de prueba como DEFAULT de la columna, que el ROLLBACK del final deshace.
+INSERT INTO bodegas (id, nombre, es_movil) VALUES
+  ('5b000000-0000-0000-0000-000000000178', 'Bodega movil de prueba 00178', TRUE);
+ALTER TABLE jornadas ALTER COLUMN botiquin_bodega_id SET DEFAULT '5b000000-0000-0000-0000-000000000178';
 
 -- ============================================================================
 -- Setup
@@ -71,7 +77,13 @@ SELECT is(
 SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000014611';
 
-SELECT is((SELECT count(*) FROM proyecto_personal)::int, 3, 'el administrador lee todos los equipos');
+SELECT is(
+  (SELECT count(*) FROM proyecto_personal
+    WHERE proyecto_id IN ('50000000-0000-0000-0000-000000001461',
+                          '50000000-0000-0000-0000-000000001462'))::int,
+  3,
+  'el administrador lee todos los equipos'
+);
 
 SELECT lives_ok(
   $$ INSERT INTO proyecto_personal (proyecto_id, perfil_id, rol_en_proyecto)
@@ -150,11 +162,13 @@ SELECT ok(
   'y le trae el nombre de TODAS las personas del equipo, aunque no pueda leer perfiles'
 );
 
+-- En B el administrador 14611 no esta en el equipo ni en un turno, pero es el responsable de su
+-- jornada: desde la 00157 la funcion lo suma.
 SELECT is(
   (SELECT count(*) FROM equipo_de_proyecto('50000000-0000-0000-0000-000000001462'))::int,
   (SELECT count(*) FROM proyecto_personal
-    WHERE proyecto_id = '50000000-0000-0000-0000-000000001462')::int,
-  'equipo_de_proyecto coincide con la tabla tambien en el proyecto al que pertenece por equipo'
+    WHERE proyecto_id = '50000000-0000-0000-0000-000000001462')::int + 1,
+  'equipo_de_proyecto coincide con la tabla, mas el responsable de su jornada, en el proyecto al que pertenece por equipo'
 );
 
 -- ============================================================================
@@ -220,9 +234,46 @@ SELECT is(
 );
 
 -- ============================================================================
+-- 00157: el responsable de una jornada es parte del equipo del proyecto
+-- ============================================================================
+RESET ROLE;
+-- El medico 14614 organiza la jornada C del proyecto A sin estar en su equipo ni en ningun turno.
+INSERT INTO jornadas (id, nombre, fecha, comunidad_id, responsable_id, proyecto_id) VALUES
+  ('40000000-0000-0000-0000-000000001463', 'Jornada C 1461', CURRENT_DATE + 32,
+   '10000000-0000-0000-0000-000000001461', '00000000-0000-0000-0000-000000014614',
+   '50000000-0000-0000-0000-000000001461');
+
+SET LOCAL ROLE authenticated;
+SET LOCAL request.jwt.claim.sub TO '00000000-0000-0000-0000-000000014611';
+
+SELECT is(
+  (SELECT count(*) FROM equipo_de_proyecto('50000000-0000-0000-0000-000000001461'))::int, 4,
+  'el equipo de A suma al responsable de una de sus jornadas aunque no tenga turno'
+);
+
+SELECT is(
+  (SELECT row(en_equipo_del_proyecto, jornadas)::text
+     FROM equipo_de_proyecto('50000000-0000-0000-0000-000000001461')
+    WHERE perfil_id = '00000000-0000-0000-0000-000000014614'),
+  row(false, ARRAY['Jornada C 1461']::text[])::text,
+  'el responsable se marca como quien viene de una jornada y dice de cual'
+);
+
+SELECT is(
+  (SELECT row(count(*), bool_and(en_equipo_del_proyecto), max(jornadas::text))::text
+     FROM equipo_de_proyecto('50000000-0000-0000-0000-000000001461')
+    WHERE perfil_id = '00000000-0000-0000-0000-000000014611'),
+  row(1::bigint, true, ARRAY['Jornada A 1461']::text)::text,
+  'quien es responsable de una jornada y esta en el equipo aparece una sola vez'
+);
+
+-- ============================================================================
 -- Borrado de un proyecto
 -- ============================================================================
 RESET ROLE;
+-- Desde la 00169 un proyecto con jornadas no se borra (ON DELETE RESTRICT): primero se va su
+-- jornada. Lo que se prueba aqui es la cascada sobre el equipo, no sobre las jornadas.
+DELETE FROM jornadas WHERE proyecto_id = '50000000-0000-0000-0000-000000001462';
 DELETE FROM proyectos WHERE id = '50000000-0000-0000-0000-000000001462';
 
 SELECT is(

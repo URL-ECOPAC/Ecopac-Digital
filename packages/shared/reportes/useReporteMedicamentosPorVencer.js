@@ -14,6 +14,7 @@ import { puedeVerReporteDeVencimientos } from "./permisos.js";
 import { RETARDO_DE_FILTROS_MS } from "./useFiltrosReportes.js";
 import { useOrdenYPagina } from "./useOrdenYPagina.js";
 import { obtenerReporteDeVencimientos } from "./vencimientos.api.js";
+import { useCambiosEnTiempoReal } from "../hooks/useCambiosEnTiempoReal.js";
 
 // Reporte de medicamentos proximos a vencer (#213, RF-33).
 //
@@ -185,6 +186,9 @@ export function useReporteMedicamentosPorVencer({ rol } = {}) {
 
   const { pagina, orden, alternarOrden, numeroDePagina, totalPaginas, irAPagina, total } =
     useOrdenYPagina(renglones, { columnas: COLUMNAS_VENCIMIENTO });
+
+  // Se recarga sola cuando cambian estas tablas (00163).
+  useCambiosEnTiempoReal(["lotes", "existencias"], cargar);
 
   return {
     tieneAcceso,

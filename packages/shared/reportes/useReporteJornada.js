@@ -23,6 +23,7 @@ import {
   COLUMNAS_PERSONAL_PARTICIPANTE,
 } from "./columnas.js";
 import { obtenerReporteJornada, puedeVerReporteJornada } from "./jornada.api.js";
+import { useCambiosEnTiempoReal } from "../hooks/useCambiosEnTiempoReal.js";
 
 /**
  * Reporte de resultados de una jornada.
@@ -97,6 +98,9 @@ export function useReporteJornada(jornadaId, { rol } = {}) {
       pacientes_atendidos: datos.resumen?.pacientes_atendidos ?? 0,
     };
   }, [datos]);
+
+  // Se recarga sola cuando cambian estas tablas (00163).
+  useCambiosEnTiempoReal(["atenciones", "consultas", "recetas", "jornada_personal"], cargar);
 
   return {
     tieneAcceso,

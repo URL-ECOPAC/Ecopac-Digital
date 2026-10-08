@@ -19,6 +19,7 @@ import { useCallback, useEffect, useState } from "react";
 import { obtenerPaciente } from "./api.js";
 import { obtenerUltimaAtencion } from "./historial.api.js";
 import { puedeVerHistorial } from "./permisos.js";
+import { useCambiosEnTiempoReal } from "../hooks/useCambiosEnTiempoReal.js";
 
 const ESTADO_INICIAL = { paciente: null, cargando: true, error: null };
 
@@ -85,6 +86,9 @@ export function usePaciente(id, { rol } = {}) {
   useEffect(() => {
     cargar();
   }, [cargar]);
+
+  // Se recarga sola cuando cambian estas tablas (00163).
+  useCambiosEnTiempoReal(["pacientes"], cargar);
 
   return {
     paciente: estado.paciente,

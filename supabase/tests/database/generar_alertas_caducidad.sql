@@ -29,6 +29,13 @@ BEGIN;
 
 SELECT plan(13);
 
+-- Desde la 00162 (issue #899) la ventana sale de configuracion_alertas_caducidad, que por defecto
+-- es de 90 dias. Esta prueba fija los bordes de una ventana de 30 -el dia 30 entra y el 31 no-, asi
+-- que la configura en 30. Las fechas se calculan con fn_hoy_guatemala(), la misma que usa la
+-- funcion: con CURRENT_DATE (UTC) la prueba fallaria si corre entre las 00:00 y las 06:00 UTC.
+-- umbrales_alertas_caducidad.sql prueba la ventana configurable y los avisos por etapa.
+UPDATE configuracion_alertas_caducidad SET umbrales_dias = '{30}';
+
 -- ============================================================================
 -- Setup: dos bodegas, un medicamento, un proveedor, y los lotes que cubren cada caso del DoD.
 -- ============================================================================
@@ -47,31 +54,32 @@ INSERT INTO proveedores (id, nombre, tipo) VALUES
 -- chk_lotes_vencimiento_posterior (00020) sin importar el caso.
 INSERT INTO lotes (id, medicamento_id, proveedor_id, numero_lote, origen, cantidad_ingresada, fecha_ingreso, fecha_vencimiento) VALUES
   -- 1. Urgente: vence en 10 dias, con stock. SI genera alerta.
-  ('a4000000-0000-0000-0000-000000000001', 'a2000000-0000-0000-0000-000000000001', 'a3000000-0000-0000-0000-000000000001', 'L-166-1', 'compra', 100, CURRENT_DATE - 100, CURRENT_DATE + 10),
+  ('a4000000-0000-0000-0000-000000000001', 'a2000000-0000-0000-0000-000000000001', 'a3000000-0000-0000-0000-000000000001', 'L-166-1', 'compra', 100, fn_hoy_guatemala() - 100, fn_hoy_guatemala() + 10),
   -- 2. Lejano: vence en 45 dias, fuera del rango de 30. NO genera alerta.
-  ('a4000000-0000-0000-0000-000000000002', 'a2000000-0000-0000-0000-000000000001', 'a3000000-0000-0000-0000-000000000001', 'L-166-2', 'compra', 100, CURRENT_DATE - 100, CURRENT_DATE + 45),
+  ('a4000000-0000-0000-0000-000000000002', 'a2000000-0000-0000-0000-000000000001', 'a3000000-0000-0000-0000-000000000001', 'L-166-2', 'compra', 100, fn_hoy_guatemala() - 100, fn_hoy_guatemala() + 45),
   -- 3. Sin stock: vence en 5 dias, pero cantidad_disponible = 0. NO genera alerta.
-  ('a4000000-0000-0000-0000-000000000003', 'a2000000-0000-0000-0000-000000000001', 'a3000000-0000-0000-0000-000000000001', 'L-166-3', 'compra', 100, CURRENT_DATE - 100, CURRENT_DATE + 5),
+  ('a4000000-0000-0000-0000-000000000003', 'a2000000-0000-0000-0000-000000000001', 'a3000000-0000-0000-0000-000000000001', 'L-166-3', 'compra', 100, fn_hoy_guatemala() - 100, fn_hoy_guatemala() + 5),
   -- 4. Ya alertado: vence en 20 dias, con stock, pero ya tiene una alerta pendiente. NO duplica.
-  ('a4000000-0000-0000-0000-000000000004', 'a2000000-0000-0000-0000-000000000001', 'a3000000-0000-0000-0000-000000000001', 'L-166-4', 'compra', 100, CURRENT_DATE - 100, CURRENT_DATE + 20),
+  ('a4000000-0000-0000-0000-000000000004', 'a2000000-0000-0000-0000-000000000001', 'a3000000-0000-0000-0000-000000000001', 'L-166-4', 'compra', 100, fn_hoy_guatemala() - 100, fn_hoy_guatemala() + 20),
   -- 5. Vencido CON existencia: vencio hace 5 dias y todavia hay unidades en bodega. SI genera
   --    alerta desde la 00129: es justo el lote que hay que dar de baja (issue #838).
-  ('a4000000-0000-0000-0000-000000000005', 'a2000000-0000-0000-0000-000000000001', 'a3000000-0000-0000-0000-000000000001', 'L-166-5', 'compra', 100, CURRENT_DATE - 100, CURRENT_DATE - 5),
+  ('a4000000-0000-0000-0000-000000000005', 'a2000000-0000-0000-0000-000000000001', 'a3000000-0000-0000-0000-000000000001', 'L-166-5', 'compra', 100, fn_hoy_guatemala() - 100, fn_hoy_guatemala() - 5),
   -- 7. Vencido SIN existencia: vencio hace 40 dias y no queda ninguna unidad. NO genera alerta,
   --    porque no hay nada que dar de baja. Es el limite que la 00129 NO mueve.
-  ('a4000000-0000-0000-0000-000000000007', 'a2000000-0000-0000-0000-000000000001', 'a3000000-0000-0000-0000-000000000001', 'L-166-7', 'compra', 100, CURRENT_DATE - 100, CURRENT_DATE - 40),
+  ('a4000000-0000-0000-0000-000000000007', 'a2000000-0000-0000-0000-000000000001', 'a3000000-0000-0000-0000-000000000001', 'L-166-7', 'compra', 100, fn_hoy_guatemala() - 100, fn_hoy_guatemala() - 40),
   -- 6. Multi-bodega: vence en 15 dias, stock repartido en las dos bodegas. Una sola alerta con
   --    la suma de las dos.
-  ('a4000000-0000-0000-0000-000000000006', 'a2000000-0000-0000-0000-000000000001', 'a3000000-0000-0000-0000-000000000001', 'L-166-6', 'compra', 100, CURRENT_DATE - 100, CURRENT_DATE + 15),
+  ('a4000000-0000-0000-0000-000000000006', 'a2000000-0000-0000-0000-000000000001', 'a3000000-0000-0000-0000-000000000001', 'L-166-6', 'compra', 100, fn_hoy_guatemala() - 100, fn_hoy_guatemala() + 15),
   -- Los tres bordes de la ventana (issue #755). La condicion es `fecha_vencimiento <=
   -- CURRENT_DATE + 30`: el dia 30 entra y el 31 no. Hoy entra por partida doble: no ha vencido
-  -- (regla #597, un lote que vence hoy aun se entrega) y esta dentro de los 30 dias.
+  -- (regla #597, un lote que vence hoy aun se entrega) y esta dentro de los 30 dias. Desde la 00162
+-- la condicion es la misma con la ventana configurada y la fecha de Guatemala.
   -- 8. Vence HOY, con stock. SI genera alerta.
-  ('a4000000-0000-0000-0000-000000000008', 'a2000000-0000-0000-0000-000000000001', 'a3000000-0000-0000-0000-000000000001', 'L-166-8', 'compra', 100, CURRENT_DATE - 100, CURRENT_DATE),
+  ('a4000000-0000-0000-0000-000000000008', 'a2000000-0000-0000-0000-000000000001', 'a3000000-0000-0000-0000-000000000001', 'L-166-8', 'compra', 100, fn_hoy_guatemala() - 100, fn_hoy_guatemala()),
   -- 9. Vence en exactamente 30 dias, con stock. SI genera alerta: es el ultimo dia de la ventana.
-  ('a4000000-0000-0000-0000-000000000009', 'a2000000-0000-0000-0000-000000000001', 'a3000000-0000-0000-0000-000000000001', 'L-166-9', 'compra', 100, CURRENT_DATE - 100, CURRENT_DATE + 30),
+  ('a4000000-0000-0000-0000-000000000009', 'a2000000-0000-0000-0000-000000000001', 'a3000000-0000-0000-0000-000000000001', 'L-166-9', 'compra', 100, fn_hoy_guatemala() - 100, fn_hoy_guatemala() + 30),
   -- 10. Vence en 31 dias, con stock. NO genera alerta: el primer dia fuera de la ventana.
-  ('a4000000-0000-0000-0000-000000000010', 'a2000000-0000-0000-0000-000000000001', 'a3000000-0000-0000-0000-000000000001', 'L-166-10', 'compra', 100, CURRENT_DATE - 100, CURRENT_DATE + 31);
+  ('a4000000-0000-0000-0000-000000000010', 'a2000000-0000-0000-0000-000000000001', 'a3000000-0000-0000-0000-000000000001', 'L-166-10', 'compra', 100, fn_hoy_guatemala() - 100, fn_hoy_guatemala() + 31);
 
 INSERT INTO existencias (lote_id, bodega_id, cantidad_disponible) VALUES
   ('a4000000-0000-0000-0000-000000000001', 'a1000000-0000-0000-0000-000000000001', 5),

@@ -11,14 +11,20 @@ import { useCallback, useEffect, useState } from "react";
 
 import { listarProyectos } from "../proyectos/api.js";
 import { listarJornadas } from "../jornadas/api.js";
-import { listarUsuarios } from "../usuarios/api.js";
+import { listarNombresDePerfiles } from "../usuarios/api.js";
 import { nombreCompletoDe } from "../usuarios/useUsuariosListado.js";
-import { obtenerPresupuestosDeProyectos, obtenerPresupuestoSistema, listarGastos } from "./api.js";
+import {
+  listarCategoriasGasto,
+  listarGastos,
+  obtenerPresupuestosDeProyectos,
+  obtenerPresupuestoSistema,
+} from "./api.js";
 import { permisosDeGastos } from "./permisos.js";
+import { useCambiosEnTiempoReal } from "../hooks/useCambiosEnTiempoReal.js";
 
 const KPIS_VACIOS = { asignado: 0, gastado: 0, disponible: 0, pendiente: 0, porcentaje: 0 };
 
-const CATALOGOS_VACIOS = { proyectos: [], jornadas: [], perfiles: [] };
+const CATALOGOS_VACIOS = { proyectos: [], jornadas: [], perfiles: [], categorias: [] };
 
 /**
  * Catalogo `{ value, label }` para los `opcionesDesde` de FILTROS_GASTO/CAMPOS_GASTO
@@ -165,8 +171,19 @@ export function useEjecucionPresupuestal(rol) {
 
     // Dato secundario: si esta parte falla, los KPIs ya cargados se quedan y la pantalla no se
     // vacia por completo (mismo criterio que pacientesPorJornada en useJornadasKanban.js).
-    const [{ proyectos: filas }, { jornadas: filasDeJornada }, { usuarios: filasDePerfil }] =
-      await Promise.all([listarProyectos(), listarJornadas(), listarUsuarios({ estado: true })]);
+    const [
+      { proyectos: filas },
+      { jornadas: filasDeJornada },
+      { perfiles: filasDePerfil },
+      { categorias },
+    ] = await Promise.all([
+      listarProyectos(),
+      listarJornadas(),
+      // Nombres de todas las personas (00161): la columna Encargado los necesita aunque quien
+      // mira no tenga Colaboradores, y aunque la persona ya no este activa.
+      listarNombresDePerfiles(),
+      listarCategoriasGasto(),
+    ]);
 
     const { presupuestos: presupuestosPorProyecto } = await obtenerPresupuestosDeProyectos(
       filas.map((proyecto) => proyecto.id),
@@ -177,6 +194,7 @@ export function useEjecucionPresupuestal(rol) {
       proyectos: aOpciones(filas, (proyecto) => proyecto.nombre),
       jornadas: aOpciones(filasDeJornada, (jornada) => jornada.nombre),
       perfiles: aOpciones(filasDePerfil, nombreCompletoDe),
+      categorias,
     });
 
     const { gastos: filasDeGasto } = await listarGastos({ estado: filtroEstado || undefined });
@@ -198,6 +216,9 @@ export function useEjecucionPresupuestal(rol) {
   }, []);
 
   const permisos = permisosDeGastos(rol);
+
+  // Se recarga sola cuando cambian estas tablas (00163).
+  useCambiosEnTiempoReal(["gastos", "jornadas", "proyectos", "jornada_presupuesto_origen"], cargar);
 
   return {
     kpis,

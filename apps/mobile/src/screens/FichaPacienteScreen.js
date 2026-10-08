@@ -145,10 +145,11 @@ export default function FichaPacienteScreen({ route, navigation }) {
             pacienteId={paciente.id}
             paciente={paciente}
             rol={rol}
-            onAbrirConsulta={(visita) =>
+            onAbrirConsulta={(visita, consultaId = null) =>
               navigation.navigate(ROUTES.CONSULTA, {
                 pacienteId: paciente.id,
                 jornadaId: visita.jornadaId,
+                ...(consultaId ? { consultaId } : {}),
               })
             }
             onAbrirEntrega={(visita) =>

@@ -128,21 +128,24 @@ describe("permisos de proyectos", () => {
     }
   });
 
-  // 00154: un proyecto cancelado se consulta, no se edita, ni siquiera por la administradora.
-  it("sobre un proyecto cancelado nadie modifica nada; se sigue viendo y se puede crear otro", () => {
-    expect(permisosDeProyectos(ROLES.ADMINISTRADOR, { estado: "cancelado" })).toEqual({
-      ...NADA,
-      puedeVer: true,
-      puedeCrear: true,
-      puedeVerInsumosYGastos: true,
-      puedeVerHistorial: true,
-      puedeVerSeguimiento: true,
-    });
+  // 00154 y 00172: un proyecto cancelado o finalizado se consulta, no se edita, ni siquiera por la
+  // administradora.
+  it("sobre un proyecto cancelado o finalizado nadie modifica nada; se sigue viendo y se puede crear otro", () => {
+    for (const estado of ["cancelado", "finalizado"]) {
+      expect(permisosDeProyectos(ROLES.ADMINISTRADOR, { estado })).toEqual({
+        ...NADA,
+        puedeVer: true,
+        puedeCrear: true,
+        puedeVerInsumosYGastos: true,
+        puedeVerHistorial: true,
+        puedeVerSeguimiento: true,
+      });
+    }
   });
 
-  it("un proyecto en otro estado, o sin proyecto, no cambia lo que puede el rol", () => {
+  it("un proyecto abierto, o sin proyecto, no cambia lo que puede el rol", () => {
     const delRol = permisosDeProyectos(ROLES.ADMINISTRADOR);
-    for (const estado of ["planificado", "en curso", "finalizado"]) {
+    for (const estado of ["planificado", "en curso"]) {
       expect(permisosDeProyectos(ROLES.ADMINISTRADOR, { estado })).toEqual(delRol);
     }
     expect(delRol.puedeEditar).toBe(true);

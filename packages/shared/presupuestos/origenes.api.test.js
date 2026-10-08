@@ -105,6 +105,15 @@ describe("saldoDeDonacion", () => {
     ).toEqual({ total: 1000, asignado: 700.1, disponible: 299.9 });
   });
 
+  it("lo devuelto al liquidar el sobrante de una jornada vuelve a estar disponible (00160)", () => {
+    expect(
+      saldoDeDonacion({
+        donacion_detalle: [{ monto: "1000.00" }],
+        jornada_presupuesto_origen: [{ monto: "700.10", devuelto: "100.10" }],
+      }),
+    ).toEqual({ total: 1000, asignado: 600, disponible: 400 });
+  });
+
   it("una donacion sin asignar tiene todo disponible", () => {
     expect(saldoDeDonacion({ donacion_detalle: [{ monto: 50 }] }).disponible).toBe(50);
   });

@@ -46,6 +46,7 @@ const mockEstadoHook = {
   items: [],
   itemActual: ITEM_VACIO,
   setItemActual: vi.fn(),
+  renglonesDonacion: [],
   agregarItem: vi.fn(),
   eliminarItem: vi.fn(),
   guardarMovimiento: vi.fn(),

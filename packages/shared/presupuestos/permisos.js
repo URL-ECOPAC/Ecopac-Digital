@@ -75,6 +75,22 @@ export function puedeAprobarGasto(rol) {
 }
 
 /**
+ * Puede agregar una categoria al catalogo de gastos (categorias_de_gasto, 00158): la
+ * administradora y quien tenga presupuestos.registrar o presupuestos.aprobar. El personal de campo
+ * registra gastos con las categorias que ya existen.
+ *
+ * @param {string} rol
+ * @returns {boolean}
+ */
+export function puedeCrearCategoriaDeGasto(rol) {
+  return (
+    esAdministrador(rol) ||
+    tienePermisoFino(rol, "presupuestos.registrar") ||
+    tienePermisoFino(rol, "presupuestos.aprobar")
+  );
+}
+
+/**
  * Puede editar un gasto concreto.
  *
  * tr_bloquear_gasto_finalizado (00052) deja inmutable cualquier gasto que ya esta aprobado o

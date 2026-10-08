@@ -11,6 +11,7 @@ import { ROLES } from "../usuarios/roles.js";
 import {
   permisosDeReportes,
   puedeVerIndicadoresDeImpacto,
+  puedeVerReporteDeEnfermedades,
   puedeVerReporteDeInventario,
   puedeVerReporteDePacientes,
   puedeVerReporteDeVencimientos,
@@ -46,6 +47,7 @@ describe("permisos de reportes", () => {
       puedeVerReporteJornada: false,
       puedeVerReporteDeInventario: false,
       puedeVerReporteDeVencimientos: false,
+      puedeVerReporteDeEnfermedades: false,
     });
   });
 
@@ -62,6 +64,7 @@ describe("permisos de reportes", () => {
         puedeVerReporteJornada: true,
         puedeVerReporteDeInventario: true,
         puedeVerReporteDeVencimientos: true,
+        puedeVerReporteDeEnfermedades: true,
       });
     }
 
@@ -71,6 +74,7 @@ describe("permisos de reportes", () => {
       puedeVerReporteJornada: true,
       puedeVerReporteDeInventario: true,
       puedeVerReporteDeVencimientos: true,
+      puedeVerReporteDeEnfermedades: true,
     });
   });
 
@@ -89,6 +93,20 @@ describe("permisos de reportes", () => {
 
     it("no lo ve el voluntario", () => {
       expect(puedeVerReporteJornada(ROLES.VOLUNTARIO)).toBe(false);
+    });
+  });
+
+  // ISSUE #916: espejo de la guarda de fn_reporte_enfermedades (00177).
+  describe("reporte de enfermedades", () => {
+    it("lo ven administrador y los dos roles consultivos", () => {
+      for (const rol of [ROLES.ADMINISTRADOR, ROLES.JUNTA_DIRECTIVA, ROLES.SOCIO_FUNDADOR]) {
+        expect(puedeVerReporteDeEnfermedades(rol)).toBe(true);
+      }
+    });
+
+    it("no lo ven el medico ni el voluntario sin acceso a Reportes", () => {
+      expect(puedeVerReporteDeEnfermedades(ROLES.MEDICO)).toBe(false);
+      expect(puedeVerReporteDeEnfermedades(ROLES.VOLUNTARIO)).toBe(false);
     });
   });
 

@@ -626,10 +626,21 @@ El resultado se reporta en el resumen de la corrida.
 
 ### La programacion de las alertas de vencimiento (issue #167)
 
-`fn_generar_alertas_caducidad` (migracion 00088, redefinida por la 00129) genera una alerta
-pendiente por cada lote con existencia positiva que vence en 30 dias o menos **o que ya vencio**.
-Quien la invoca es la Edge Function `alertas-vencimiento`, y quien invoca a la funcion es el
-workflow del mismo nombre, todos los dias a las 06:00 UTC.
+`fn_generar_alertas_caducidad` (migracion 00088, redefinida por la 00129, la 00138 y la 00162)
+genera una alerta pendiente por cada lote con existencia positiva que vence dentro de la antelacion
+mas larga configurada **o que ya vencio**, y avisa a la administracion en cada etapa. Quien la
+invoca es la Edge Function `alertas-vencimiento`, y quien invoca a la funcion es el workflow del
+mismo nombre, todos los dias a las 06:00 UTC, que son las 00:00 de Guatemala.
+
+**Antelaciones configurables (issue #899, 00162).** La administracion elige en la web (Inventario >
+Alertas > Configurar avisos) de cero a cuatro antelaciones, entre 1 y 365 dias; por defecto 90. Se
+agregan de una en una segun se necesiten; sin ninguna solo se avisa el dia del vencimiento. El
+aviso del dia del vencimiento no se configura: siempre se envia. Cada vez que una alerta pendiente
+llega a una etapa mas cercana -una antelacion o el dia del vencimiento- se registra una fila en
+`avisos_caducidad` y esa fila genera la notificacion (buzon y correo). Una alerta nueva avisa solo
+su etapa actual, no todas las que ya dejo atras, y volver a correr la rutina no repite nada. Las
+fechas se calculan con la de Guatemala (`fn_hoy_guatemala`), no con `CURRENT_DATE`, que en la base
+es UTC. Una alerta pendiente cuyo lote se quedo sin existencia se cierra sola.
 
 **Por que tambien lo ya vencido (issue #838).** La 00088 solo tomaba lo que vence dentro de los
 proximos 30 dias, con un limite inferior en `CURRENT_DATE`. Eso dejaba permanentemente fuera a los
@@ -661,7 +672,7 @@ vencimientos y nadie lo hace, y la pantalla de alertas se ve igual de vacia cuan
 alertar que cuando la rutina no corrio.
 
 Volver a dispararlo a mano es seguro: `fn_generar_alertas_caducidad` es idempotente y no duplica
-alertas de un lote que ya tiene una pendiente.
+alertas de un lote que ya tiene una pendiente, ni avisos de una etapa ya avisada.
 
 ### Las notificaciones al administrador y su correo (issue #755)
 

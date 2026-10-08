@@ -3,7 +3,9 @@ import { describe, expect, it } from "vitest";
 import {
   anotarDisponibilidad,
   describirExistencia,
+  describirReparto,
   renglonIncompleto,
+  repartirEntreLotes,
 } from "./useGeneracionReceta.js";
 
 const CATALOGO = [
@@ -76,5 +78,85 @@ describe("renglonIncompleto", () => {
   it("rechaza cantidad cero o negativa", () => {
     expect(renglonIncompleto({ ...completo, cantidadEntregada: 0 })).toContain("mayor que cero");
     expect(renglonIncompleto({ ...completo, cantidadEntregada: -3 })).toContain("mayor que cero");
+  });
+});
+
+describe("repartirEntreLotes", () => {
+  // Ordenados por vencimiento, como los entrega consultarLotesDisponibles().
+  const LOTES = {
+    "m-1": [
+      { loteId: "l-1", bodegaId: "b-1", numeroLote: "LOT1", cantidadDisponible: 10 },
+      { loteId: "l-2", bodegaId: "b-1", numeroLote: "LOT2", cantidadDisponible: 300 },
+      { loteId: "l-3", bodegaId: "b-1", numeroLote: "LOT3", cantidadDisponible: 50 },
+    ],
+  };
+  const renglon = (cambios) => ({
+    clave: "r-1",
+    medicamentoId: "m-1",
+    loteId: "l-1",
+    bodegaId: "b-1",
+    cantidadEntregada: 20,
+    ...cambios,
+  });
+
+  it("si el lote elegido alcanza, todo sale de ahi", () => {
+    const { "r-1": reparto } = repartirEntreLotes([renglon({ cantidadEntregada: 8 })], LOTES);
+    expect(reparto.partes).toEqual([
+      { loteId: "l-1", bodegaId: "b-1", numeroLote: "LOT1", cantidad: 8 },
+    ]);
+    expect(reparto.faltante).toBe(0);
+  });
+
+  it("si no alcanza, pone lo que tiene y pasa al siguiente que vence", () => {
+    const { "r-1": reparto } = repartirEntreLotes([renglon()], LOTES);
+    expect(reparto.partes.map((parte) => [parte.numeroLote, parte.cantidad])).toEqual([
+      ["LOT1", 10],
+      ["LOT2", 10],
+    ]);
+  });
+
+  it("empieza por el lote elegido aunque no sea el primero en vencer", () => {
+    const { "r-1": reparto } = repartirEntreLotes(
+      [renglon({ loteId: "l-3", cantidadEntregada: 60 })],
+      LOTES,
+    );
+    expect(reparto.partes.map((parte) => [parte.numeroLote, parte.cantidad])).toEqual([
+      ["LOT3", 50],
+      ["LOT1", 10],
+    ]);
+  });
+
+  it("dos renglones del mismo medicamento no cuentan dos veces la misma existencia", () => {
+    const repartos = repartirEntreLotes(
+      [renglon({ cantidadEntregada: 6 }), renglon({ clave: "r-2", cantidadEntregada: 6 })],
+      LOTES,
+    );
+    expect(repartos["r-2"].partes.map((parte) => [parte.numeroLote, parte.cantidad])).toEqual([
+      ["LOT1", 4],
+      ["LOT2", 2],
+    ]);
+  });
+
+  it("lo que no cubre ningun lote queda como faltante", () => {
+    const { "r-1": reparto } = repartirEntreLotes([renglon({ cantidadEntregada: 400 })], LOTES);
+    expect(reparto.faltante).toBe(40);
+    expect(reparto.disponible).toBe(360);
+  });
+});
+
+describe("describirReparto", () => {
+  it("de un solo lote no hay nada que avisar", () => {
+    expect(describirReparto({ partes: [{ numeroLote: "LOT1", cantidad: 5 }] })).toBeNull();
+  });
+
+  it("de varios lotes dice cuanto sale de cada uno", () => {
+    expect(
+      describirReparto({
+        partes: [
+          { numeroLote: "LOT1", cantidad: 10 },
+          { numeroLote: "LOT2", cantidad: 10 },
+        ],
+      }),
+    ).toBe("El lote elegido no alcanza: se entregan 10 del lote LOT1 y 10 del lote LOT2.");
   });
 });

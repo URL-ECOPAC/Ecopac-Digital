@@ -44,8 +44,15 @@ describe("estadoDeLote", () => {
   it("a siete dias o menos es critico; entre ocho y treinta, por vencer", () => {
     expect(estadoDeLote(7, 10)).toBe(ESTADOS_DE_LOTE.CRITICO);
     expect(estadoDeLote(8, 10)).toBe(ESTADOS_DE_LOTE.POR_VENCER);
-    expect(estadoDeLote(30, 10)).toBe(ESTADOS_DE_LOTE.POR_VENCER);
-    expect(estadoDeLote(31, 10)).toBe(ESTADOS_DE_LOTE.DISPONIBLE);
+    expect(estadoDeLote(30, 10, 30)).toBe(ESTADOS_DE_LOTE.POR_VENCER);
+    expect(estadoDeLote(31, 10, 30)).toBe(ESTADOS_DE_LOTE.DISPONIBLE);
+  });
+
+  // Issue #899: el limite de "por vencer" es la ventana configurada; por defecto, 90 dias.
+  it("por vencer llega hasta la ventana de los avisos, por defecto 90 dias", () => {
+    expect(estadoDeLote(90, 10)).toBe(ESTADOS_DE_LOTE.POR_VENCER);
+    expect(estadoDeLote(91, 10)).toBe(ESTADOS_DE_LOTE.DISPONIBLE);
+    expect(estadoDeLote(45, 10, 60)).toBe(ESTADOS_DE_LOTE.POR_VENCER);
   });
 
   it("un lote sin fecha de vencimiento se juzga solo por su existencia", () => {

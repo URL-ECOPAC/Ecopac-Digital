@@ -25,30 +25,31 @@
 // `atenciones` directo, cuyo SELECT (00033) tampoco alcanza a junta directiva ni a socio fundador --
 // puedeVerAtenciones() de mas abajo gatea esa llamada tambien, por la misma razon.
 //
-// "Movimientos pendientes de validar" (criterio 2, segunda mitad) es lo unico que faltaba.
-// movimientos_inventario no tiene jornada_id (cuelga de bodega_id, ver movimientos.api.js:9-12): el
-// botiquin de una jornada es jornadas.botiquin_bodega_id (00036, nullable). listarMovimientos() ya
-// acepta filtrar por bodega_id (movimientos.api.js), asi que "pendientes del botiquin de esta
-// jornada" es ese filtro con estado 'pendiente', sin RPC ni tabla nueva. usePendientesValidacion.js
-// (#158) no se toca: cuenta pendientes globales, no por jornada, y ese archivo no es dueño de esa
-// distincion.
+// "Movimientos pendientes de validar" (criterio 2, segunda mitad): los pendientes de la bodega movil
+// de la jornada (jornadas.botiquin_bodega_id, obligatoria desde la 00178). listarMovimientos() ya
+// acepta filtrar por bodega_id (movimientos.api.js), asi que es ese filtro con estado pendiente, sin
+// RPC ni tabla nueva. usePendientesValidacion.js (#158) no se toca: cuenta pendientes globales.
+// movimientos_inventario.jornada_id (00178) solo marca la carga de la bodega, que nace aprobada, asi
+// que no sirve para esto.
 //
 // SELECT sobre movimientos_inventario esta abierto a cualquier sesion activa (politica "Sesion
 // activa lee movimientos_inventario", 00079:204-205: `USING (public.rol_actual() IS NOT NULL)`), a
 // diferencia de consultas/atenciones/recetas: no hace falta gatear este conteo por rol.
 //
+// Con la bodega principal (00181) no se cuentan: la principal es la de toda la organizacion y sus
+// pendientes no son de la jornada. El conteo queda en 0, como el de una jornada sin botiquin.
+//
 // "Del botiquin de esta jornada", no "de esta jornada" (a proposito, ver el texto que arma
-// DetalleJornadaPage.jsx con este numero): jornadas.botiquin_bodega_id NO tiene UNIQUE (00036), asi
-// que nada en el esquema impide que dos jornadas compartan bodega -- si eso pasara, el numero
-// incluiria movimientos de la otra jornada. En la practica esto no se puede probar hoy: campos.js
-// declara el campo `botiquinBodega` (CAMPOS_JORNADA) pero lo excluye a proposito de
-// IDS_CAMPOS_FORMULARIO_JORNADA (el subconjunto que arma ModalJornada.jsx, issue #179), asi que
-// ninguna pantalla del repo permite asignarle un botiquin a una jornada: botiquinBodegaId es null
-// para toda jornada creada desde la UI, y esta advertencia no tiene con que dispararse todavia.
-// Corregir eso es tocar el formulario de alta/edicion de jornada, fuera de la excepcion de alcance
-// de #183 (solo DetalleJornadaPage.jsx y la pagina del Kanban) -- queda reportado, no arreglado aca.
+// DetalleJornadaPage.jsx con este numero): jornadas.botiquin_bodega_id NO tiene UNIQUE, asi que dos
+// jornadas pueden compartir bodega, y entonces el numero incluye movimientos de la otra.
+//
+// "Citas pendientes" (issue #927, 00184): las creadas o en atencion. Al finalizar la jornada la base
+// las cancela con el motivo "No atendida al cerrar la jornada", y se avisa antes de confirmar. Quien
+// no ve citas (junta directiva, socios fundadores) recibe `null`, no un 0 que diria "ninguna".
 
 import { contarPacientesDeJornada } from "../atenciones/api.js";
+import { contarCitasPendientesDeJornada } from "../citas/api.js";
+import { puedeVerCitas } from "../citas/permisos.js";
 import { ESTADOS_MOVIMIENTO } from "../enums.js";
 import { listarMovimientos } from "../inventario/movimientos.api.js";
 import { contarConsultasDeJornada } from "../pacientes/consultas.api.js";
@@ -56,6 +57,37 @@ import { puedeVerHistorial as puedeVerDatosClinicos } from "../pacientes/permiso
 import { contarRecetasDeJornada } from "../pacientes/recetas.api.js";
 import { esAdministrador, ROLES } from "../usuarios/roles.js";
 import { contarAtencionesIncompletas } from "./api.js";
+import {
+  jornadaUsaBodegaPrincipal,
+  listarConsumoDeInsumosDeJornada,
+  resumirConsumoDeJornada,
+} from "./bodega.api.js";
+import { puedeVerInsumosDeJornada } from "./permisos.js";
+
+/**
+ * Lo que le queda a la jornada en su bodega movil al cerrarla (2A, issue #925): las unidades y su
+ * valor. Antes el cierre no lo mencionaba y la jornada se cerraba con el botiquin lleno sin que
+ * nadie lo notara. `null` si no aplica (bodega principal, sin bodega, rol que no ve insumos) o si
+ * no se pudo calcular: este dato nunca tumba el resto del resumen.
+ *
+ * @param {object} jornada
+ * @param {string} [rol]
+ * @returns {Promise<{ unidades: number, valor: number, lotesSinCosto: number }|null>}
+ */
+export async function obtenerInventarioQueQueda(jornada, rol) {
+  if (!jornada?.id || !jornada?.botiquinBodegaId || jornadaUsaBodegaPrincipal(jornada)) return null;
+  if (!puedeVerInsumosDeJornada(rol)) return null;
+
+  const { consumo, error } = await listarConsumoDeInsumosDeJornada(jornada.id);
+  if (error) return null;
+
+  const resumen = resumirConsumoDeJornada(consumo);
+  return {
+    unidades: consumo.reduce((total, fila) => total + Math.max(0, fila.queda), 0),
+    valor: resumen.valorQueda,
+    lotesSinCosto: consumo.filter((fila) => fila.queda > 0 && fila.costoUnitario === null).length,
+  };
+}
 
 /**
  * Puede ver cuantos pacientes tiene registrados una jornada.
@@ -81,8 +113,8 @@ const puedeVerAtencionesIncompletas = puedeVerDatosClinicos;
 /**
  * Cuenta los movimientos de inventario pendientes de validar contra el botiquin de una jornada.
  *
- * Una jornada sin botiquin asignado (botiquinBodegaId null -- hoy, todas: ver el encabezado de
- * este archivo) no tiene bodega que consultar: devuelve 0, no un error ni un guion, porque no hay
+ * Una jornada sin botiquin asignado (botiquinBodegaId null: solo las anteriores a la 00178) no
+ * tiene bodega que consultar: devuelve 0, no un error ni un guion, porque no hay
  * ningun movimiento que pudiera estar pendiente sin una bodega que los agrupe.
  *
  * @param {string|null|undefined} botiquinBodegaId
@@ -113,12 +145,14 @@ export async function contarMovimientosPendientesDelBotiquin(botiquinBodegaId) {
  * sin dejar de mostrar lo que si se pudo calcular. Mismo criterio que obtenerJornadasDePersona()
  * (api.js) usa para su propio Promise.all.
  *
- * @param {{ id: string, botiquinBodegaId?: string|null }} jornada
+ * @param {{ id: string, botiquinBodegaId?: string|null, botiquinBodega?: { esPrincipal?: boolean }|null }} jornada
  * @param {{ rol?: string }} [opciones]
  * @returns {Promise<{
  *   indicadores: { pacientesAtendidos: number|null, consultasRealizadas: number|null, tratamientosEntregados: number|null },
  *   atencionesIncompletas: number|null,
  *   movimientosPendientes: number,
+ *   citasPendientes: number|null,
+ *   inventarioQueQueda: { unidades: number, valor: number, lotesSinCosto: number }|null,
  *   error: object|null,
  * }>}
  */
@@ -134,6 +168,8 @@ export async function obtenerResumenCierre(jornada, { rol } = {}) {
       },
       atencionesIncompletas: null,
       movimientosPendientes: 0,
+      citasPendientes: null,
+      inventarioQueQueda: null,
       error: null,
     };
   }
@@ -146,12 +182,18 @@ export async function obtenerResumenCierre(jornada, { rol } = {}) {
     respuestaRecetas,
     respuestaIncompletas,
     respuestaPendientes,
+    respuestaCitas,
+    inventarioQueQueda,
   ] = await Promise.all([
     puedeVerAtenciones(rol) ? contarPacientesDeJornada(jornadaId) : sinDato,
     contarConsultasDeJornada(jornadaId, { rol }),
     contarRecetasDeJornada(jornadaId, { rol }),
     puedeVerAtencionesIncompletas(rol) ? contarAtencionesIncompletas(jornadaId) : sinDato,
-    contarMovimientosPendientesDelBotiquin(jornada?.botiquinBodegaId),
+    contarMovimientosPendientesDelBotiquin(
+      jornadaUsaBodegaPrincipal(jornada) ? null : jornada?.botiquinBodegaId,
+    ),
+    puedeVerCitas(rol) ? contarCitasPendientesDeJornada(jornadaId) : sinDato,
+    obtenerInventarioQueQueda(jornada, rol),
   ]);
 
   return {
@@ -162,12 +204,15 @@ export async function obtenerResumenCierre(jornada, { rol } = {}) {
     },
     atencionesIncompletas: respuestaIncompletas.cantidad,
     movimientosPendientes: respuestaPendientes.cantidad,
+    citasPendientes: respuestaCitas.cantidad,
+    inventarioQueQueda,
     error:
       respuestaPacientes.error ??
       respuestaConsultas.error ??
       respuestaRecetas.error ??
       respuestaIncompletas.error ??
       respuestaPendientes.error ??
+      respuestaCitas.error ??
       null,
   };
 }
@@ -187,9 +232,28 @@ export async function obtenerResumenCierre(jornada, { rol } = {}) {
  * "Advertir" nunca es "impedir" (criterio 8): esta funcion solo decide si se pinta el aviso, nunca
  * si el boton de confirmar se deshabilita.
  *
- * @param {{ atencionesIncompletas: number|null, movimientosPendientes: number }} resumen
+ * @param {{ atencionesIncompletas: number|null, movimientosPendientes: number,
+ *   citasPendientes?: number|null }} resumen
  * @returns {boolean}
  */
 export function hayAdvertenciasDeCierre(resumen) {
-  return (resumen?.atencionesIncompletas ?? 0) > 0 || (resumen?.movimientosPendientes ?? 0) > 0;
+  return (
+    (resumen?.atencionesIncompletas ?? 0) > 0 ||
+    (resumen?.movimientosPendientes ?? 0) > 0 ||
+    (resumen?.citasPendientes ?? 0) > 0 ||
+    (resumen?.inventarioQueQueda?.unidades ?? 0) > 0
+  );
+}
+
+/**
+ * El aviso de citas pendientes antes de cerrar la jornada (issue #927), o null si no hay.
+ *
+ * @param {number|null} cantidad
+ * @returns {string|null}
+ */
+export function mensajeDeCitasPendientesAlCerrar(cantidad) {
+  if (!cantidad || cantidad <= 0) return null;
+  return cantidad === 1
+    ? 'Hay 1 cita creada o en atención: al cerrar la jornada se cancelará como "No atendida al cerrar la jornada".'
+    : `Hay ${cantidad} citas creadas o en atención: al cerrar la jornada se cancelarán como "No atendida al cerrar la jornada".`;
 }

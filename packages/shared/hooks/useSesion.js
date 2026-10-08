@@ -38,6 +38,34 @@ async function resolverPerfilYAccesos(usuario) {
   return { ...evaluacion, accesos };
 }
 
+/**
+ * Esperas entre los reintentos de leer el perfil cuando el fallo es pasajero (issue #911).
+ *
+ * Al iniciar sesion, la primera lectura del perfil a veces fallaba -la red, o el token recien
+ * emitido todavia sin llegar a la consulta- y la pantalla se quedaba en "No se pudo confirmar tu
+ * rol" hasta recargar. Dos reintentos cortos lo resuelven sin que la persona note nada.
+ */
+const ESPERAS_DE_REINTENTO_MS = [400, 1200];
+
+/**
+ * resolverPerfilYAccesos() con reintentos ante un fallo pasajero. Un rechazo de la cuenta (perfil
+ * ausente o desactivado, requiereCerrarSesion) no se reintenta: no va a cambiar.
+ *
+ * @param {object} usuario
+ * @param {() => boolean} sigueVigente Falso si mientras se esperaba llego otra sesion: se deja de
+ *   reintentar, la respuesta ya no describiria la sesion actual.
+ */
+async function resolverConReintentos(usuario, sigueVigente) {
+  let resultado = await resolverPerfilYAccesos(usuario);
+  for (const espera of ESPERAS_DE_REINTENTO_MS) {
+    if (!resultado.error || requiereCerrarSesion(resultado.error) || !sigueVigente()) break;
+    await new Promise((resolver) => setTimeout(resolver, espera));
+    if (!sigueVigente()) break;
+    resultado = await resolverPerfilYAccesos(usuario);
+  }
+  return resultado;
+}
+
 /** Mismo contenido, aunque sean objetos distintos: evita redibujar la app entera por nada. */
 function mismoContenido(uno, otro) {
   return JSON.stringify(uno ?? null) === JSON.stringify(otro ?? null);
@@ -195,17 +223,25 @@ export function useSesion({ almacenamiento } = {}) {
         });
       }
 
-      const { perfil, accesos, error } = await resolverPerfilYAccesos(usuario);
+      const sigueVigente = () => activo.current && turno === resolucion.current;
+      const { perfil, accesos, error } = await resolverConReintentos(usuario, sigueVigente);
 
       // Llego otro evento mientras se leia: esta respuesta ya no describe la sesion actual.
-      if (!activo.current || turno !== resolucion.current) return;
+      if (!sigueVigente()) return;
 
       if (error) {
         if (!requiereCerrarSesion(error)) {
-          // Fallo transitorio leyendo el perfil (red, servidor): la sesion sigue siendo
-          // valida. Se conserva para que la aplicacion pueda reintentar, en vez de mandar al
-          // login a alguien que si tiene sesion.
-          setSesion({ usuario, perfil: null, cargando: false, error });
+          // Fallo transitorio leyendo el perfil (red, servidor), aun despues de reintentar: la
+          // sesion sigue siendo valida. Se conserva para que la aplicacion pueda reintentar, en
+          // vez de mandar al login a alguien que si tiene sesion. Si ya habia un perfil de este
+          // mismo usuario (una relectura al volver a la pestana), se queda: perderlo por un fallo
+          // de red dejaba la pantalla en "no se pudo confirmar tu rol" (issue #911).
+          setSesion((anterior) => ({
+            usuario,
+            perfil: anterior.perfil?.id === usuario.id ? anterior.perfil : null,
+            cargando: false,
+            error,
+          }));
           return;
         }
 
@@ -392,14 +428,19 @@ export function useSesion({ almacenamiento } = {}) {
     const cliente = obtenerSupabase();
     const usuarioActual = sesion.usuario;
     const turno = (resolucion.current += 1);
+    const sigueVigente = () => activo.current && turno === resolucion.current;
 
-    const { perfil, accesos, error } = await resolverPerfilYAccesos(usuarioActual);
+    // Sin perfil todavia (el "Reintentar" de la pantalla de acceso, issue #911), la ruta muestra
+    // "Comprobando tu sesion" mientras se lee, en vez del mismo error.
+    setSesion((anterior) => (anterior.perfil ? anterior : { ...anterior, cargando: true }));
 
-    if (!activo.current || turno !== resolucion.current) return;
+    const { perfil, accesos, error } = await resolverConReintentos(usuarioActual, sigueVigente);
+
+    if (!sigueVigente()) return;
 
     if (error) {
       if (!requiereCerrarSesion(error)) {
-        setSesion((anterior) => ({ ...anterior, error }));
+        setSesion((anterior) => ({ ...anterior, cargando: false, error }));
         return;
       }
 
@@ -412,8 +453,15 @@ export function useSesion({ almacenamiento } = {}) {
       return;
     }
 
+    sinSesionPublicada.current = false;
     fijarAccesoDeSesion({ rol: perfil.rol, ...accesos });
-    setSesion((anterior) => ({ ...anterior, usuario: usuarioActual, perfil, error: null }));
+    setSesion((anterior) => ({
+      ...anterior,
+      usuario: usuarioActual,
+      perfil,
+      cargando: false,
+      error: null,
+    }));
   }, [sesion.usuario, almacenamiento]);
 
   return {

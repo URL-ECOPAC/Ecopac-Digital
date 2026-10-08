@@ -27,6 +27,7 @@ const {
   sincronizarAlertas,
   accionesPermitidasParaAlerta,
   efectoDeAccionSobreElStock,
+  etiquetaAccionTomada,
 } = await import("./alertas.api.js");
 const { ACCIONES_DE_ALERTA } = await import("../enums.js");
 
@@ -438,5 +439,29 @@ describe("sincronizarAlertas", () => {
 
     expect(creadas).toBe(0);
     expect(error.codigo).toBe(CODIGOS_DE_ERROR_DE_SUPABASE.PERMISO_DENEGADO);
+  });
+});
+
+describe("etiquetaAccionTomada (issue #899)", () => {
+  it("una alerta cerrada por la rutina sin existencia lo dice", () => {
+    expect(etiquetaAccionTomada({ accion: null, cerradaSinExistencia: true })).toBe(
+      "Cierre automático (sin existencia)",
+    );
+  });
+
+  it("una sola accion usa su etiqueta, varias se desglosan con la bodega destino", () => {
+    expect(etiquetaAccionTomada({ accion: "donado" })).toBe("Donado");
+    expect(
+      etiquetaAccionTomada(
+        {
+          accion: null,
+          detalle: [
+            { accion: "descartado", cantidad: 3 },
+            { accion: "reubicado", cantidad: 2, bodegaDestinoId: "b-1" },
+          ],
+        },
+        [{ id: "b-1", nombre: "Bodega Norte" }],
+      ),
+    ).toBe("Descartado: 3, Reubicado: 2 a Bodega Norte");
   });
 });

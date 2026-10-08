@@ -60,6 +60,7 @@ const mockEstadoAlertas = {
   porVencer: [],
   vencidas: [],
   cantidadPendientes: 0,
+  textoSinPorVencer: "No hay lotes por vencer en los próximos 90 días",
   cargando: false,
   error: null,
   recargar: jest.fn(),
@@ -138,7 +139,10 @@ describe("InventarioResumenAlertasScreen", () => {
   it("sin alertas pendientes, cada seccion muestra su propio mensaje de vacio", async () => {
     pantalla();
 
-    expect(await screen.findByText("Ningún lote vence en los próximos 30 días.")).toBeTruthy();
+    // Issue #899: la ventana es la configurada, no un 30 escrito a mano.
+    expect(
+      await screen.findByText("No hay lotes por vencer en los próximos 90 días."),
+    ).toBeTruthy();
     expect(screen.getByText("No hay lotes vencidos.")).toBeTruthy();
   });
 

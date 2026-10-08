@@ -88,6 +88,8 @@ vi.mock("@ecopac/shared", async (importarOriginal) => ({
   // Solo para que la pestana de pacientes atendidos se pueda montar: su contenido tiene su propia
   // prueba (ReportePacientesPage.test.jsx). Aqui interesa que las pestanas sigan ahi.
   useReportePacientes: vi.fn(() => ({ tieneAcceso: false })),
+  // Igual: el reporte de enfermedades tiene su propia prueba (ReporteEnfermedadesPage.test.jsx).
+  useReporteEnfermedades: vi.fn(() => ({ tieneAcceso: false })),
 }));
 
 function pantalla(ruta = "/reportes") {
@@ -139,6 +141,18 @@ describe("ReportesPage", () => {
     pantalla();
 
     expect(screen.getByText("Inventario actual")).toBeInTheDocument();
+  });
+
+  // ISSUE #916: el reporte de enfermedades es una pestana con su propia direccion.
+  it("el reporte de enfermedades tiene su pestana y su ruta", () => {
+    pantalla("/reportes/enfermedades");
+
+    expect(screen.getByText("Enfermedades").closest("a")).toHaveClass("active");
+    expect(
+      screen.getByText(
+        "Solo administración y los roles consultivos consultan el reporte de enfermedades.",
+      ),
+    ).toBeInTheDocument();
   });
 
   it("mientras carga los vencimientos, muestra el estado de carga", () => {

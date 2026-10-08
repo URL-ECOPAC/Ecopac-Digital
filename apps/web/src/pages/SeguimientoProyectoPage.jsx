@@ -152,7 +152,7 @@ export default function SeguimientoProyectoPage({ proyectoId, proyectoInicial, r
         )}
       </PageHeader>
 
-      {/* 00154: un proyecto cancelado se consulta, no se edita. */}
+      {/* 00154 y 00172: un proyecto cancelado o finalizado se consulta, no se edita. */}
       {proyectoCancelado && (
         <Alert variant="secondary" className="mb-4">
           {MENSAJE_PROYECTO_CANCELADO}

@@ -33,6 +33,11 @@ import {
   normalizarError,
 } from "../api/errores-de-supabase.js";
 import { esAdministrador } from "../usuarios/roles.js";
+import {
+  listarConsumoDeInsumosDeJornada,
+  mensajeDeInventarioCargado,
+  tieneInventarioCargado,
+} from "./bodega.api.js";
 import { puedeVerHistorialJornada } from "./permisos.js";
 import { ESTADOS_JORNADA } from "../enums.js";
 import {
@@ -45,10 +50,12 @@ import {
 // Las columnas se enumeran en lugar de pedir "*" para que una columna nueva en jornadas no
 // empiece a viajar sola hasta el cliente.
 //
-// comunidad, responsable y botiquinBodega se piden embebidos (comunidades.nombre, perfiles.nombres y
-// apellidos, bodegas.nombre) para que la pantalla pinte el nombre sin una segunda consulta. Si RLS
-// no deja ver el perfil, la comunidad o la bodega, el objeto embebido llega en null y la pantalla
-// cae a su respaldo; el id propio (comunidadId, responsableId, botiquinBodegaId) siempre viaja.
+// comunidad, responsable y botiquinBodega se piden embebidos (comunidades.nombre, nombres y
+// apellidos, bodegas.nombre) para que la pantalla pinte el nombre sin una segunda consulta. Los
+// nombres de personas salen de la vista nombres_de_perfiles (00161), que los ve toda persona
+// activa: desde `perfiles` un colaborador recibia al responsable y al equipo en null. Si RLS no
+// deja ver la comunidad o la bodega, el objeto llega en null y la pantalla cae a su respaldo; el id
+// propio (comunidadId, responsableId, botiquinBodegaId) siempre viaja.
 const COLUMNAS_DE_JORNADA = [
   "id",
   "nombre",
@@ -66,8 +73,13 @@ const COLUMNAS_DE_JORNADA = [
   "createdAt:created_at",
   "updatedAt:updated_at",
   "comunidad:comunidades(nombre)",
-  "responsable:perfiles(nombres, apellidos)",
-  "botiquinBodega:bodegas(nombre)",
+  "responsable:nombres_de_perfiles(nombres, apellidos)",
+  // esPrincipal: la jornada entrega directo de la bodega principal (00181), sin carga ni devolucion.
+  "botiquinBodega:bodegas(nombre, esPrincipal:es_principal)",
+  // El detalle dice a que proyecto pertenece. Si RLS no deja leer el proyecto, llega en null. El
+  // estado dice si todavia se puede cargar su bodega (un proyecto cancelado o finalizado no se
+  // modifica, 00154/00172).
+  "proyecto:proyectos(nombre, estado)",
 ].join(", ");
 
 // Personal asignado a una jornada, con el nombre del perfil embebido para el detalle.
@@ -79,7 +91,7 @@ const COLUMNAS_DE_PERSONAL = [
   "horaFin:hora_fin",
   "responsabilidad",
   "asistio",
-  "perfil:perfiles(nombres, apellidos)",
+  "perfil:nombres_de_perfiles(nombres, apellidos)",
 ].join(", ");
 
 // Contadores de atenciones de la jornada, desde vista_reporte_impacto (00027).
@@ -97,7 +109,7 @@ const COLUMNAS_DE_HISTORIAL = [
   "estadoAnterior:estado_anterior",
   "estadoNuevo:estado_nuevo",
   "createdAt:created_at",
-  "cambiadoPor:perfiles(nombres, apellidos)",
+  "cambiadoPor:nombres_de_perfiles(nombres, apellidos)",
 ].join(", ");
 
 /**
@@ -403,7 +415,7 @@ export async function actualizarJornada(id, datos, { rol } = {}) {
 
     const { data: filaActual, error: errorDeLectura } = await supabase
       .from("jornadas")
-      .select("estado")
+      .select("estado, botiquinBodegaId:botiquin_bodega_id, botiquinBodega:bodegas(nombre)")
       .eq("id", id)
       .maybeSingle();
 
@@ -420,6 +432,26 @@ export async function actualizarJornada(id, datos, { rol } = {}) {
       };
     }
 
+    // 00181: no se cambia de bodega mientras la anterior conserve lo que se cargo para esta
+    // jornada. La base lo rechaza igual (trg_jornadas_sin_inventario_cargado_al_cambiar_bodega),
+    // pero su mensaje no llega a la pantalla.
+    const cambiaDeBodega =
+      fila.botiquin_bodega_id !== undefined &&
+      filaActual?.botiquinBodegaId &&
+      fila.botiquin_bodega_id !== filaActual.botiquinBodegaId;
+    if (cambiaDeBodega) {
+      const { consumo } = await listarConsumoDeInsumosDeJornada(id);
+      if (tieneInventarioCargado(consumo)) {
+        return {
+          jornada: null,
+          error: {
+            ...construirError(CODIGOS_DE_ERROR_DE_SUPABASE.CHECK),
+            mensaje: mensajeDeInventarioCargado(filaActual.botiquinBodega?.nombre),
+          },
+        };
+      }
+    }
+
     const { data, error } = await supabase
       .from("jornadas")
       .update(fila)
@@ -432,6 +464,19 @@ export async function actualizarJornada(id, datos, { rol } = {}) {
   } catch (error) {
     return { jornada: null, error: normalizarError(error) };
   }
+}
+
+/**
+ * Por que no se puede usar una bodega movil que ya esta en otra jornada en curso (00179).
+ *
+ * @param {string} otraJornada Nombre de la jornada que la tiene.
+ * @returns {string}
+ */
+export function mensajeDeBodegaOcupada(otraJornada) {
+  return (
+    `La bodega móvil ya está en la jornada «${otraJornada}», que sigue en curso. ` +
+    "Finalízala o elige otra bodega para esta jornada."
+  );
 }
 
 /**
@@ -461,7 +506,9 @@ export async function cambiarEstadoJornada(id, nuevoEstado, { rol } = {}) {
 
     const { data: filaActual, error: errorDeLectura } = await supabase
       .from("jornadas")
-      .select("estado")
+      .select(
+        "estado, botiquinBodegaId:botiquin_bodega_id, botiquinBodega:bodegas(esPrincipal:es_principal)",
+      )
       .eq("id", id)
       .maybeSingle();
 
@@ -480,6 +527,33 @@ export async function cambiarEstadoJornada(id, nuevoEstado, { rol } = {}) {
         jornada: null,
         error: { ...construirError(CODIGOS_DE_ERROR_DE_SUPABASE.CHECK), mensaje: errores.estado },
       };
+    }
+
+    // 00179: la bodega movil no esta en dos jornadas en curso. La base lo rechaza igual, pero su
+    // mensaje no llega a la pantalla; aqui se dice cual es la otra jornada. La principal no se
+    // ocupa: varias jornadas en curso pueden usarla (00181).
+    if (
+      nuevoEstado === ESTADOS_JORNADA.EN_CURSO &&
+      filaActual.botiquinBodegaId &&
+      !filaActual.botiquinBodega?.esPrincipal
+    ) {
+      const { data: otra } = await supabase
+        .from("jornadas")
+        .select("nombre")
+        .eq("botiquin_bodega_id", filaActual.botiquinBodegaId)
+        .eq("estado", ESTADOS_JORNADA.EN_CURSO)
+        .neq("id", id)
+        .limit(1)
+        .maybeSingle();
+      if (otra) {
+        return {
+          jornada: null,
+          error: {
+            ...construirError(CODIGOS_DE_ERROR_DE_SUPABASE.CHECK),
+            mensaje: mensajeDeBodegaOcupada(otra.nombre),
+          },
+        };
+      }
     }
 
     const { data, error } = await supabase

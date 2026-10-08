@@ -99,7 +99,8 @@ export default function ModalAsignarPersonal({
             onChange={(evento) => setBusqueda(evento.target.value)}
           />
           <Selector
-            label="Rol (opcional)"
+            label="Rol"
+            requerido={false}
             value={rolFiltro}
             options={OPCIONES_ROL}
             onSelect={setRolFiltro}
@@ -189,6 +190,7 @@ export default function ModalAsignarPersonal({
               <Selector
                 key={campo.id}
                 label={campo.label}
+                requerido={campo.validacion?.requerido}
                 value={valores[campo.id]}
                 options={campo.opciones}
                 onSelect={(valor) => setCampo(campo.id, valor)}
@@ -199,6 +201,7 @@ export default function ModalAsignarPersonal({
               <TextField
                 key={campo.id}
                 label={campo.label}
+                requerido={campo.validacion?.requerido}
                 type={TIPO_DE_INPUT[campo.tipo] ?? "text"}
                 value={valores[campo.id] ?? ""}
                 onChange={(evento) => setCampo(campo.id, evento.target.value)}

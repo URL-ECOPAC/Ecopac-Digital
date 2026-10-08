@@ -81,11 +81,49 @@ const mockEstadoCierre = {
   errorCierre: null,
 };
 
+const mockEstadoGastos = {
+  puedeRegistrar: true,
+  estadoInicial: "aprobado",
+  columnas: [
+    { id: "concepto", label: "Concepto", tipo: "texto", principal: true },
+    { id: "monto", label: "Monto", tipo: "moneda" },
+  ],
+  catalogos: { perfiles: [] },
+  gastos: [{ id: "g-1", concepto: "Transporte del equipo", monto: 350, estado: "aprobado" }],
+  resumen: { asignado: 5000, aprobado: 350, pendiente: 150, disponible: 4500 },
+  cargando: false,
+  error: null,
+  recargar: vi.fn(),
+};
+
 vi.mock("@ecopac/shared", async (importarOriginal) => ({
   ...(await importarOriginal()),
   useDetalleJornada: vi.fn(() => mockEstadoDetalle),
+  useGastosDeJornada: vi.fn(() => mockEstadoGastos),
   useCuadroTurnos: vi.fn(() => mockEstadoCuadroTurnos),
   useResumenCierreJornada: vi.fn(() => mockEstadoCierre),
+  // La seccion de sobrante (00160) tiene su propia prueba (SobranteDeJornada.test.jsx): aqui solo
+  // importa que aparezca con la jornada finalizada.
+  useSobranteDeJornada: vi.fn(({ jornada }) => ({
+    visible: jornada?.estado === "finalizada",
+    puedeLiquidar: true,
+    cargando: false,
+    error: null,
+    filas: [],
+    liquidados: [],
+    totalSobrante: 0,
+    hayGastosPendientes: false,
+    jornadasDestino: [],
+    opcionesDeDestino: () => [],
+    decisiones: {},
+    errores: {},
+    setDestino: vi.fn(),
+    setJornadaDestino: vi.fn(),
+    liquidar: vi.fn(),
+    liquidando: false,
+    errorAlLiquidar: null,
+    recargar: vi.fn(),
+  })),
 }));
 
 const { useDetalleJornada, useResumenCierreJornada } = await import("@ecopac/shared");
@@ -105,6 +143,7 @@ function irAPestaniaCierre() {
 describe("DetalleJornadaPage", () => {
   afterEach(() => {
     mockEstadoDetalle.jornada = JORNADA_EN_CURSO;
+    mockEstadoDetalle.destinos = ["finalizada"];
     mockEstadoDetalle.cargando = false;
     mockEstadoDetalle.error = null;
     mockEstadoCierre.resumen = {
@@ -220,6 +259,21 @@ describe("DetalleJornadaPage", () => {
     expect(screen.queryByText("Confirmar cierre")).not.toBeInTheDocument();
   });
 
+  it("una jornada finalizada muestra en Cierre el sobrante del presupuesto (00160)", () => {
+    mockEstadoDetalle.jornada = { ...JORNADA_EN_CURSO, estado: "finalizada" };
+    pantalla();
+    irAPestaniaCierre();
+
+    expect(screen.getByText("Sobrante del presupuesto")).toBeInTheDocument();
+  });
+
+  it("una jornada en curso todavia no muestra el sobrante", () => {
+    pantalla();
+    irAPestaniaCierre();
+
+    expect(screen.queryByText("Sobrante del presupuesto")).not.toBeInTheDocument();
+  });
+
   // Camino de error, carga (issue #759/#778): si la jornada no carga, se muestra el error con
   // boton de reintentar.
   it("camino de error: si la jornada no carga, muestra el error con boton de reintentar", () => {
@@ -241,5 +295,71 @@ describe("DetalleJornadaPage", () => {
     irAPestaniaCierre();
 
     expect(screen.getByText("No se pudo confirmar el cierre de la jornada.")).toBeInTheDocument();
+  });
+
+  describe("jornada finalizada: solo consulta", () => {
+    function finalizada() {
+      mockEstadoDetalle.jornada = { ...JORNADA_EN_CURSO, estado: "finalizada" };
+      mockEstadoDetalle.destinos = ["en curso"];
+    }
+
+    it("el resumen ya no ofrece Atras y deja Editar jornada deshabilitado", () => {
+      finalizada();
+      pantalla();
+
+      expect(screen.queryByRole("button", { name: /Atrás/ })).not.toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /Editar jornada/ })).toBeDisabled();
+    });
+
+    it("en Equipo, Asignar personal queda deshabilitado", () => {
+      finalizada();
+      pantalla();
+      fireEvent.click(screen.getByText("Equipo"));
+
+      expect(screen.getByRole("button", { name: /Asignar personal/ })).toBeDisabled();
+    });
+
+    it("una jornada en curso sigue con Editar jornada y Asignar personal habilitados", () => {
+      pantalla();
+      expect(screen.getByRole("button", { name: /Editar jornada/ })).toBeEnabled();
+
+      fireEvent.click(screen.getByText("Equipo"));
+      expect(screen.getByRole("button", { name: /Asignar personal/ })).toBeEnabled();
+    });
+  });
+
+  describe("pestaña Gastos", () => {
+    it("muestra los gastos de la jornada y como van contra el presupuesto", () => {
+      pantalla();
+      fireEvent.click(screen.getByText("Gastos"));
+
+      expect(screen.getByText("Transporte del equipo")).toBeInTheDocument();
+      expect(screen.getByText("Gastado")).toBeInTheDocument();
+      expect(screen.getByText("Por aprobar")).toBeInTheDocument();
+      expect(screen.getByText("Disponible")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /Registrar gasto/ })).toBeEnabled();
+    });
+
+    it("con la jornada finalizada ya no se registran gastos (00159)", () => {
+      mockEstadoDetalle.jornada = { ...JORNADA_EN_CURSO, estado: "finalizada" };
+      pantalla();
+      fireEvent.click(screen.getByText("Gastos"));
+
+      expect(screen.getByText("Transporte del equipo")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /Registrar gasto/ })).toBeDisabled();
+    });
+  });
+
+  it("el responsable de la jornada aparece en Equipo aunque no tenga turno", () => {
+    mockEstadoDetalle.jornada = {
+      ...JORNADA_EN_CURSO,
+      responsableId: "perfil-responsable",
+      responsable: { nombres: "Ana", apellidos: "Perez" },
+    };
+    pantalla();
+    fireEvent.click(screen.getByText("Equipo"));
+
+    expect(screen.getByText("Ana Perez")).toBeInTheDocument();
+    expect(screen.getByText("Responsable de la jornada")).toBeInTheDocument();
   });
 });

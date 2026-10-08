@@ -29,6 +29,8 @@ const COLUMNAS_DEL_PROVEEDOR = [
   "nombre",
   "contacto",
   "tipo",
+  // 00175: el donante del que sale el proveedor; null en uno comercial.
+  "donanteId:donante_id",
   "createdAt:created_at",
   "updatedAt:updated_at",
 ].join(", ");
@@ -56,6 +58,7 @@ function aProveedor(fila) {
     nombre: fila.nombre,
     contacto: fila.contacto,
     tipo: fila.tipo,
+    donanteId: fila.donanteId ?? null,
     createdAt: fila.createdAt,
     updatedAt: fila.updatedAt,
   };
@@ -147,42 +150,36 @@ export async function listarProveedores({ busqueda, tipo } = {}) {
   }
 }
 
-function normalizarNombre(texto) {
-  return String(texto ?? "")
-    .trim()
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "");
-}
-
 /**
- * Resuelve el proveedor que corresponde a un nombre dado -tipicamente el de un donante ya
- * elegido en otra pantalla-, creandolo si todavia no existe (issue #756: `proveedores` no
- * enlaza con `donantes`, son dos catalogos distintos, asi que pedir el ingreso de una donacion
- * significaba escribir el mismo nombre dos veces sin ninguna garantia de que coincidiera).
+ * El proveedor de un donante (00175): el que la base crea y mantiene con su mismo nombre y su
+ * contacto. Es el que va como procedencia del ingreso a inventario de una donacion.
  *
- * Busca por coincidencia exacta -sin acentos ni mayusculas- contra CUALQUIER proveedor, no solo
- * los de `tipo`: `proveedores.nombre` es UNIQUE (00017), asi que crear uno nuevo con un nombre
- * que ya existe con otro tipo fallaria contra esa restriccion.
+ * Reemplaza a obtenerOCrearProveedorPorNombre() (issue #756), que buscaba un proveedor con el mismo
+ * nombre y, si no lo encontraba, creaba otro: los dos catalogos se iban separando, y un nombre
+ * escrito distinto dejaba un proveedor donante que no era ningun donante (issue #911). Ahora el
+ * proveedor existe desde que se registra el donante, y se busca por su enlace, no por el nombre.
  *
- * @param {string} nombre
- * @param {string} tipo Tipo con el que se crea el proveedor si no existe (tipo_proveedor).
+ * `proveedorId: null` sin error es un resultado valido: un donante que RLS no deja ver, o un id
+ * que no existe.
+ *
+ * @param {string} donanteId UUID del donante.
  * @returns {Promise<{ proveedorId: string|null, error: object|null }>}
  */
-export async function obtenerOCrearProveedorPorNombre(nombre, tipo) {
-  if (!nombre?.trim()) return { proveedorId: null, error: null };
+export async function obtenerProveedorDeDonante(donanteId) {
+  if (!donanteId) return { proveedorId: null, error: null };
 
-  const { proveedores, error: errorBusqueda } = await listarProveedores({ busqueda: nombre });
-  if (errorBusqueda) return { proveedorId: null, error: errorBusqueda };
+  try {
+    const { data, error } = await obtenerSupabase()
+      .from("proveedores")
+      .select("id")
+      .eq("donante_id", donanteId)
+      .maybeSingle();
 
-  const buscado = normalizarNombre(nombre);
-  const existente = proveedores.find((proveedor) => normalizarNombre(proveedor.nombre) === buscado);
-  if (existente) return { proveedorId: existente.id, error: null };
-
-  const { proveedor, error: errorCreacion } = await registrarProveedor({ nombre, tipo });
-  if (errorCreacion) return { proveedorId: null, error: errorCreacion };
-
-  return { proveedorId: proveedor.id, error: null };
+    if (error) return { proveedorId: null, error: normalizarError(error) };
+    return { proveedorId: data?.id ?? null, error: null };
+  } catch (error) {
+    return { proveedorId: null, error: normalizarError(error) };
+  }
 }
 
 /**

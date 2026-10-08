@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { contarJornadasPorPerfil, listarCatalogoEspecialidades, listarUsuarios } from "./api.js";
 import { ESTADOS_USUARIO, OPCIONES_ROL } from "./campos.js";
 import { FILTROS_USUARIO_VACIOS, hayFiltrosDeUsuario } from "./filtros.js";
+import { useCambiosEnTiempoReal } from "../hooks/useCambiosEnTiempoReal.js";
 
 export const USUARIOS_POR_PAGINA = 20;
 
@@ -15,7 +16,9 @@ export const USUARIOS_POR_PAGINA = 20;
  * @returns {string}
  */
 export function nombreCompletoDe(perfil = {}) {
-  return [perfil.nombres, perfil.apellidos].filter(Boolean).join(" ").trim();
+  // `perfil` llega en null cuando el embebido no trajo nada: el valor por defecto solo cubre
+  // undefined, y sin el ?. imprimir el cuadro de turnos rompia la pantalla.
+  return [perfil?.nombres, perfil?.apellidos].filter(Boolean).join(" ").trim();
 }
 
 /**
@@ -139,6 +142,9 @@ export function useUsuariosListado({ porPagina = USUARIOS_POR_PAGINA, rol } = {}
   );
 
   const paginas = calcularPaginas(total, porPagina);
+
+  // Se recarga sola cuando cambian estas tablas (00163).
+  useCambiosEnTiempoReal(["perfiles"], cargar);
 
   return {
     filas,

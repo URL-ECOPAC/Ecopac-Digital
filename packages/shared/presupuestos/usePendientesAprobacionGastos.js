@@ -11,10 +11,11 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { debeRecargarTrasAccion } from "../inventario/usePendientesValidacion.js";
-import { listarUsuarios } from "../usuarios/api.js";
+import { listarNombresDePerfiles } from "../usuarios/api.js";
 import { nombreCompletoDe } from "../usuarios/useUsuariosListado.js";
 import { aprobarGasto, rechazarGasto } from "./aprobacionGastosApi.js";
 import { listarGastos } from "./api.js";
+import { useCambiosEnTiempoReal } from "../hooks/useCambiosEnTiempoReal.js";
 
 function aOpciones(filas, etiquetaDe) {
   return (filas ?? []).map((fila) => ({ value: fila.id, label: etiquetaDe(fila) }));
@@ -53,8 +54,9 @@ export function usePendientesAprobacionGastos({ usuarioId } = {}) {
   // (criterio 1). Se carga una sola vez: no cambia mientras la bandeja esta abierta.
   useEffect(() => {
     let vigente = true;
-    listarUsuarios({ estado: true }).then(({ usuarios }) => {
-      if (vigente) setPerfiles(aOpciones(usuarios, nombreCompletoDe));
+    // nombres_de_perfiles (00161): quien aprueba por delegacion no lee perfiles.
+    listarNombresDePerfiles().then(({ perfiles: filas }) => {
+      if (vigente) setPerfiles(aOpciones(filas, nombreCompletoDe));
     });
     return () => {
       vigente = false;
@@ -84,6 +86,9 @@ export function usePendientesAprobacionGastos({ usuarioId } = {}) {
     },
     [usuarioId, consultar],
   );
+
+  // Se recarga sola cuando cambian estas tablas (00163).
+  useCambiosEnTiempoReal(["gastos"], recargar);
 
   return {
     pendientes,

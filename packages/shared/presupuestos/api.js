@@ -1,5 +1,9 @@
 import { obtenerSupabase } from "../api/cliente.js";
-import { normalizarError } from "../api/errores-de-supabase.js";
+import {
+  CODIGOS_DE_ERROR_DE_SUPABASE,
+  construirError,
+  normalizarError,
+} from "../api/errores-de-supabase.js";
 import { aCadenaFechaLocal } from "../formato/fechas.js";
 const PRESUPUESTO_VACIO = {
   asignado: 0,
@@ -261,27 +265,55 @@ export async function editarGasto(idGasto, datosGasto) {
 }
 
 /**
- * Categorias de gasto que ya aparecen en `gastos`, como opciones de selector.
+ * El catalogo de categorias de gasto (categorias_de_gasto, 00158), por nombre, como opciones de
+ * selector. `gastos.categoria` guarda el nombre, asi que el valor de cada opcion es el nombre.
  *
  * @returns {Promise<{ categorias: { value: string, label: string }[], error: object|null }>}
  */
 export async function listarCategoriasGasto() {
   try {
     const { data, error } = await obtenerSupabase()
-      .from("gastos")
-      .select("categoria")
-      .not("categoria", "is", null)
-      .order("categoria", { ascending: true });
+      .from("categorias_de_gasto")
+      .select("nombre")
+      .order("nombre", { ascending: true });
 
-    if (error) {
-      return { categorias: [], error };
-    }
-
-    const unicas = [...new Set(data.map((fila) => fila.categoria))];
-    const opciones = unicas.map((nombre) => ({ value: nombre, label: nombre }));
-    return { categorias: opciones, error: null };
+    if (error) return { categorias: [], error: normalizarError(error) };
+    return {
+      categorias: (data ?? []).map((fila) => ({ value: fila.nombre, label: fila.nombre })),
+      error: null,
+    };
   } catch (error) {
-    return { categorias: [], error };
+    return { categorias: [], error: normalizarError(error) };
+  }
+}
+
+/**
+ * Agrega una categoria al catalogo (00158). El nombre no se repite ignorando mayusculas
+ * (uq_categorias_de_gasto_nombre): repetirlo llega como violacion de unicidad.
+ *
+ * @param {string} nombre
+ * @returns {Promise<{ categoria: { value: string, label: string }|null, error: object|null }>}
+ */
+export async function crearCategoriaDeGasto(nombre) {
+  const limpio = typeof nombre === "string" ? nombre.trim() : "";
+  if (!limpio) {
+    return {
+      categoria: null,
+      error: construirError(CODIGOS_DE_ERROR_DE_SUPABASE.CAMPO_REQUERIDO),
+    };
+  }
+
+  try {
+    const { data, error } = await obtenerSupabase()
+      .from("categorias_de_gasto")
+      .insert({ nombre: limpio })
+      .select("nombre")
+      .single();
+
+    if (error) return { categoria: null, error: normalizarError(error) };
+    return { categoria: { value: data.nombre, label: data.nombre }, error: null };
+  } catch (error) {
+    return { categoria: null, error: normalizarError(error) };
   }
 }
 

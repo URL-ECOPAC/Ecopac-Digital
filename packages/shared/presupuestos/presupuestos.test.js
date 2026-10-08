@@ -10,7 +10,7 @@
 import { describe, expect, it } from "vitest";
 
 import { TIPOS_DE_CAMPO, TIPOS_DE_FILTRO } from "../descriptores.js";
-import { CATEGORIAS_DE_GASTO, ESTADOS_DE_GASTO } from "../enums.js";
+import { ESTADOS_DE_GASTO } from "../enums.js";
 import { CAMPOS_FICHA_GASTO, CAMPOS_GASTO, COLUMNAS_GASTO, FILTROS_GASTO } from "./index.js";
 
 // Columnas de la tabla gastos (00025). Un descriptor cuyo id no este aqui apunta a nada.
@@ -136,17 +136,6 @@ describe("FILTROS_GASTO", () => {
 });
 
 describe("valores de enum del modulo", () => {
-  it("CATEGORIAS_DE_GASTO replica el enum categoria_gasto de la 00025", () => {
-    expect(Object.values(CATEGORIAS_DE_GASTO)).toEqual([
-      "Medicamentos",
-      "Logistica",
-      "Diagnostico",
-      "Honorarios",
-      "Educacion",
-      "Infraestructura",
-    ]);
-  });
-
   it("ESTADOS_DE_GASTO usa los valores de estado_gasto (00089)", () => {
     expect(Object.values(ESTADOS_DE_GASTO)).toEqual(["pendiente", "aprobado", "rechazado"]);
   });

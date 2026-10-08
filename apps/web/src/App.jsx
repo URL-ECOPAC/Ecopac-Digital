@@ -41,6 +41,9 @@ const PacientesCronicosPage = lazy(() => import("./pages/PacientesCronicosPage")
 const CatalogoDiagnosticosPage = lazy(() => import("./pages/CatalogoDiagnosticosPage"));
 const CatalogoCondicionesPage = lazy(() => import("./pages/CatalogoCondicionesPage"));
 const CatalogoComunidadesPage = lazy(() => import("./pages/CatalogoComunidadesPage"));
+const CatalogoAreasPage = lazy(() => import("./pages/CatalogoAreasPage"));
+const CatalogoClinicasPage = lazy(() => import("./pages/CatalogoClinicasPage"));
+const AgendaCitasPage = lazy(() => import("./pages/AgendaCitasPage"));
 const PosiblesDuplicadosPage = lazy(() => import("./pages/PosiblesDuplicadosPage"));
 const DonacionesPage = lazy(() => import("./pages/DonacionesPage"));
 const DonantesPage = lazy(() => import("./pages/DonantesPage"));
@@ -48,6 +51,7 @@ const RegistroDonacionPage = lazy(() => import("./pages/RegistroDonacionPage"));
 const HistorialDonacionesPage = lazy(() => import("./pages/HistorialDonacionesPage"));
 const ConstanciaDonacionPage = lazy(() => import("./pages/ConstanciaDonacionPage"));
 const InventarioPage = lazy(() => import("./pages/InventarioPage"));
+const AvisosVencimientoPage = lazy(() => import("./pages/AvisosVencimientoPage"));
 const PresupuestosPage = lazy(() => import("./pages/PresupuestosPage"));
 const ProyectosSocialesPage = lazy(() => import("./pages/ProyectosSocialesPage"));
 const SeguimientoProyectoPage = lazy(() => import("./pages/SeguimientoProyectoPage"));
@@ -102,20 +106,28 @@ function ConstanciaDonacionEnrutada() {
   const desdeElHistorial = String(state?.donacion?.id) === id ? state.donacion : null;
 
   const [donacion, setDonacion] = useState(desdeElHistorial);
+  // Mientras se consulta, la pagina muestra la carga: sin esto, "No se ha seleccionado ninguna
+  // donacion" se asomaba un instante al abrir la constancia desde el resumen, que no manda la fila.
+  const [buscando, setBuscando] = useState(!desdeElHistorial);
 
   useEffect(() => {
     if (desdeElHistorial || !id || !perfil?.rol) return undefined;
 
     let vigente = true;
+    setBuscando(true);
     obtenerDonacion(id, { rolUsuario: perfil.rol }).then(({ datos }) => {
-      if (vigente) setDonacion(datos);
+      if (!vigente) return;
+      setDonacion(datos);
+      setBuscando(false);
     });
     return () => {
       vigente = false;
     };
   }, [id, perfil?.rol, desdeElHistorial]);
 
-  return <ConstanciaDonacionPage usuarioRol={perfil?.rol} donacion={donacion} />;
+  return (
+    <ConstanciaDonacionPage usuarioRol={perfil?.rol} donacion={donacion} cargando={buscando} />
+  );
 }
 
 // useSeguimientoProyecto ahora resuelve el :id el mismo (issue #756): antes solo recibia lo que
@@ -164,6 +176,9 @@ export default function App() {
                   <Route path="/pacientes/diagnosticos" element={<CatalogoDiagnosticosPage />} />
                   <Route path="/pacientes/condiciones" element={<CatalogoCondicionesPage />} />
                   <Route path="/pacientes/comunidades" element={<CatalogoComunidadesPage />} />
+                  <Route path="/pacientes/areas" element={<CatalogoAreasPage />} />
+                  <Route path="/pacientes/clinicas" element={<CatalogoClinicasPage />} />
+                  <Route path="/pacientes/citas" element={<AgendaCitasPage />} />
                   <Route path="/pacientes/duplicados" element={<PosiblesDuplicadosPage />} />
                   <Route path="/pacientes/:id" element={<FichaPacientePage />} />
                 </Route>
@@ -179,6 +194,12 @@ export default function App() {
                 </Route>
                 <Route element={<RutaProtegida modulo="inventario" />}>
                   <Route path="/inventario" element={<InventarioPage />} />
+                  {/* Solo administracion (la pagina lo comprueba, como /pacientes/duplicados):
+                  antelaciones de los avisos de vencimiento, issue #899. */}
+                  <Route
+                    path="/inventario/avisos-vencimiento"
+                    element={<AvisosVencimientoPage />}
+                  />
                 </Route>
                 <Route element={<RutaProtegida modulo="presupuestos" />}>
                   <Route path="/presupuestos" element={<PresupuestosPage />} />
@@ -204,6 +225,7 @@ export default function App() {
                   <Route path="/reportes/medicamentos-por-vencer" element={<ReportesPage />} />
                   <Route path="/reportes/pacientes-atendidos" element={<ReportesPage />} />
                   <Route path="/reportes/inventario-actual" element={<ReportesPage />} />
+                  <Route path="/reportes/enfermedades" element={<ReportesPage />} />
                   <Route path="/reportes/jornada/:id" element={<ReporteJornada />} />
                 </Route>
                 <Route element={<RutaProtegida modulo="jornadas" />}>

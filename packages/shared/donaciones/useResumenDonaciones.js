@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { listarDonaciones } from "./historial.api.js";
+import { useCambiosEnTiempoReal } from "../hooks/useCambiosEnTiempoReal.js";
 
 /**
  * Hook para gestionar el resumen y KPIs del módulo de donaciones en web.
@@ -75,6 +76,9 @@ export function useResumenDonaciones({ rolUsuario } = {}) {
   useEffect(() => {
     cargarResumen();
   }, [cargarResumen]);
+
+  // Se recarga sola cuando cambian estas tablas (00163).
+  useCambiosEnTiempoReal(["donaciones", "donacion_detalle"], cargarResumen);
 
   return {
     fechaInicio,

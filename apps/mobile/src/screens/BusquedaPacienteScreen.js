@@ -5,6 +5,7 @@ import {
   COLUMNAS_PACIENTE_MOVIL,
   FILTROS_PACIENTE,
   puedeRegistrarPaciente,
+  puedeVerCitas,
   usePacientesListado,
 } from "@ecopac/shared";
 import { moduleAccents, spacing } from "@ecopac/ui-tokens";
@@ -26,6 +27,15 @@ const GRUPOS_DE_PACIENTES = [
   {
     titulo: "Consultar",
     opciones: [
+      {
+        id: "citas",
+        etiqueta: "Citas",
+        descripcion: "Agenda del día de la jornada",
+        icono: "calendar-outline",
+        ruta: ROUTES.AGENDA_CITAS,
+        // Junta directiva y socios fundadores no ven citas (issue #927).
+        visible: puedeVerCitas,
+      },
       {
         id: "cronicos",
         etiqueta: "Pacientes crónicos",
@@ -104,7 +114,12 @@ export default function BusquedaPacienteScreen() {
             el menú lateral, como en Inventario (docs/DISENO-MOVIL.md, regla 3). */}
         <MenuLateral
           titulo="Pacientes"
-          grupos={GRUPOS_DE_PACIENTES}
+          grupos={GRUPOS_DE_PACIENTES.map((grupo) => ({
+            ...grupo,
+            opciones: grupo.opciones.filter(
+              (opcion) => !opcion.visible || opcion.visible(perfil?.rol),
+            ),
+          }))}
           onElegir={(opcion) => navigation.navigate(opcion.ruta)}
         />
       </View>

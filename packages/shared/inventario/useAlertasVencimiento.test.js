@@ -16,7 +16,12 @@
 
 import { describe, expect, it } from "vitest";
 
-import { calcularDiasRestantes, datosAtenderAlerta } from "./useAlertasVencimiento.js";
+import {
+  calcularDiasRestantes,
+  datosAtenderAlerta,
+  textoSinLotesPorVencer,
+  textoVentanaDeAlertas,
+} from "./useAlertasVencimiento.js";
 
 /** "AAAA-MM-DD" del dia de calendario LOCAL de hoy (no UTC: toISOString() se corre de dia). */
 function hoyComoTexto() {
@@ -73,5 +78,19 @@ describe("datosAtenderAlerta", () => {
     expect(
       datosAtenderAlerta([{ accion: "descartado", cantidad: 5 }], {}).rolUsuario,
     ).toBeUndefined();
+  });
+});
+
+describe("textoSinLotesPorVencer (issue #899)", () => {
+  it("dice la ventana configurada, no un 30 escrito a mano", () => {
+    expect(textoSinLotesPorVencer(90)).toBe("No hay lotes por vencer en los próximos 90 días");
+  });
+
+  it("sin antelaciones habla solo de hoy", () => {
+    expect(textoSinLotesPorVencer(0)).toBe("No hay lotes que venzan hoy");
+    expect(textoVentanaDeAlertas(0)).toBe("Lotes que vencen hoy o que ya vencieron");
+    expect(textoVentanaDeAlertas(30)).toBe(
+      "Lotes que vencen en los próximos 30 días o que ya vencieron",
+    );
   });
 });

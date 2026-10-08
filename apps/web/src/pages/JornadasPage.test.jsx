@@ -140,6 +140,23 @@ describe("JornadasPage", () => {
     expect(mockEstadoHook.moverJornada).toHaveBeenCalledWith("jor-1", "en curso", "finalizada");
   });
 
+  it("en una jornada en curso, Editar esta habilitado", () => {
+    mockEstadoHook.columnas = agruparJornadasPorEstado([JORNADA_EN_CURSO]);
+    pantalla();
+
+    expect(screen.getByRole("button", { name: /Editar/ })).toBeEnabled();
+  });
+
+  it("en una jornada finalizada, Editar queda deshabilitado y Atras sigue disponible", () => {
+    mockEstadoHook.columnas = agruparJornadasPorEstado([
+      { ...JORNADA_EN_CURSO, estado: "finalizada" },
+    ]);
+    pantalla();
+
+    expect(screen.getByRole("button", { name: /Editar/ })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /Atrás/ })).toBeEnabled();
+  });
+
   it("Nueva jornada abre el modal en modo alta", () => {
     pantalla();
 

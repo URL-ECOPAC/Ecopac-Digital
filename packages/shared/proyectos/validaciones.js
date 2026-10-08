@@ -63,26 +63,27 @@ export function esTransicionDeProyectoValida(desde, hacia) {
   return transicionesDeProyectoDesde(desde).includes(hacia);
 }
 
-/** Lo que se le dice a quien intenta modificar un proyecto cancelado. */
+/** Lo que se le dice a quien intenta modificar un proyecto cancelado o finalizado. */
 export const MENSAJE_PROYECTO_CANCELADO =
-  "Este proyecto está cancelado: se puede consultar, pero ya no se modifica.";
+  "Este proyecto está cancelado o finalizado: se puede consultar, pero ya no se modifica.";
 
 /**
- * Indica si a un proyecto en este estado todavia se le pueden hacer cambios. Uno cancelado queda
- * como quedo: se consulta, no se edita -datos, avance, bitacora, hitos, equipo, jornadas ni
- * insumos-. Espejo de los triggers de la 00154, que son los que de verdad lo impiden.
+ * Indica si a un proyecto en este estado todavia se le pueden hacer cambios. Uno cancelado (00154)
+ * o finalizado (00172) queda como quedo: se consulta, no se edita -datos, avance, bitacora, hitos,
+ * equipo, jornadas ni insumos-. Los dos estados son terminales, asi que no hay vuelta atras.
+ * Espejo de los triggers de esas migraciones, que son los que de verdad lo impiden.
  *
  * @param {string} estado
  * @returns {boolean}
  */
 export function proyectoAdmiteCambios(estado) {
-  return estado !== ESTADOS_PROYECTO.CANCELADO;
+  return estado !== ESTADOS_PROYECTO.CANCELADO && estado !== ESTADOS_PROYECTO.FINALIZADO;
 }
 
 /**
  * Proyectos a los que se puede asociar algo nuevo (una jornada, una donacion): todos menos los
- * cancelados. `conservarId` deja el que ya estaba elegido, para que un formulario en edicion siga
- * mostrando su valor aunque ese proyecto se haya cancelado despues.
+ * cancelados y los finalizados. `conservarId` deja el que ya estaba elegido, para que un
+ * formulario en edicion siga mostrando su valor aunque ese proyecto se haya cerrado despues.
  *
  * @param {object[]} proyectos Filas de listarProyectos().
  * @param {string|null} [conservarId]

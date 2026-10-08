@@ -26,7 +26,8 @@ import {
   Spinner,
 } from "react-bootstrap";
 
-import { BotonLimpiarFiltros, DataList } from "../components";
+import { BotonLimpiarFiltros, DataList, StatCard } from "../components";
+import ContenidoDeBodega from "../components/ContenidoDeBodega";
 import PageHeader from "../components/PageHeader";
 import ScreenContainer from "../components/ScreenContainer";
 import ModalProyecto from "./ModalProyecto";
@@ -47,12 +48,12 @@ export default function ProyectosSocialesPage({ usuarioRol }) {
     presupuestoProyecto,
     columnasGastos,
     gastosProyecto,
+    resumenDeGastos,
     cargandoGastos,
     errorGastos,
     jornadasDisponibles,
     errorJornadas,
     asociarJornada,
-    quitarJornada,
     equipo,
     cargandoEquipo,
     errorEquipo,
@@ -62,6 +63,12 @@ export default function ProyectosSocialesPage({ usuarioRol }) {
     quitarDelEquipo,
     insumosPorJornada,
     insumosSinJornada,
+    bodegasDeJornadas,
+    existenciasEnBodegas,
+    valorDeBodegas,
+    entregadoDesdeLaPrincipal,
+    valorEntregadoDesdeLaPrincipal,
+    columnasEntregadoDesdeLaPrincipal,
     cargandoInsumos,
     errorInsumos,
     columnasInsumos,
@@ -81,7 +88,6 @@ export default function ProyectosSocialesPage({ usuarioRol }) {
   const [formularioAbierto, setFormularioAbierto] = useState(false);
 
   const [jornadaPorAsociar, setJornadaPorAsociar] = useState("");
-  const [jornadaPorQuitar, setJornadaPorQuitar] = useState(null);
   const [personaPorAgregar, setPersonaPorAgregar] = useState("");
   const [rolPorAgregar, setRolPorAgregar] = useState("");
   const [personaPorQuitar, setPersonaPorQuitar] = useState(null);
@@ -306,7 +312,7 @@ export default function ProyectosSocialesPage({ usuarioRol }) {
           <Modal.Body>
             <p className="text-secondary small mb-3">{proyectoDetalle.descripcion}</p>
 
-            {/* 00154: un proyecto cancelado se consulta, no se edita. Los botones de agregar,
+            {/* 00154 y 00172: un proyecto cancelado o finalizado se consulta, no se edita. Los botones de agregar,
                 quitar, asociar y editar ya no aparecen (permisos del proyecto abierto). */}
             {proyectoCancelado && (
               <Alert variant="secondary" className="py-2 px-3 small">
@@ -354,12 +360,47 @@ export default function ProyectosSocialesPage({ usuarioRol }) {
               </div>
             )}
 
-            {/* Insumos (00151): se planean en cada jornada; aqui solo se ven, agrupados. */}
+            {/* Insumos: desde la 00178 son lo que hay en la bodega movil de cada jornada, que se
+                carga en el detalle de la jornada. Los previstos (00151) quedan de las jornadas
+                anteriores. Aqui solo se ven, con su valor arriba. */}
             {pestanaDelProyectoVisible === "insumos" && (
               <div className="d-flex flex-column gap-3">
+                <div className="ec-kpis">
+                  <StatCard
+                    label="Les queda a sus jornadas"
+                    value={formatearMoneda(valorDeBodegas.valor)}
+                    caption={
+                      valorDeBodegas.lotesSinCosto > 0
+                        ? `${valorDeBodegas.lotesSinCosto} lote(s) sin costo no se suman`
+                        : `${valorDeBodegas.unidades} unidades`
+                    }
+                    accent="var(--accent-inventario)"
+                  />
+                  {entregadoDesdeLaPrincipal.length > 0 && (
+                    <StatCard
+                      label="Entregado de la bodega principal"
+                      value={formatearMoneda(valorEntregadoDesdeLaPrincipal)}
+                      caption="En las recetas de sus jornadas"
+                      accent="var(--color-success)"
+                    />
+                  )}
+                  {(insumosPorJornada.length > 0 || insumosSinJornada.length > 0) && (
+                    <StatCard
+                      label="Previsto (estimado)"
+                      value={formatearMoneda(resumenDeInsumos.totalEstimado)}
+                      caption={
+                        resumenDeInsumos.sinCosto > 0
+                          ? `${resumenDeInsumos.sinCosto} sin costo estimado`
+                          : "Planificado antes de cargar las bodegas"
+                      }
+                      accent="var(--accent-jornadas)"
+                    />
+                  )}
+                </div>
                 <p className="text-muted small mb-0">
-                  Lo previsto en cada jornada del proyecto. Se agrega y se corrige desde el detalle
-                  de cada jornada, en su pestaña Insumos. No descuenta existencias del inventario.
+                  Es lo que le queda a cada jornada del proyecto en su bodega móvil: lo cargado
+                  menos lo entregado y lo devuelto. Se carga y se devuelve desde el detalle de cada
+                  jornada, en su pestaña Insumos, y lo que se consumió está en su pestaña Consumo.
                 </p>
                 {errorInsumos && (
                   <Alert variant="danger" className="mb-0 py-2 px-3 small">
@@ -368,17 +409,62 @@ export default function ProyectosSocialesPage({ usuarioRol }) {
                 )}
                 {cargandoInsumos && <p className="text-muted small mb-0">Cargando insumos...</p>}
                 {!cargandoInsumos &&
+                  bodegasDeJornadas.length === 0 &&
+                  entregadoDesdeLaPrincipal.length === 0 &&
                   insumosPorJornada.length === 0 &&
                   insumosSinJornada.length === 0 && (
                     <p className="text-muted small mb-0">
-                      Ninguna jornada de este proyecto tiene insumos previstos.
+                      Ninguna jornada de este proyecto tiene insumos todavía.
                     </p>
                   )}
 
+                {/* Issue #911: lo que hay en la bodega movil de cada jornada es insumo del
+                    proyecto. */}
+                {bodegasDeJornadas.length > 0 && (
+                  <div>
+                    <h6 className="fw-bold mb-1">En las bodegas móviles de sus jornadas</h6>
+                    <ul className="text-muted small mb-2 ps-3">
+                      {bodegasDeJornadas.map((bodega) => (
+                        <li key={bodega.bodegaId}>
+                          {bodega.bodegaNombre ?? "Bodega"} ·{" "}
+                          {bodega.jornadas.length === 1 ? "jornada" : "jornadas"}{" "}
+                          {bodega.jornadas.join(", ")}
+                        </li>
+                      ))}
+                    </ul>
+                    <ContenidoDeBodega
+                      contenido={existenciasEnBodegas}
+                      cargando={cargandoInsumos}
+                      vacio="A sus jornadas no les queda nada en las bodegas móviles."
+                      mostrarJornada
+                      mostrarBodega={bodegasDeJornadas.length > 1}
+                      conValor
+                    />
+                  </div>
+                )}
+
+                {/* 00181: de la bodega principal solo cuenta lo entregado en sus jornadas; su
+                    existencia es de toda la organizacion. */}
+                {entregadoDesdeLaPrincipal.length > 0 && (
+                  <div>
+                    <h6 className="fw-bold mb-1">Entregado de la bodega principal</h6>
+                    <p className="text-muted small mb-2">
+                      Lo que salió en las recetas de las jornadas que entregan directo de la bodega
+                      principal.
+                    </p>
+                    <DataList
+                      columnas={columnasEntregadoDesdeLaPrincipal}
+                      datos={entregadoDesdeLaPrincipal}
+                      cargando={cargandoInsumos}
+                    />
+                  </div>
+                )}
+
+                {insumosPorJornada.length > 0 && <h6 className="fw-bold mb-0 mt-2">Previstos</h6>}
                 {insumosPorJornada.map((grupo) => (
                   <div key={grupo.jornadaId}>
                     <div className="d-flex justify-content-between align-items-baseline mb-1">
-                      <h6 className="fw-bold mb-0">{grupo.jornadaNombre}</h6>
+                      <span className="fw-semibold">{grupo.jornadaNombre}</span>
                       <span className="text-muted small">
                         {formatearFechaCorta(grupo.jornadaFecha)} ·{" "}
                         {formatearMoneda(grupo.resumen.totalEstimado)}
@@ -455,18 +541,6 @@ export default function ProyectosSocialesPage({ usuarioRol }) {
                       }
                     />
                   </div>
-                )}
-
-                {(insumosPorJornada.length > 0 || insumosSinJornada.length > 0) && (
-                  <p className="mb-0 text-end">
-                    <strong>Total estimado del proyecto:</strong>{" "}
-                    {formatearMoneda(resumenDeInsumos.totalEstimado)}
-                    {resumenDeInsumos.sinCosto > 0 && (
-                      <span className="text-muted small ms-2">
-                        ({resumenDeInsumos.sinCosto} sin costo estimado)
-                      </span>
-                    )}
-                  </p>
                 )}
               </div>
             )}
@@ -614,40 +688,9 @@ export default function ProyectosSocialesPage({ usuarioRol }) {
                         className="list-group-item d-flex justify-content-between align-items-center px-0 py-2"
                       >
                         <span>{j.nombre}</span>
-                        <span className="d-flex align-items-center gap-3">
-                          <span className="text-muted small">{j.fecha}</span>
-                          {permisos.puedeAsociarJornadas &&
-                            (jornadaPorQuitar === j.id ? (
-                              <span className="d-flex align-items-center gap-2 small">
-                                ¿Quitar del proyecto?
-                                <Button
-                                  variant="danger"
-                                  size="sm"
-                                  onClick={async () => {
-                                    await quitarJornada(j.id);
-                                    setJornadaPorQuitar(null);
-                                  }}
-                                >
-                                  Confirmar
-                                </Button>
-                                <Button
-                                  variant="outline-secondary"
-                                  size="sm"
-                                  onClick={() => setJornadaPorQuitar(null)}
-                                >
-                                  Cancelar
-                                </Button>
-                              </span>
-                            ) : (
-                              <Button
-                                variant="outline-danger"
-                                size="sm"
-                                onClick={() => setJornadaPorQuitar(j.id)}
-                              >
-                                Quitar
-                              </Button>
-                            ))}
-                        </span>
+                        {/* Sin "Quitar": desde la 00169 una jornada no se queda sin proyecto.
+                            Para pasarla a otro proyecto se edita la jornada. */}
+                        <span className="text-muted small">{j.fecha}</span>
                       </li>
                     ))}
                   </ul>
@@ -700,8 +743,33 @@ export default function ProyectosSocialesPage({ usuarioRol }) {
                 )}
                 {/* Solo consulta: los gastos de las jornadas del proyecto. Se registran contra una
                     jornada en Presupuestos, donde pasan por la aprobacion. */}
+                <div className="ec-kpis">
+                  <StatCard
+                    label="Total gastado"
+                    value={formatearMoneda(resumenDeGastos.aprobado)}
+                    caption="Gastos aprobados"
+                    accent="var(--color-success)"
+                  />
+                  <StatCard
+                    label="Por aprobar"
+                    value={formatearMoneda(resumenDeGastos.pendiente)}
+                    caption={
+                      resumenDeGastos.rechazados > 0
+                        ? `${resumenDeGastos.rechazados} rechazado(s) no se suman`
+                        : "Esperan aprobación"
+                    }
+                    accent="var(--color-warning)"
+                  />
+                  <StatCard
+                    label="Presupuesto"
+                    value={formatearMoneda(presupuestoProyecto?.asignado) ?? "—"}
+                    caption="Asignado al proyecto"
+                    accent="var(--accent-presupuestos)"
+                  />
+                </div>
                 <p className="text-muted small mb-0">
-                  Los gastos de las jornadas de este proyecto. Se registran en Presupuestos.
+                  Los gastos de las jornadas de este proyecto. Se registran en Presupuestos o en la
+                  pestaña Gastos de cada jornada.
                 </p>
                 <DataList
                   columnas={columnasGastos}

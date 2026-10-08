@@ -66,11 +66,14 @@ $$;
 -- ============================================================================
 -- 1. Caducidad
 -- ============================================================================
+-- Desde la 00162 (issue #899) la notificacion cuelga de un aviso (avisos_caducidad), no de la
+-- alerta: una alerta puede avisar varias veces, una por etapa.
 SELECT fn_generar_alertas_caducidad();
 
 SELECT is(
   (SELECT count(*)::int FROM notificaciones n
-   JOIN alertas_caducidad a ON a.id = n.origen_id
+   JOIN avisos_caducidad av ON av.id = n.origen_id
+   JOIN alertas_caducidad a ON a.id = av.alerta_id
    WHERE n.perfil_id = 'b0000000-0000-0000-0000-000000000001'
      AND a.lote_id = 'b4000000-0000-0000-0000-000000000001'),
   1,
@@ -79,7 +82,8 @@ SELECT is(
 
 SELECT is(
   (SELECT titulo FROM notificaciones n
-   JOIN alertas_caducidad a ON a.id = n.origen_id
+   JOIN avisos_caducidad av ON av.id = n.origen_id
+   JOIN alertas_caducidad a ON a.id = av.alerta_id
    WHERE n.perfil_id = 'b0000000-0000-0000-0000-000000000001'
      AND a.lote_id = 'b4000000-0000-0000-0000-000000000001'),
   'Lote vencido: Medicamento 755',
@@ -100,7 +104,8 @@ SELECT is(
 
 SELECT is(
   (SELECT count(*)::int FROM notificaciones n
-   JOIN alertas_caducidad a ON a.id = n.origen_id
+   JOIN avisos_caducidad av ON av.id = n.origen_id
+   JOIN alertas_caducidad a ON a.id = av.alerta_id
    JOIN perfiles p ON p.id = n.perfil_id
    WHERE a.lote_id = 'b4000000-0000-0000-0000-000000000001'),
   (SELECT count(*)::int FROM perfiles WHERE rol = 'administrador' AND activo),
@@ -111,8 +116,8 @@ SELECT fn_generar_alertas_caducidad();
 
 SELECT is(
   pg_temp.contar('b0000000-0000-0000-0000-000000000001', 'caducidad'),
-  (SELECT count(*)::int FROM alertas_caducidad WHERE estado = 'pendiente'),
-  'caducidad: correr la generacion dos veces no repite notificaciones (una por alerta pendiente)'
+  (SELECT count(*)::int FROM avisos_caducidad),
+  'caducidad: correr la generacion dos veces no repite notificaciones (una por aviso)'
 );
 
 -- ============================================================================
@@ -159,8 +164,10 @@ SELECT is(
 -- ============================================================================
 SELECT set_config('request.jwt.claim.sub', 'b0000000-0000-0000-0000-000000000003', TRUE);
 
+-- Una jornada abierta y con presupuesto: desde la 00159 una finalizada no admite gastos y ninguno
+-- pasa el presupuesto de su jornada.
 INSERT INTO gastos (id, jornada_id, concepto, categoria, monto, registrado_por)
-VALUES ('b7000000-0000-0000-0000-000000000001', (SELECT id FROM jornadas ORDER BY id LIMIT 1),
+VALUES ('b7000000-0000-0000-0000-000000000001', (SELECT id FROM jornadas WHERE estado <> 'finalizada' AND presupuesto_asignado >= 2000 ORDER BY id LIMIT 1),
         'Transporte 755', 'Logistica', 1250.5, 'b0000000-0000-0000-0000-000000000003');
 
 SELECT is(
@@ -181,7 +188,7 @@ SELECT ok(
 SELECT set_config('request.jwt.claim.sub', 'b0000000-0000-0000-0000-000000000001', TRUE);
 
 INSERT INTO gastos (id, jornada_id, concepto, categoria, monto, registrado_por)
-VALUES ('b7000000-0000-0000-0000-000000000002', (SELECT id FROM jornadas ORDER BY id LIMIT 1),
+VALUES ('b7000000-0000-0000-0000-000000000002', (SELECT id FROM jornadas WHERE estado <> 'finalizada' AND presupuesto_asignado >= 2000 ORDER BY id LIMIT 1),
         'Material 755', 'Logistica', 10, 'b0000000-0000-0000-0000-000000000001');
 
 SELECT is(

@@ -61,6 +61,11 @@ El sistema decide permisos en cuatro sitios. **Solo el ultimo protege.**
 Desde la `00148` las capas 1 a 3 no deciden solo por rol: leen tambien lo que la base le abrio a la
 sesion (`mis_accesos()`, ver "Acceso a modulos y funciones delegables").
 
+**Tiempo real (`00163`).** Las tablas de negocio estan en la publicacion `supabase_realtime`
+para que las pantallas se recarguen solas cuando cambian. No abre nada: Realtime solo avisa de las
+filas que la politica de SELECT de cada tabla ya deja leer a la sesion, y el cliente no usa el
+contenido del aviso, vuelve a leer con su consulta de siempre (`useCambiosEnTiempoReal`).
+
 Las capas 1 a 3 existen para que la interfaz no ofrezca lo que va a fallar. Si una de ellas dice
 que si y la capa 4 dice que no, el usuario ve un error; si dice que no y la capa 4 diria que si,
 la funcion es inalcanzable. Las dos situaciones son defectos, y las que hay estan en
@@ -178,7 +183,8 @@ eso abrir es de solo lectura y no hay que confiar en que el cliente esconda los 
 
 ### Funciones delegadas por persona
 
-Los nueve permisos finos (ver "Los permisos finos") se conceden a una persona desde Colaboradores.
+Los once permisos finos (ver "Los permisos finos") se conceden o revocan a una persona desde
+Colaboradores.
 Desde la `00148`:
 
 - **El cliente los lee.** Al iniciar sesion, `useSesion()` llama a `mis_accesos()` (modulos abiertos
@@ -188,7 +194,8 @@ Desde la `00148`:
   falla, la sesion no se da por resuelta: una persona con una funcion delegada no puede verse como
   una sin ella.
 - **Quien recibe una funcion llega a su modulo**: `donaciones.registrar` abre Donaciones,
-  `presupuestos.*` Presupuestos, `usuarios.gestionar_permisos` Colaboradores, etc.
+  `presupuestos.*` Presupuestos, `usuarios.gestionar_permisos` Colaboradores, `citas.agendar`
+  Pacientes (donde vive la agenda), etc.
   (`MODULO_DE_PERMISO_FINO`).
 - **Las delegaciones leen lo que necesitan.** `jornadas.gestionar` ve todas las jornadas, su
   historial y asigna personal (`jornada_personal`); `proyectos.gestionar` lee y escribe hitos,
@@ -198,7 +205,8 @@ Desde la `00148`:
   `perfil_id <> auth.uid()` salvo a la administradora.
 - `rol_permiso` **deja de editarse desde la aplicacion** (`00148` retira sus politicas y el `GRANT`
   de escritura): queda como el valor por defecto de cada rol, sembrado por migracion. La `00148` le
-  suma `pacientes.editar` al voluntario general.
+  suma `pacientes.editar` al voluntario general, y la `00185` siembra `citas.agendar` en
+  administrador, medico y voluntario general.
 
 Lo prueba `supabase/tests/database/acceso_a_modulos_por_rol.sql`.
 
@@ -241,13 +249,17 @@ no llevan a ningun lado.
 | `expedientes`             | C R U         | —                                | C R U  | C R U              | `00032` + `00086` + `00148`, mismo cambio                                                                              |
 | `triajes`                 | C R U         | —                                | C R U  | C R U              | `00033` + `00148` (el UPDATE, que era de administrador y medico, suma al voluntario). El `imc` es columna generada y no se envia |
 | `atenciones`              | C R U         | —                                | C R U  | C R                | `00033`; cola de la jornada en `00060`                                                                                 |
-| `consultas`               | C R U         | —                                | C R U  | R                  | `00033` + `00148` (el voluntario lee). El INSERT exige `medico_id = auth.uid()` **y** `participa_en_jornada()`; el UPDATE, ser el medico que atendio |
+| `consultas`               | C R U         | —                                | C R U  | R                  | `00033` + `00148` (el voluntario lee). El INSERT exige `medico_id = auth.uid()` **y** `participa_en_jornada()`; el UPDATE, ser el medico que atendio. Con `cita_id` (`00184`): la cita tiene que estar en atencion y, si tiene profesional, solo el o la administradora registran la consulta; la consulta toma el area de la cita y deja la cita atendida en la misma transaccion (triggers DEFINER) |
 | `consulta_diagnostico`    | C R D         | —                                | C R D  | R                  | `00033` (INSERT sin exigir consulta propia) + `00082` (INSERT: medico solo en su propia consulta, `EXISTS` contra `consultas.medico_id`) + `00127` (issue #756: mismo actor de la `00082` para DELETE, para corregir un diagnostico mal elegido) + `00148` (el voluntario lee) |
 | `recetas`                 | C R U         | —                                | C R U  | R                  | `00033`; anulacion en `00066`. El UPDATE exige ser el medico que la firmo **y** que siga `emitida` (`00075`). `00148`: el voluntario lee |
 | `receta_detalle`          | C R           | —                                | C R    | R                  | `00033` + `00148` (el voluntario lee)                                                                                  |
 | `padecimientos_cronicos`  | C R U D       | —                                | C R U  | C R U              | `00010` + `00148` (el voluntario lee, registra y corrige). Unica tabla clinica con DELETE, y solo para administrador. Auditada desde la `00070` |
 | `diagnosticos` (catalogo) | C R U         | —                                | C R U  | C R U              | `00033` (lectura) + `00105` (mantenimiento) + `00148` (el personal de campo lee, agrega y corrige). **Retirarlo (`activo = false`) es solo de la administradora**: trigger `impedir_desactivar_sin_ser_administrador` (`00148`). **Sin DELETE:** `consulta_diagnostico` lo referencia `ON DELETE RESTRICT` (`00018`) y un diagnostico ya usado es historia clinica |
 | `fusiones_pacientes`      | R             | —                                | —      | —                  | `00101` (issue #140). Solo administrador lee; sin politicas de escritura, la unica que inserta es `fn_fusionar_pacientes()` (SECURITY DEFINER) |
+| `areas_atencion` (catalogo) | C R U       | R                                | R      | R                  | `00182` (issue #927). Lee toda sesion activa; crea y edita **solo la administradora** (un area nueva es decision de la organizacion). Retirar (`es_vigente = false`) tambien es suyo: trigger `impedir_retirar_sin_ser_administrador`. Sin DELETE |
+| `paciente_area`           | C R D         | —                                | C R D  | C R D              | `00182`. Lee quien lee pacientes. Asigna y quita la administradora, `tiene_permiso('pacientes.editar')` o quien registro al paciente (`pacientes.registrado_por`, columna nueva de la `00182`). Un trigger rechaza asignar un area retirada |
+| `clinicas`                | C R U D       | R                                | R      | R                  | `00183` (issue #927). Lee toda sesion activa; crea y edita la administradora o `tiene_permiso('jornadas.gestionar')`; retirar, reactivar y DELETE solo la administradora. `fn_eliminar_clinica()` (DEFINER) borra la que nunca tuvo citas y retira la que si (`00184`); bajar `salas_disponibles` por debajo de lo agendado a futuro lo rechaza un trigger |
+| `citas`                   | C R U         | —                                | C R U en sus jornadas | C R U en sus jornadas | `00184` + `00185` (issue #927). Lee la administradora, `tiene_permiso('jornadas.gestionar')` o quien pertenece a la jornada (`pertenece_a_jornada()`: cuadro de turnos o responsable), **nunca un rol consultivo**. Agenda (INSERT) la administradora, `jornadas.gestionar`, o `tiene_permiso('citas.agendar')` **y** pertenecer a la jornada (`00185`). UPDATE: la administradora, `jornadas.gestionar` y el personal de campo de la jornada; sin `citas.agendar` solo cambia el estado entre creada y en atencion (Atender, Regresar a creada), trigger `fn_cita_exige_permiso_de_agenda`. Las reglas de cupo, traslapes, cuadro de turnos y transiciones las hace cumplir `fn_validar_cita` (DEFINER). Sin DELETE: se cancela. Ver una cita no da permiso de registrar su consulta: eso sigue siendo la politica de `consultas` |
 
 **Casi ninguna tabla clinica tiene politica de DELETE**: las excepciones son
 `padecimientos_cronicos` y, desde la `00127` (issue #756), `consulta_diagnostico`. La baja de un
@@ -296,7 +308,15 @@ nada en vez de despues. El flujo de aprobacion no cambia: al administrador se lo
 `00028` y el stock baja en el acto; a medico y voluntario el movimiento les nace `pendiente` y el
 stock espera a que administracion lo apruebe. Lo que la `00112` garantiza no es que el stock baje
 siempre en el momento, sino que **nunca exista una receta emitida sin su movimiento registrado**.
+Desde la `00186` lo pendiente queda comprometido: la receta siguiente ya no lo ve disponible (ver
+"El inventario se cuenta por jornada" en Proyectos y presupuestos).
 No hace falta ningun `GRANT` nuevo: el que ya tenia (`authenticated`) sigue siendo el mismo.
+
+Desde la `00176` (issue #911) `fn_generar_receta()` solo descuenta de la **bodega de entrega** de la
+consulta: la de botiquin de su jornada o, si no tiene, la bodega principal (`bodegas.es_principal`).
+Otra bodega se rechaza con `55000`. La dice `fn_bodega_de_entrega_de_consulta()`, SECURITY DEFINER
+con `EXECUTE` para `authenticated`: el medico puede no leer la jornada por RLS, y con su consulta
+la funcion caeria a la principal. Solo devuelve el id de una bodega, que toda sesion ya lee.
 
 `fn_ajustar_entrega_receta()` (`00128`, issue #764) corrige la cantidad realmente entregada de un
 renglon sin reescribir `cantidad_entregada` ni descontar el inventario dos veces: calcula la
@@ -331,13 +351,15 @@ sin reasignar, bajo el absorbido. Reflejo en el cliente: `puedeFusionarPacientes
 | `medicamentos`           | C R U         | R                                | C R U  | C R U              | `00034` + `00141` + `00148` (el personal de campo crea y corrige), alta por `fn_registrar_medicamento` (`00050`). **Desactivarlo es solo de la administradora**: trigger `impedir_desactivar_sin_ser_administrador` (`00148`). La lectura la endurecio la `00079` a `rol_actual() IS NOT NULL`: un perfil desactivado deja de verla |
 | `principios_activos`     | C R U D       | R                                | C R U  | C R U              | `00034` + `00046` + `00148` (el personal de campo crea y corrige; el DELETE sigue siendo de la administradora) |
 | `presentaciones`         | C R U D       | R                                | C R U  | C R U              | `00144` + `00148`, mismo reparto que `principios_activos`. RESTRICT desde `medicamentos.presentacion_id`: una presentacion en uso no se borra |
-| `medicamento_principio`  | C R           | R                                | C R    | C R                | `00034` + `00148`                                                                                           |
+| `medicamento_principio`  | C R D         | R                                | C R D  | C R D              | `00034` + `00148` + `00166`. El DELETE (`00166`) es para cambiar el principio activo al editar el medicamento, con `fn_cambiar_principio_de_medicamento` (no es `SECURITY DEFINER`: la deciden estas politicas), y tiene la misma condicion que el INSERT |
 | `lotes`                  | C R U         | R                                | C R U\* | C R U\*            | `00034` + `00107`. \*Medico y voluntario dan de alta el lote que acompania a su ingreso, pero **nace provisional** (`confirmado = FALSE`) y solo lo pueden editar mientras siga asi; al aprobar el ingreso pasa a firme y deja de ser suyo. La politica les exige ademas `registrado_por = auth.uid()`. **Sin DELETE para nadie** |
 | `existencias`            | C R U         | R                                | R      | R                  | `00034`; disponibilidad por `fn_existencias_disponibles` (`00065`)                                          |
 | `bodegas`                | C R U         | R                                | C R U  | C R U              | `00034` + `00148` (el personal de campo crea y corrige), con la lectura endurecida por la `00079` a `rol_actual() IS NOT NULL`. Las politicas duplicadas de la `00061`/`00062` las retiro esa misma migracion (era la Divergencia 12). **Sin DELETE para nadie**, y no solo por politica: la `00034` nunca otorgo `GRANT DELETE`, asi que el borrado muere en `42501` antes de llegar a RLS. Cubierto rol por rol en `politicas_rls_inventario.sql` (issue #513)                                                          |
 | `proveedores`            | C R U         | R                                | C R U  | C R U              | `00034` + `00148` (el personal de campo crea y corrige), con la lectura endurecida por la `00079` a `rol_actual() IS NOT NULL`. Las politicas duplicadas de la `00061`/`00062` las retiro esa misma migracion (era la Divergencia 12). **Sin DELETE para nadie**, y no solo por politica: la `00034` nunca otorgo `GRANT DELETE`, asi que el borrado muere en `42501` antes de llegar a RLS. Cubierto rol por rol en `politicas_rls_inventario.sql` (issue #513)                                                                             |
-| `alertas_caducidad`      | R **A**       | R                                | R      | R                  | `00034` + `00138`. Sin INSERT DIRECTO para nadie: las genera `fn_generar_alertas_caducidad` (`00088`, redefinida por la `00129` y la `00138`), que es `SECURITY DEFINER`. La invocan la rutina programada con `service_role` y, desde la `00129`, tambien la administradora a traves de `fn_sincronizar_alertas_caducidad` (ver abajo). **Sin UPDATE directo para nadie desde la `00138`**: se atiende solo con `fn_atender_alerta_caducidad`, que ademas descuenta el stock (ver abajo) |
+| `alertas_caducidad`      | R **A**       | R                                | R      | R                  | `00034` + `00138` + `00162`. Sin INSERT DIRECTO para nadie: las genera `fn_generar_alertas_caducidad` (`00088`, redefinida por la `00129`, la `00138` y la `00162`, que ademas cierra sola -`cerrada_sin_existencia`- la alerta pendiente de un lote que se quedo sin existencia), que es `SECURITY DEFINER`. La invocan la rutina programada con `service_role` y, desde la `00129`, tambien la administradora a traves de `fn_sincronizar_alertas_caducidad` (ver abajo). **Sin UPDATE directo para nadie desde la `00138`**: se atiende solo con `fn_atender_alerta_caducidad`, que ademas descuenta el stock (ver abajo) |
 | `alerta_caducidad_detalle` | R           | R                                | R      | R                  | `00143`. Desglose de las acciones aplicadas al atender una alerta con varias acciones a la vez. **Sin GRANT de escritura para nadie**: la unica fila la inserta `fn_atender_alerta_caducidad`, `SECURITY DEFINER` |
+| `configuracion_alertas_caducidad` | R U | R | R | R | `00162` (issue #899). Una sola fila con las antelaciones de los avisos de vencimiento (de 0 a 4, entre 1 y 365 dias; por defecto 90; sin ninguna solo se avisa el dia del vencimiento). La lee toda sesion activa (`rol_actual() IS NOT NULL`): las listas de inventario marcan "por vencer" con la misma ventana. **La cambia la administracion, o quien tenga el permiso fino `inventario.configurar_alertas`** (politica "Administracion o permiso configura alertas de caducidad", que se delega en Colaboradores > Permisos), y solo la columna `umbrales_dias` (`GRANT UPDATE (umbrales_dias)`). Sin INSERT ni DELETE para nadie. Se audita. Se edita solo desde la web (`/inventario/avisos-vencimiento`) |
+| `avisos_caducidad` | R | — | — | — | `00162` (issue #899). Un aviso por alerta y por etapa (cada antelacion y el dia del vencimiento); su INSERT genera la notificacion. Lo escribe solo `fn_generar_alertas_caducidad` (`SECURITY DEFINER`); lectura solo para la administracion (`es_administrador()`) |
 | `movimientos_inventario` | R U **A**     | R                                | C R U\* | C R U\*            | `00034` + `00048` + `00086` (aprobar admite tambien `tiene_permiso('inventario.aprobar')`) + `00106`. \*Solo el **propio** movimiento y solo mientras siga `pendiente` |
 | `notificaciones`         | R U\*\*       | R U\*\*                          | R U\*\* | R U\*\*             | `00138` (issue #755). \*\*Cada perfil activo solo **sus propias** filas (`perfil_id = auth.uid() AND rol_actual() IS NOT NULL`), y el UPDATE solo alcanza a `leida_en` (`GRANT UPDATE (leida_en)`, por columna). Sin INSERT ni DELETE para nadie: las escriben triggers `SECURITY DEFINER` (ver abajo). Hoy solo la administracion recibe filas. **Desde la `00149` la administradora lee ademas las de todas las personas** (politica "La administracion lee el envio de todas las notificaciones", `es_administrador()`): la Bitacora muestra si el correo de cada una salio o fallo. Solo lectura: marcar como leida sigue siendo de cada quien |
 
@@ -376,6 +398,9 @@ siguiente de la rutina nocturna en aparecer. Es un envoltorio `SECURITY DEFINER`
 es crear alertas pendientes que la rutina habria creado igual. No abre ninguna puerta nueva: es la
 misma regla que la politica "Solo administrador atiende alertas_caducidad" (`00034`) ya exige para
 cerrarlas.
+Desde la `00162` (issue #899) tambien la puede ejecutar quien tenga `inventario.configurar_alertas`:
+al guardar las antelaciones la pantalla sincroniza para que los lotes que entran a la ventana nueva
+avisen en el momento. Atender las alertas sigue siendo solo de la administracion.
 
 **`fn_atender_alerta_caducidad` (issue #755, `00138`): atender una alerta descuenta el stock.**
 Atender era un `UPDATE` de la alerta y nada mas: las unidades seguian en existencias y el
@@ -392,7 +417,8 @@ ella, la salida de un vencido sigue rechazada como antes (CP-RF03-04).
 
 **Notificaciones al administrador (issue #755, `00138`): quien las escribe.** Nadie las inserta
 desde la aplicacion. Las crean cuatro triggers `SECURITY DEFINER` -`AFTER INSERT` en
-`alertas_caducidad`, en `movimientos_inventario` con `estado = 'pendiente'` y en `gastos` con
+`avisos_caducidad` (desde la `00162`, issue #899; antes en `alertas_caducidad`, que solo avisaba una
+vez por alerta), en `movimientos_inventario` con `estado = 'pendiente'` y en `gastos` con
 `estado = 'pendiente'`, y `AFTER UPDATE` de sentencia en `existencias` cuando el total de un
 medicamento pasa de mayor que cero a cero- a traves de `fn_notificar_administradores`, que inserta
 una fila por **administrador activo** (un perfil desactivado no recibe nada, mismo criterio que la
@@ -499,6 +525,8 @@ reabrir una jornada finalizada **solo al administrador**. Reflejo en el cliente:
 | `gastos`                    | C R **A**     | —                                | C R si participa | C R si participa   | `00052` + `00141` + `00148` (lo leen tambien quien tiene `presupuestos.registrar` o `presupuestos.aprobar`: antes aprobaba un gasto que no podia ver). El gasto del personal de campo entra `pendiente` y pasa por la aprobacion |
 | `jornada_presupuesto_origen` | C R U D      | —                                | —                | —                  | `00135` + `00141`. Escribir admite tambien `tiene_permiso('jornadas.gestionar')`, igual que actualizar la jornada; su lectura tambien, por el `INSERT ... RETURNING`. `00149` le suma `fuente_id` (solo con origen `aporte_externo`, por CHECK) |
 | `fuentes_de_presupuesto`     | C R          | —                                | —                | —                  | `00149`. Quien aporta de fuera al presupuesto de una jornada. La lee quien lee los aportes y la crea quien los registra (administradora o `jornadas.gestionar`). Sin U ni D: una fuente usada es historia del presupuesto. Auditada |
+| `movimientos_de_caja`        | R            | —                                | —                | —                  | `00168`. El libro de la caja. La lee quien lee los aportes (administradora, `jornadas.gestionar`, o Jornadas o Presupuestos abiertos por la matriz). **Sin escritura para nadie**: la entrada la escribe `fn_liquidar_sobrante_de_jornada` y la salida un trigger de `jornada_presupuesto_origen`, los dos `SECURITY DEFINER` |
+| `categorias_de_gasto`        | C R          | R                                | R                | R                  | `00158`. El catalogo de categorias de gasto (antes el enum `categoria_gasto`). La lee toda persona activa (`rol_actual() IS NOT NULL`); la crea la administradora o quien tenga `presupuestos.registrar` o `presupuestos.aprobar`. Sin U ni D. Auditada |
 
 **Un proyecto cancelado no lo modifica nadie (`00154`)**, ni la administradora: lo que de la tabla
 de arriba dice "C", "U" o "D" deja de valer para un proyecto en estado `cancelado`. No son
@@ -510,6 +538,10 @@ jornada (error `55000`). Cancelar sigue siendo posible, y las jornadas del proye
 editando mientras no cambien de proyecto. Reflejo en el cliente: `permisosDeProyectos(rol,
 proyecto)` y `proyectoAdmiteCambios(estado)` en `proyectos/`. Lo afirma
 `proyecto_cancelado_solo_lectura.sql`.
+
+**Desde la `00172` (issue #911) lo mismo vale para un proyecto `finalizado`**: los dos triggers de
+arriba rechazan tambien ese estado. Finalizar sigue siendo posible; despues, el proyecto se
+consulta y no se modifica. Lo afirma `proyecto_finalizado_solo_lectura.sql`.
 
 **La lectura de `proyectos` del personal de campo** no es "todos los proyectos": es
 `pertenece_a_proyecto(id)` (`00148`), que mira el equipo del proyecto (`proyecto_personal`) y sus
@@ -565,12 +597,93 @@ jornada (la administradora puede las dos), y todo ocurre en una transaccion. Ref
 `puedeVerInsumosDeJornada()` y `puedeGestionarInsumosDeJornada()` en `jornadas/permisos.js`, y
 `jornadas/insumos.api.js`. Lo afirma `jornada_insumos.sql`.
 
+**La bodega movil de la jornada (`00178`).** Desde la `00178` toda jornada nueva lleva una bodega
+movil (`botiquin_bodega_id`), y la lista de previstos ya no se llena: los insumos de la jornada son
+lo que hay en esa bodega.
+
+- `fn_cargar_insumo_a_bodega_de_jornada()` traslada un lote desde otra bodega a la de la jornada:
+  un ingreso y una salida con `movimientos_inventario.jornada_id`. **SECURITY INVOKER** y **solo la
+  administradora** (`es_administrador()`, `42501` para cualquier otro rol), como la reubicacion de
+  `fn_atender_alerta_caducidad()`: sus movimientos nacen aprobados por la `00028` y el traslado
+  queda completo en el acto. Con otro rol nacerian pendientes por separado, y aprobar la salida sin
+  el ingreso haria desaparecer el inventario. Rechaza una jornada finalizada o de un proyecto
+  cancelado o finalizado.
+- `fn_consumo_de_insumos_de_jornada()` dice, por lote, lo cargado, lo entregado en las recetas
+  emitidas de la jornada y lo que queda en su bodega, con el costo del lote. **SECURITY DEFINER**,
+  porque quien ve los insumos no necesariamente lee las recetas; solo devuelve cantidades por lote,
+  nada del paciente, y comprueba ella misma la condicion de la politica de SELECT de
+  `jornada_insumos` (`42501` si no se cumple).
+
+Reflejo en el cliente: `puedeCargarBodegaDeJornada()` (solo administrador) y
+`puedeVerInsumosDeJornada()` para la pestaña Consumo, en `jornadas/permisos.js`, y
+`jornadas/bodega.api.js`. Lo afirma `bodega_movil_obligatoria_y_carga.sql`.
+
+**Traslados entre bodegas y devolucion (`00179`).** Las tres funciones son **SECURITY INVOKER** y
+**solo de la administradora** (`42501` para cualquier otro rol), por el mismo motivo que la carga:
+dos movimientos que tienen que nacer aprobados juntos.
+
+- `fn_trasladar_entre_bodegas()` mueve un lote de una bodega a otra (ingreso en la destino y salida
+  del origen). Es lo que hace ahora el motivo "Traslado entre bodegas" de Registrar salida, que
+  antes solo registraba la salida y el inventario desaparecia; por eso ese motivo ya no se le ofrece
+  a otro rol (`motivosDeSalida()`, `inventario/useRegistroSalida.js`). La carga de la `00178` pasa a
+  usarla.
+- `fn_devolver_de_bodega_de_jornada()` devuelve lo que sobra en la bodega movil a una bodega fija,
+  marcado con la jornada; se puede con la jornada finalizada. `fn_consumo_de_insumos_de_jornada()`
+  lo cuenta como `devuelto`.
+- Un trigger impide que una bodega movil este en dos jornadas **en curso** a la vez (`55000`);
+  varias planificadas si la comparten. El cliente lo dice antes de intentarlo
+  (`mensajeDeBodegaOcupada()`, `jornadas/api.js`).
+
+**El inventario se cuenta por jornada y lo pendiente ya esta comprometido (`00186`, issue #925).**
+Las decisiones de la issue cambian que se puede hacer con el inventario de una bodega movil, no
+quien puede hacerlo: carga, devolucion y traslado siguen siendo solo de la administradora.
+
+- **Lo comprometido.** Una salida pendiente (la receta de un medico) ya no se puede dar a nadie mas.
+  `vista_lotes_disponibles.cantidad_disponible` es lo neto (`cantidad_fisica -
+  cantidad_comprometida`), y la receta, su ajuste, la carga, la devolucion y el traslado comparan
+  contra `fn_disponible_neto()`. `fn_cantidad_comprometida()` y `fn_disponible_neto()` son
+  SECURITY DEFINER (la vista es `security_invoker` y quien la lee puede no ver los movimientos de
+  otros) y solo devuelven un numero.
+- **Cada lado movil de un traslado es de una jornada.** El ingreso a una bodega movil se registra en
+  la jornada indicada o en la que la tiene en curso; la salida de una bodega movil, en su duena
+  (`fn_jornada_duena_de_bodega()`) hasta lo que le queda, y el resto sin jornada. Asi cargar desde
+  la bodega de otra jornada en curso queda como devuelto en esa y cargado en esta.
+- **Devolver** solo hasta lo que le queda a la jornada (`23514` si se pasa), y **cargar** se rechaza
+  si la bodega esta en curso en otra jornada (`55000`).
+- **Aprobacion de sistema.** El traspaso al iniciar una jornada y la anulacion de una receta
+  registran movimientos que impone la regla, no una persona. Una variable local a la transaccion
+  (`ecopac.aprobacion_de_sistema`, `fn_es_aprobacion_de_sistema()`) hace que
+  `fn_autoaprobar_movimiento_inventario()` los apruebe y que `fn_proteger_decision_de_movimiento()`
+  deje rechazar las salidas pendientes de una receta anulada. Solo la encienden y apagan dos
+  funciones SECURITY DEFINER de la `00186`, dentro de un trigger: PostgREST no expone `set_config`
+  ni deja ejecutar SQL suelto, asi que una sesion del cliente no puede encenderla. Quien inicia la
+  jornada puede ser alguien con `jornadas.gestionar` y quien anula, el medico: ninguno aprueba
+  movimientos, y sin esto el traspaso nacia pendiente y llenaba la bandeja de Validacion.
+- **Anular una receta** (la politica de la `00075` decide quien) rechaza sus movimientos pendientes
+  y devuelve lo ya descontado con un ingreso enlazado (`movimientos_inventario.receta_id`). Ese
+  ingreso sigue la regla de siempre: aprobado si lo registra la administradora, pendiente si es el
+  medico.
+- **La entrega de una receta se valida completa.** Sus salidas (una por lote) avisan una sola vez,
+  con la receta como origen de la notificacion, y la bandeja las muestra como una fila. Aprobar una
+  aprueba las demas en la misma transaccion (trigger SECURITY DEFINER; si a una le falta
+  existencia no se aprueba ninguna).
+- **Rechazar la entrega de una receta la anula.** En la bandeja de Validacion, rechazar la salida
+  "Entrega por receta medica ..." anula la receta entera (trigger SECURITY DEFINER, a nombre de quien
+  rechazo, con motivo "Anulada por la administracion al rechazar su salida de inventario: ..."), y
+  la anulacion hace lo de arriba con el resto. Rechazar un ajuste no anula la receta.
+- `fn_insumos_de_proyecto()` (SECURITY DEFINER, misma guarda que `fn_consumo_de_insumos_de_jornada()`)
+  devuelve lo que les queda a las jornadas de un proyecto; `anon` no la ejecuta.
+
+Lo afirma `consumo_por_jornada_y_lo_comprometido.sql`.
+
 **El equipo del proyecto es la union (`00150`).** `equipo_de_proyecto(proyecto_id)` devuelve, ademas
 de las filas de `proyecto_personal`, a quien esta en el equipo de alguna jornada del proyecto
 (`jornada_personal`), con las jornadas en que esta (`jornadas`) y si esta tambien en el equipo del
 proyecto (`en_equipo_del_proyecto`). La guarda de lectura de la funcion no cambio: la ve quien ve el
 proyecto. Quitar solo aplica a quien esta en `proyecto_personal`; a quien llega por una jornada se le
-quita desde esa jornada. Lo afirma `proyecto_personal.sql`.
+quita desde esa jornada. Desde la `00157` suma tambien al responsable de cada jornada del proyecto,
+que ya pertenecia a el para RLS (`pertenece_a_jornada()`, `00141`); no cambia quien la ve. Lo afirma
+`proyecto_personal.sql`.
 
 `jornada_presupuesto_origen` (issue #840) dice de donde viene cada parte del presupuesto de una
 jornada: una donacion de dinero, fondos propios o un aporte externo. `jornadas.presupuesto_asignado`
@@ -581,6 +694,36 @@ pero no el desglose. Que una donacion no se asigne por encima de su monto lo val
 `fn_validar_origen_de_presupuesto` (DEFINER, solo lee), para que valga igual aunque quien escribe no
 tenga lectura sobre `donaciones`. Reflejo en el cliente: `permisosDeOrigenDePresupuesto()` en
 `presupuestos/permisos.js`.
+
+**El dinero comprometido no pasa el presupuesto (`00159`).** Son reglas de datos, no de rol, y valen
+para todos, la administradora incluida. `fn_validar_gasto_contra_presupuesto` (DEFINER, porque quien
+registra en su jornada no ve por RLS los gastos de los demas) rechaza un gasto pendiente o aprobado
+que deje lo comprometido de la jornada (pendientes + aprobados, `comprometido_de_jornada()`, sin
+EXECUTE para nadie) por encima de `presupuesto_asignado`, y una fecha posterior al dia de la jornada
+(o a hoy, si ya paso), y cualquier gasto nuevo en una jornada finalizada: ya cerro, y sus
+pendientes solo se aprueban o se rechazan. `fn_proteger_presupuesto_comprometido` rechaza quitar o rebajar un aporte por
+debajo de lo comprometido. Como corren antes que RLS, una fila sin permiso y sin presupuesto recibe
+el `23514` del presupuesto y no el `42501`: las pruebas de RLS dan presupuesto a sus jornadas.
+
+**El sobrante de una jornada finalizada (`00160`).** `sobrante_de_jornada(jornada)` (DEFINER, con la
+misma guarda de lectura que los aportes) dice cuanto usaron los gastos de cada aporte y cuanto
+sobra. `fn_liquidar_sobrante_de_jornada(jornada, decisiones)` (DEFINER) lo devuelve a su origen o lo
+traspasa a otra jornada planificada o en curso del mismo proyecto; exige `es_administrador()` o
+`tiene_permiso('jornadas.gestionar')` -los mismos que escriben aportes-, jornada finalizada y sin
+gastos pendientes. `jornada_presupuesto_origen.devuelto` y `traspasado_desde` solo los escribe esa
+funcion (`fn_impedir_devuelto_a_mano`), y un aporte ya liquidado no se corrige ni se quita. Reflejo
+en el cliente: `useSobranteDeJornada()` en `presupuestos/`. Lo afirma
+`presupuesto_gastos_y_sobrante.sql`.
+
+**La caja (`00167`, `00168`).** Lo devuelto de un aporte que no es de una donacion -fondos propios,
+aporte externo, sin clasificar o la propia caja- entra a la caja (`movimientos_de_caja`), y la caja
+es un origen mas de un aporte (`origen = 'caja'`). Registrar ese aporte es la misma politica de
+INSERT de `jornada_presupuesto_origen`; `fn_validar_aporte_de_caja` (DEFINER) rechaza con `23514`
+sacar mas de lo que hay, y `fn_registrar_salida_de_caja` (DEFINER) anota la salida. Quitar el
+aporte borra su salida (CASCADE) y el dinero vuelve a la caja. `saldo_de_caja()` (DEFINER) devuelve
+el saldo con la misma guarda de lectura que la tabla, y NULL a quien no la ve. Reflejo en el
+cliente: `useCajaDePresupuesto()` y la pestana Caja de Presupuestos. Lo afirma
+`caja_de_sobrantes.sql`.
 
 `gastos` es el otro circuito de aprobacion: quien participa en la jornada registra en estado
 `pendiente` y a su nombre; aprobar es un UPDATE que exige `es_administrador()` o
@@ -594,8 +737,8 @@ inserta el propio administrador, sin ajuste de existencias: un gasto no mueve in
 | Tabla              | administrador | junta directiva / socio fundador | medico | voluntario general | Como se implementa                                       |
 | ------------------ | ------------- | -------------------------------- | ------ | ------------------ | --------------------------------------------------------- |
 | `donantes`         | C R U         | —                                | —      | —                  | `00083` + `00086` + `00141` (registrar Y SU LECTURA admiten `tiene_permiso('donaciones.registrar')`, mismo motivo que `proyectos`: `registrarDonante()` hace `.insert().select()`). `es_administrador()` escribe, `es_consultivo()` o el permiso fino leen |
-| `donaciones`       | C R U         | —                                | —      | —                  | `00083` + `00086` + `00141`, mismo cambio. La anulacion (UPDATE) exige `estado = 'anulada'` y `motivo_anulacion`. Desde la `00153` una donacion puede ser para una jornada (`jornada_id`); el trigger `fn_proyecto_de_la_jornada_de_la_donacion` (DEFINER, sin EXECUTE para nadie) pone el proyecto de esa jornada aunque quien registra por delegacion no lea `jornadas`. No cambia quien puede escribir |
-| `donacion_detalle` | C R U (`lote_id`) | —                            | —      | —                  | `00083` + `00086` + `00141`, mismo cambio. El detalle no se corrige, se anula la donacion completa. Desde la `00135` el renglon de una donacion de medicamentos lleva `medicamento_id`, que exige `fn_registrar_donacion` (INVOKER: no cambia quien puede escribir). El unico UPDATE es enlazar el lote que produjo el renglon: GRANT de la columna `lote_id` y nada mas, una sola vez (la politica solo alcanza `lote_id IS NULL`), con un lote del mismo medicamento (trigger), y lo hace quien registra donaciones (`es_administrador() OR tiene_permiso('donaciones.registrar')`). Hasta la `00135` no habia GRANT ni politica y `enlazarLoteConDonacion()` fallaba siempre. La `00135` concedio el GRANT de columna sin revocar el UPDATE de tabla completa que `authenticated` ya traia por default desde que la tabla se creo (`00022`, antes de que la `00120` empezara a revocar privilegios por defecto): el resto del renglon si se podia corregir con un UPDATE directo hasta que la `00145` revoco el UPDATE amplio |
+| `donaciones`       | C R           | —                                | —      | —                  | `00083` + `00086` + `00141`, mismo cambio. Desde la `00173` (issue #911) no hay politica de UPDATE ni `fn_anular_donacion`: una donacion ya no se anula, porque no hay proceso para devolver lo donado; las anuladas antes conservan su estado. Desde la `00153` una donacion puede ser para una jornada (`jornada_id`); el trigger `fn_proyecto_de_la_jornada_de_la_donacion` (DEFINER, sin EXECUTE para nadie) pone el proyecto de esa jornada aunque quien registra por delegacion no lea `jornadas`. No cambia quien puede escribir |
+| `donacion_detalle` | C R U (`lote_id`) | —                            | —      | —                  | `00083` + `00086` + `00141`, mismo cambio. El detalle no se corrige. Desde la `00135` el renglon de una donacion de medicamentos lleva `medicamento_id`, que exige `fn_registrar_donacion` (INVOKER: no cambia quien puede escribir). El unico UPDATE es enlazar el lote que produjo el renglon: GRANT de la columna `lote_id` y nada mas, una sola vez (la politica solo alcanza `lote_id IS NULL`), con un lote del mismo medicamento (trigger), y lo hace quien registra donaciones (`es_administrador() OR tiene_permiso('donaciones.registrar')`). Hasta la `00135` no habia GRANT ni politica y `enlazarLoteConDonacion()` fallaba siempre. La `00135` concedio el GRANT de columna sin revocar el UPDATE de tabla completa que `authenticated` ya traia por default desde que la tabla se creo (`00022`, antes de que la `00120` empezara a revocar privilegios por defecto): el resto del renglon si se podia corregir con un UPDATE directo hasta que la `00145` revoco el UPDATE amplio |
 
 Hasta la `00083`, las tres tablas estaban **denegadas a los cinco roles, incluido el
 administrador**, por dos motivos independientes que detalla la Divergencia 1 (resuelta).
@@ -604,8 +747,13 @@ Desde la **`00141`** (issue #864) las lee **solo la administradora**, o quien te
 `donaciones.registrar`. Los dos roles consultivos salen: su unica pantalla es Reportes y ninguno
 de los cuatro reportes lee donantes, donaciones ni su detalle. Desde la `00148` tambien las lee el
 rol al que la matriz le abre Donaciones. Registrar se delega (`donaciones.registrar`); corregir o
-dar de baja un donante y anular una donacion no -sus politicas de UPDATE son solo
-`es_administrador()`-, y el cliente lo refleja con `puedeCorregirDonaciones()`.
+dar de baja un donante no -su politica de UPDATE es solo `es_administrador()`-, y el cliente lo
+refleja con `puedeCorregirDonaciones()`. Una donacion no la anula nadie desde la `00173`.
+
+Desde la **`00175`** cada donante tiene su proveedor (`proveedores.donante_id`): lo crea y lo
+mantiene el trigger `trg_donantes_proveedor` con `fn_sincronizar_proveedor_de_donante` (DEFINER,
+sin EXECUTE para nadie), asi que quien registra donantes por delegacion no necesita escribir
+`proveedores`. No cambia quien puede escribir ninguna de las dos tablas.
 
 ### Usuarios y permisos
 
@@ -719,8 +867,10 @@ tabla:
 | ------------------------- | ----------------------- | ---------------------------------------------------------------------------------- | ------------------------- |
 | `vista_reporte_impacto`   | **DEFINER**             | `puede_consultar_reportes()` en el `WHERE`: administrador, los dos consultivos, quien tiene `reportes.exportar` y el rol al que la matriz le abre Reportes | `00027`, `00054`, `00064`, `00080`, `00086`, `00148` |
 | `vista_reporte_impacto_por_comunidad` | **DEFINER**  | `puede_consultar_reportes()`, igual que la anterior; `GRANT SELECT` a `authenticated`, nada a `anon`. Mismos indicadores con grano (jornada, comunidad de origen del paciente). Nada identifica a un paciente | `00155` |
+| `fn_reporte_enfermedades`, `fn_opciones_reporte_enfermedades` | **DEFINER** (funciones) | `puede_consultar_reportes()` en el cuerpo; `EXECUTE` a `authenticated`, nada a `anon`. Solo conteos agregados, siempre con su numero real | `00177`, `00180` |
 | `pacientes_reporte`       | **DEFINER**             | `puede_consultar_reportes()`, igual que la anterior. Solo expone `id` y `comunidad_id` | `00041`, `00080`, `00086`, `00148` |
 | `perfiles_directorio`     | **DEFINER**             | administrador y el propio; desde la `00148` tambien quien tiene `usuarios.gestionar_permisos`, `jornadas.gestionar` o `proyectos.gestionar`, y el rol al que la matriz le abre Colaboradores. Enmascara telefono y correo | `00038`, `00141`, `00148` |
+| `nombres_de_perfiles`     | **DEFINER**             | toda persona activa (`rol_actual() IS NOT NULL`). Solo `id`, `nombres`, `apellidos` y `activo`: pone nombre a los ids que el RLS de cada tabla ya deja ver (equipo y responsable de una jornada, responsable de un proyecto, encargado y registro de un gasto). `perfiles` sigue cerrada | `00161` |
 | `vista_cola_jornada`      | **DEFINER**             | administrador y quien participa en la jornada                                      | `00060`                   |
 | `vista_lotes_disponibles` | `security_invoker=true` | cualquier autenticado, con su propia RLS                                           | `00024`, `00041`, `00047` |
 | `privilegios_de_anon`     | DEFINER                 | nadie: es una guarda de CI                                                         | `00056`                   |
@@ -742,6 +892,24 @@ consultas, recetas), los diagnosticos mas frecuentes, los medicamentos mas entre
 con su total de atenciones. Nada identifica a un paciente. Hasta ahi el cliente armaba el reporte
 leyendo `atenciones`, `consultas` y `recetas` con la sesion, y los roles consultivos -que no leen
 filas clinicas- recibian un reporte vacio. La guarda es `puede_consultar_reportes()` o ser medico.
+
+**El reporte de enfermedades son dos funciones agregadas (`00177`, issue #916).**
+`fn_reporte_enfermedades(...)` cuenta los diagnosticos del catalogo (`consulta_diagnostico`) por
+jornada, comunidad (la de la jornada o la del paciente) o mes, con desglose por sexo y edad, y
+`fn_opciones_reporte_enfermedades()` entrega las jornadas, proyectos y diagnosticos para elegir. Las
+dos son SECURITY DEFINER con la guarda `puede_consultar_reportes()` en el cuerpo (`42501` si no),
+`EXECUTE` solo para `authenticated` y nada para `anon`. Hacen falta las dos porque los roles
+consultivos no leen `consultas`, `consulta_diagnostico`, `jornadas`, `proyectos` ni
+`diagnosticos`: sin la de opciones, sus selectores saldrian vacios.
+
+Nada identifica a un paciente: la funcion solo devuelve conteos agregados, nunca una fila por
+paciente. **Toda cifra sale con su numero real**, tambien las de 1 a 4, en la tabla, el desglose
+por sexo y edad, las graficas, el CSV y el papel. La `00177` las devolvia en `NULL` y la pantalla
+las mostraba como "< 5"; la organizacion pidio ver el numero real y la `00180` (issue #926) quito
+esa supresion y la columna `suprimido`. Que un conteo bajo en una comunidad pequena pueda senalar
+a una persona queda en manos de quien tiene acceso al reporte: por eso solo lo consultan la
+administracion, los roles consultivos y quien tiene acceso a Reportes. Espejo en el cliente: `puedeVerReporteDeEnfermedades` en `reportes/permisos.js`. El
+medico no lo tiene: a diferencia del reporte de una jornada, ninguna pantalla de campo lo monta.
 
 Reflejo en el cliente: `reportes/permisos.js` (issue #396), que absorbio
 `puedeVerIndicadoresDeImpacto` y `puedeVerReporteDePacientes`, sueltas hasta ahora fuera de un
@@ -806,15 +974,18 @@ su rol no tiene, sin cambiarle el rol.**
 | `presupuestos.registrar`      | administrador                                  | **Si** — INSERT de `gastos` (`00052`); lectura de `gastos` (`00148`)                 |
 | `presupuestos.aprobar`        | administrador                                  | **Si** — UPDATE de `gastos` (`00052`); lectura de `gastos` (`00148`)                 |
 | `pacientes.editar`            | administrador, medico, voluntario general (`00148`) | **Si** — UPDATE de `pacientes` y `expedientes` (`00086`)                        |
+| `citas.agendar`               | administrador, medico, voluntario general (`00185`) | **Si** — INSERT de `citas` (con pertenecer a la jornada) y, en el UPDATE, reagendar, cancelar y cambiar notas (`00185`, issue #927). Sin el, el personal de campo de la jornada solo abre la cita y la regresa a creada |
 | `inventario.aprobar`          | administrador                                  | **Si** — UPDATE de `movimientos_inventario` (`00086`)                                |
+| `inventario.configurar_alertas` | administrador                                | **Si** — UPDATE de `configuracion_alertas_caducidad` y `fn_sincronizar_alertas_caducidad` (`00162`, issue #899). No da permiso para atender alertas |
 | `donaciones.registrar`        | administrador                                  | **Si** — INSERT de `donantes`, `donaciones` y `donacion_detalle` (`00086`)           |
 | `proyectos.gestionar`         | administrador                                  | **Si** — INSERT y UPDATE de `proyectos` (`00086`, y las escrituras de `proyecto_personal` `00146` y `proyecto_insumos` `00147`) |
 | `usuarios.gestionar_permisos` | administrador                                  | **Si** — INSERT/UPDATE/DELETE de `usuario_permiso` (`00086`)                         |
 | `reportes.exportar`           | administrador, junta directiva, socio fundador | **Si** — `vista_reporte_impacto`, `pacientes_reporte`, `fn_reporte_pacientes_atendidos` (`00086`) |
 
-**Los nueve permisos gobiernan de verdad una politica.** Concederlos o revocarlos en
+**Los once permisos gobiernan de verdad una politica.** Concederlos o revocarlos en
 `usuario_permiso` cambia lo que el servidor permite. Resuelto por la issue #409 (migracion
-`00086`).
+`00086`); `inventario.configurar_alertas` nace conectado (`00162`, issue #899), y `citas.agendar`
+tambien (`00185`, issue #927).
 
 **Las ocho politicas conectadas por la `00086` son siempre `es_administrador() OR
 tiene_permiso(clave)`, nunca solo `tiene_permiso(clave)`.** Consecuencia directa: para el rol
@@ -935,6 +1106,11 @@ completo de su jornada; que da de alta un medicamento; y que el responsable de u
 aunque no este en su cuadro de turnos. Desde la `00148` el personal de campo tambien corrige el
 medicamento, pero no lo desactiva: lo afirman `permisos_por_rol_864.sql` y
 `acceso_a_modulos_por_rol.sql`.
+
+Lo de la issue #927 lo afirman `areas_de_atencion.sql`, `clinicas.sql`, `citas.sql` y
+`permiso_agendar_citas.sql`: que el medico de la jornada ve sus citas y el de fuera no, que el
+voluntario las ve, que junta directiva recibe cero filas, que agendar pide `citas.agendar` y
+pertenecer a la jornada, y que sin el permiso solo se abre la cita y se regresa a creada.
 
 Para comprobar una celda a mano contra la base local, el patron es el de esas suites:
 

@@ -140,6 +140,7 @@ poner solos el "+" y el basurero; ninguna pantalla los escribe a mano.
 | `olvidarUltimaActividad`, `CLAVE_ULTIMA_ACTIVIDAD` | Borran / nombran la marca guardada; la pantalla de inicio de sesion la borra |
 | `esRespuestaVigente`, `debeDescartarseLaRespuesta`, `combinarResultados`, `hayMasResultados` | Descartan respuestas de una busqueda ya superada |
 | `usePanelDeInicio`               | La pantalla de inicio por rol, con los accesos de `modulosVisibles()` (#710) |
+| `useCambiosEnTiempoReal`         | Recarga una pantalla cuando cambian sus tablas (Realtime, 00163). Junta una racha de avisos en una sola recarga (`ESPERA_DE_TIEMPO_REAL_MS`); `suscribirACambios` es la logica, probada con un cliente de mentira. Lo usan los hooks de listas, tableros, detalles y reportes |
 
 ### `auditoria/` - bitacora (#643)
 
@@ -333,7 +334,12 @@ La cola de la jornada. Modulo pequeno y con una sola responsabilidad.
 pediatrico, activo) y resumen los lotes de cada medicamento; la "categoria", el codigo y el precio
 que mostraba la pantalla no eran columnas.
 
-**Escrituras**: `registrarMedicamento`, `actualizarMedicamento`, `desactivarMedicamento`,
+**Insumos (00164)**: `pideDatosFarmacologicos(tipoArticulo)` y `CAMPOS_SOLO_DE_MEDICAMENTO`
+dicen que campos solo tiene un medicamento; `registrarMedicamento` pide principio activo solo a
+un medicamento. `useRegistroIngreso` expone `renglonesDonacion` (el estado de cada renglon de una
+donacion en el ingreso) y no deja guardar mientras falte alguno.
+
+**Escrituras**: `registrarMedicamento`, `actualizarMedicamento`, `cambiarPrincipioDeMedicamento` (00166), `desactivarMedicamento`,
 `registrarIngreso`, `registrarSalida`, `editarMovimiento`, `aprobarMovimiento`,
 `rechazarMovimiento`, `aprobarMovimientosEnLote`, `registrarBodega`, `actualizarBodega`,
 `registrarProveedor`, `actualizarProveedor`, `registrarPrincipioActivo`,
@@ -420,7 +426,7 @@ si con `suscribirCambiosDelBuzon` / `avisarCambioDelBuzon` (`eventos.js`).
 `obtenerDonacionDeLote`, `filtrarDonantes`.
 
 **Escrituras**: `registrarDonante`, `actualizarDonante`, `darDeBajaDonante`,
-`generarIngresoDesdeDonacion`.
+`reactivarDonante`, `generarIngresoDesdeDonacion`.
 
 **Validaciones**: `validarDonacion`, `validarDonante`, `validarAnulacionDeDonacion`.
 
@@ -440,7 +446,14 @@ el formulario no ofrece proyectos cancelados. `useResumenDonaciones` da los indi
 `obtenerPresupuestoProyecto`, `obtenerPresupuestoSistema`.
 
 **Escrituras**: `registrarGasto`, `editarGasto`, `aprobarGasto`, `rechazarGasto`,
-`registrarOrigenDePresupuesto`, `quitarOrigenDePresupuesto`.
+`registrarOrigenDePresupuesto`, `quitarOrigenDePresupuesto`, `crearCategoriaDeGasto` (00158),
+`liquidarSobranteDeJornada` (00160).
+
+**Categorias y sobrante**: `listarCategoriasGasto` lee el catalogo `categorias_de_gasto` (00158; ya
+no hay `CATEGORIAS_DE_GASTO`). `obtenerSobranteDeJornada` y `liquidarSobranteDeJornada`
+(`sobrante.api.js`, 00160) con `DESTINOS_DE_SOBRANTE`; `useSobranteDeJornada` es la seccion de
+sobrante de la pestana Cierre. `validarGasto` bloquea el gasto que pasa lo comprometido de la
+jornada o que cae en una jornada finalizada, y acepta fechas hasta el dia de la jornada (00159).
 
 El presupuesto de una jornada ya no se escribe a mano: es la suma de sus origenes
 (`jornada_presupuesto_origen`, 00135), cada uno de una donacion en efectivo con saldo o de fondos
@@ -451,7 +464,18 @@ donaciones de donde puede salir.
 `combinarProyectosConPresupuesto`, `totalizar`.
 
 **Hooks**: `useEjecucionPresupuestal`, `useFormularioGasto`, `usePendientesAprobacionGastos`,
-`useDetalleProyectoPresupuesto`.
+`useDetalleProyectoPresupuesto`, `useSobranteDeJornada`, `useGastosDeJornada`.
+
+**Caja** (`caja.api.js`, 00168): `obtenerSaldoDeCaja`, `listarMovimientosDeCaja`,
+`aMovimientoDeCaja`, `TIPOS_DE_MOVIMIENTO_DE_CAJA`; `useCajaDePresupuesto` es la pestana Caja de
+Presupuestos (`COLUMNAS_MOVIMIENTO_CAJA`). El sobrante que no vuelve a una donacion entra a la caja,
+y la caja es un origen de aporte (`ORIGENES_DE_PRESUPUESTO.CAJA`): `useOrigenesDePresupuesto`
+devuelve `saldoDeCaja` y `validarOrigenDePresupuesto` no deja pasarse de el.
+
+`useGastosDeJornada` es la pestana Gastos del detalle de una jornada: sus gastos
+(`COLUMNAS_GASTO_DE_JORNADA`) y `resumirGastosDeJornada`, que da presupuesto, aprobado, pendiente y
+disponible (lo asignado menos lo aprobado y lo pendiente, como lo cuenta la 00159). El alta desde
+ahi usa `useFormularioGasto({ jornadaId })`, que deja la jornada fija (`jornadaFija`).
 
 Los totales salen de las tres funciones SQL de la migracion `00040`. No hay columna de total: un
 total guardado se desincroniza.
@@ -476,7 +500,7 @@ estado, jornadas, equipo, insumos, `puedeRegistrarSeguimiento`), sea cual sea el
 nuevo a un proyecto; `MENSAJE_PROYECTO_CANCELADO` es el aviso que se muestra. Quien lo impide de
 verdad son los triggers de la 00154.
 
-**Equipo e insumos**: `equipo.api.js` (00146; desde la 00150, union con el equipo de sus jornadas),
+**Equipo e insumos**: `equipo.api.js` (00146; desde la 00150, union con el equipo de sus jornadas, y desde la 00157 con sus responsables),
 `insumos.api.js` (00147: listar, quitar y `pasarInsumoDelProyectoAJornada`, 00151) y
 `normalizacion.js` (`vacioANull` para columnas DATE y UUID opcionales).
 
@@ -525,7 +549,7 @@ permiso sale falso y no consulta. No hay filtro por comunidad: `bodegas` no tien
 Los valores son exactamente los del enum `rol_usuario` de la migracion `00001`. Un rol escrito
 como string suelto es un error de revision.
 
-**Consultas**: `listarUsuarios`, `obtenerPerfil`, `obtenerEspecialidadesDePerfil`,
+**Consultas**: `listarUsuarios`, `listarNombresDePerfiles` (00161: solo nombres, para toda persona activa), `obtenerPerfil`, `obtenerEspecialidadesDePerfil`,
 `listarCatalogoEspecialidades`, `listarCatalogoPermisos`, `obtenerPermisosEfectivos`,
 `contarAdministradoresActivos`, `contarJornadasPorPerfil`.
 
