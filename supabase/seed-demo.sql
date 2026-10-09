@@ -474,11 +474,10 @@ ON CONFLICT (id) DO NOTHING;
 -- 14. Presupuesto: aportes y gastos
 -- ============================================================================
 -- El Rosario y Vista Hermosa ya traen su presupuesto inicial como aporte "sin clasificar"
--- (fn_origen_del_presupuesto_inicial, 00135). Aqui se suman un aporte de la donacion de dinero a
--- Vista Hermosa y fondos propios para la jornada planificada.
+-- (fn_origen_del_presupuesto_inicial, 00135), y la donacion de dinero para Vista Hermosa ya entro
+-- sola a su presupuesto al insertar su renglon (00187). Aqui se suman fondos propios para la
+-- jornada planificada.
 INSERT INTO jornada_presupuesto_origen (id, jornada_id, origen, donacion_id, monto, descripcion) VALUES
-  ('de000012-0000-0000-0000-000000000001', 'de00000a-0000-0000-0000-000000000002', 'donacion',
-   'de000010-0000-0000-0000-000000000001', 2000, NULL),
   ('de000012-0000-0000-0000-000000000002', 'de00000a-0000-0000-0000-000000000003', 'fondos_propios',
    NULL, 1500, 'Presupuesto de preparacion')
 ON CONFLICT (id) DO NOTHING;

@@ -47,6 +47,7 @@ import {
   pideDatosFarmacologicos,
   totalizarValorizacion,
   useAlertasVencimiento,
+  useOrdenYPagina,
   usePendientesValidacion,
   validarMedicamentoDelCatalogo,
 } from "@ecopac/shared";
@@ -55,6 +56,7 @@ import PrimaryButton from "../components/PrimaryButton";
 import Selector from "../components/Selector";
 import TextField from "../components/TextField";
 import FilterBar from "../components/FilterBar";
+import Paginacion from "../components/Paginacion";
 import BotonLimpiarFiltros from "../components/BotonLimpiarFiltros";
 import SecondaryButton from "../components/SecondaryButton";
 import StatusChip from "../components/StatusChip";
@@ -487,16 +489,18 @@ export default function InventarioPage() {
     cancelarCorreccionCosto();
   };
 
-  const lotesFiltrados = lotesRaw.filter((lote) => {
+  const lotesFiltrados = useMemo(() => {
     const texto = busquedaLotes.trim().toLowerCase();
-    const coincideTexto =
-      texto === "" ||
-      lote.medicamento?.toLowerCase().includes(texto) ||
-      lote.numeroLote?.toLowerCase().includes(texto);
-    const coincideOrigen =
-      filtroBodega === "todas" || ETIQUETAS_ORIGEN_LOTE[lote.origen] === filtroBodega;
-    return coincideTexto && coincideOrigen;
-  });
+    return lotesRaw.filter((lote) => {
+      const coincideTexto =
+        texto === "" ||
+        lote.medicamento?.toLowerCase().includes(texto) ||
+        lote.numeroLote?.toLowerCase().includes(texto);
+      const coincideOrigen =
+        filtroBodega === "todas" || ETIQUETAS_ORIGEN_LOTE[lote.origen] === filtroBodega;
+      return coincideTexto && coincideOrigen;
+    });
+  }, [lotesRaw, busquedaLotes, filtroBodega]);
 
   // Lotes: cuanto queda hoy de cada lote, sumado en todas las bodegas. Reutiliza el mismo
   // helper probado que arma la pantalla movil de existencias por lote (useExistenciasPorLote.js);
@@ -517,6 +521,24 @@ export default function InventarioPage() {
     () => filtrarCatalogoMedicamentos(inventarioRaw, filtrosCatalogo),
     [inventarioRaw, filtrosCatalogo],
   );
+
+  // Catalogo y Lotes se ven por paginas: las dos tablas volcaban todas sus filas de una vez, y con
+  // el catalogo creciendo habia que desplazarse por cientos de renglones. Es paginacion en cliente
+  // sobre lo ya filtrado, el mismo hook y el mismo pie que los reportes (issue #862): los conteos
+  // y las tarjetas siguen saliendo del conjunto entero, no de la pagina. Cambiar un filtro vuelve
+  // a la primera pagina.
+  const {
+    pagina: medicamentosDeLaPagina,
+    numeroDePagina: paginaDelCatalogo,
+    totalPaginas: paginasDelCatalogo,
+    irAPagina: irAPaginaDelCatalogo,
+  } = useOrdenYPagina(medicamentosVisibles);
+  const {
+    pagina: lotesDeLaPagina,
+    numeroDePagina: paginaDeLotes,
+    totalPaginas: paginasDeLotes,
+    irAPagina: irAPaginaDeLotes,
+  } = useOrdenYPagina(lotesFiltrados);
 
   // Para el filtro de presentacion (opcionesDesde: "presentaciones", 00144) y para el Selector
   // de ModalMedicamento: mismo catalogo cargado, sin volver a pedirlo.
@@ -720,8 +742,14 @@ export default function InventarioPage() {
             campos={FILTROS_CATALOGO_MEDICAMENTOS}
             valores={filtrosCatalogo}
             catalogos={{ presentaciones: opcionesPresentacion }}
-            onChange={(id, valor) => setFiltrosCatalogo((previos) => ({ ...previos, [id]: valor }))}
-            onLimpiar={() => setFiltrosCatalogo(FILTROS_CATALOGO_VACIOS)}
+            onChange={(id, valor) => {
+              setFiltrosCatalogo((previos) => ({ ...previos, [id]: valor }));
+              irAPaginaDelCatalogo(1);
+            }}
+            onLimpiar={() => {
+              setFiltrosCatalogo(FILTROS_CATALOGO_VACIOS);
+              irAPaginaDelCatalogo(1);
+            }}
             hayFiltros={hayFiltrosDeCatalogo(filtrosCatalogo)}
           />
 
@@ -764,7 +792,7 @@ export default function InventarioPage() {
                     </td>
                   </tr>
                 ) : (
-                  medicamentosVisibles.map((item) => {
+                  medicamentosDeLaPagina.map((item) => {
                     const lotes = resumenDeLotes.get(item.id);
                     return (
                       <tr key={item.id}>
@@ -817,6 +845,12 @@ export default function InventarioPage() {
               </tbody>
             </Table>
           </div>
+
+          <Paginacion
+            pagina={paginaDelCatalogo}
+            totalPaginas={paginasDelCatalogo}
+            onCambiar={irAPaginaDelCatalogo}
+          />
         </>
       )}
 
@@ -831,7 +865,10 @@ export default function InventarioPage() {
                 label="Buscar lote"
                 placeholder="Medicamento o número de lote"
                 value={busquedaLotes}
-                onChange={(e) => setBusquedaLotes(e.target.value)}
+                onChange={(e) => {
+                  setBusquedaLotes(e.target.value);
+                  irAPaginaDeLotes(1);
+                }}
                 style={{ marginBottom: 0 }}
               />
             </div>
@@ -843,7 +880,10 @@ export default function InventarioPage() {
                   value: etiqueta,
                   label: etiqueta,
                 }))}
-                onSelect={(valor) => setFiltroBodega(valor ?? "todas")}
+                onSelect={(valor) => {
+                  setFiltroBodega(valor ?? "todas");
+                  irAPaginaDeLotes(1);
+                }}
                 placeholder="Todos los origenes"
                 style={{ marginBottom: 0 }}
               />
@@ -853,6 +893,7 @@ export default function InventarioPage() {
               onClick={() => {
                 setBusquedaLotes("");
                 setFiltroBodega("todas");
+                irAPaginaDeLotes(1);
               }}
             />
           </div>
@@ -889,7 +930,7 @@ export default function InventarioPage() {
                     </td>
                   </tr>
                 ) : (
-                  lotesFiltrados.map((lote) => {
+                  lotesDeLaPagina.map((lote) => {
                     const enCorreccion = loteEnCorreccion === lote.id;
                     return (
                       <tr key={lote.id}>
@@ -988,6 +1029,12 @@ export default function InventarioPage() {
               </tbody>
             </Table>
           </div>
+
+          <Paginacion
+            pagina={paginaDeLotes}
+            totalPaginas={paginasDeLotes}
+            onCambiar={irAPaginaDeLotes}
+          />
         </>
       )}
 

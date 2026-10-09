@@ -38,8 +38,9 @@ este seed corresponde a una persona o lugar real (regla de confidencialidad de
 - 2 insumos del catalogo (guantes y jeringas), sin principio activo ni concentracion (`00164`).
 - 3 donantes y 4 donaciones, una de cada tipo: dinero (para la jornada en curso), medicamentos
   (dos renglones, uno ya ingresado a inventario), insumos y servicios.
-- Presupuesto: la jornada en curso suma un aporte de la donacion de dinero; la planificada tiene
-  fondos propios. Gastos en los tres estados, uno de preparacion antes de la jornada, y los de la
+- Presupuesto: la jornada en curso suma el aporte de la donacion de dinero, que entra solo al
+  insertar la donacion (`00187`: el seed ya no lo inserta aparte); la planificada tiene fondos
+  propios. Gastos en los tres estados, uno de preparacion antes de la jornada, y los de la
   jornada finalizada dejan un sobrante para liquidar desde la pestana Cierre.
 - Atencion clinica: triaje, consulta con diagnostico y receta en las dos primeras jornadas; en la
   en curso ademas un paciente con triaje esperando consulta y uno recien llegado.

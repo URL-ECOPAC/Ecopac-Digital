@@ -8,10 +8,11 @@
 
 import { describe, expect, it } from "vitest";
 
-import { TIPOS_DE_DONACION } from "../enums.js";
+import { ESTADOS_JORNADA, TIPOS_DE_DONACION } from "../enums.js";
 import {
   conIdsReales,
   debeOfrecerIngresoInventario,
+  entraAlPresupuestoDeLaJornada,
   opcionesDeArticuloParaDonacion,
 } from "./useRegistroDonacion.js";
 
@@ -84,5 +85,35 @@ describe("conIdsReales", () => {
     const detallesLocales = [{ id: 1, descripcion: "Amoxicilina" }];
 
     expect(conIdsReales(detallesLocales)[0].donacionDetalleId).toBeNull();
+  });
+});
+
+describe("entraAlPresupuestoDeLaJornada (00187)", () => {
+  it("el dinero para una jornada planificada o en curso entra a su presupuesto", () => {
+    expect(
+      entraAlPresupuestoDeLaJornada(TIPOS_DE_DONACION.DINERO, ESTADOS_JORNADA.PLANIFICADA),
+    ).toBe(true);
+    expect(entraAlPresupuestoDeLaJornada(TIPOS_DE_DONACION.DINERO, ESTADOS_JORNADA.EN_CURSO)).toBe(
+      true,
+    );
+  });
+
+  it("sin jornada, o con la jornada finalizada o cancelada, no entra", () => {
+    expect(entraAlPresupuestoDeLaJornada(TIPOS_DE_DONACION.DINERO, undefined)).toBe(false);
+    expect(
+      entraAlPresupuestoDeLaJornada(TIPOS_DE_DONACION.DINERO, ESTADOS_JORNADA.FINALIZADA),
+    ).toBe(false);
+    expect(entraAlPresupuestoDeLaJornada(TIPOS_DE_DONACION.DINERO, ESTADOS_JORNADA.CANCELADA)).toBe(
+      false,
+    );
+  });
+
+  it("lo que no es dinero no entra aunque sea para una jornada activa", () => {
+    expect(
+      entraAlPresupuestoDeLaJornada(TIPOS_DE_DONACION.SERVICIOS, ESTADOS_JORNADA.PLANIFICADA),
+    ).toBe(false);
+    expect(
+      entraAlPresupuestoDeLaJornada(TIPOS_DE_DONACION.MEDICAMENTOS, ESTADOS_JORNADA.EN_CURSO),
+    ).toBe(false);
   });
 });
