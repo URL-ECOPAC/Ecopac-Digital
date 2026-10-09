@@ -438,7 +438,10 @@ medicamentos crea el lote correspondiente.
 
 `registro.api.js`: `registrarDonacion` y `anularDonacion` (`fn_registrar_donacion`,
 `fn_anular_donacion`), y `aDetalleParaGuardar`. Una donacion puede ser para una jornada (00153);
-el formulario no ofrece proyectos cancelados. `useResumenDonaciones` da los indicadores del modulo.
+el formulario no ofrece proyectos cancelados. Si es de dinero y la jornada esta planificada o en
+curso, la base crea sola su aporte en el presupuesto de esa jornada (00187):
+`entraAlPresupuestoDeLaJornada(tipo, estadoDeLaJornada)` es el espejo de esa regla, y
+`useRegistroDonacion` lo entrega ya resuelto para que el formulario lo avise. `useResumenDonaciones` da los indicadores del modulo.
 
 ### `presupuestos/`
 
@@ -522,7 +525,8 @@ no tiene una asignada (00155): `obtenerIndicadoresImpacto` lee `vista_reporte_im
 y `fn_reporte_pacientes_atendidos` agrupa y filtra igual.
 
 **Orden y paginacion en cliente**: `useOrdenYPagina` y sus piezas puras (`ordenarFilas`,
-`compararValores`, `contarPaginas`, `recortarAPagina`, `siguienteOrden`).
+`compararValores`, `contarPaginas`, `recortarAPagina`, `siguienteOrden`). Lo usan tambien las
+pestanas Catalogo y Lotes de inventario en la web, solo para paginar.
 
 **Medicamentos por vencer**: `listarLotesPorVencer({ horizonteDias, bodega })` devuelve cada lote
 con las unidades que quedan (suma de `existencias`, 00020) y sus bodegas, con el rango y los dias

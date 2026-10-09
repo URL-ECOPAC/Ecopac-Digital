@@ -705,6 +705,18 @@ pendientes solo se aprueban o se rechazan. `fn_proteger_presupuesto_comprometido
 debajo de lo comprometido. Como corren antes que RLS, una fila sin permiso y sin presupuesto recibe
 el `23514` del presupuesto y no el `42501`: las pruebas de RLS dan presupuesto a sus jornadas.
 
+**La donacion de dinero para una jornada entra sola a su presupuesto (`00187`).** Al registrar una
+donacion de dinero con `jornada_id`, `fn_aportar_donacion_a_su_jornada` (trigger de
+`donacion_detalle`, DEFINER, sin EXECUTE para nadie) crea su aporte de origen `donacion` en esa
+jornada, por el monto donado. Es DEFINER porque quien registra donaciones (`donaciones.registrar`)
+puede no tener `jornadas.gestionar`, que es lo que pide la politica de INSERT de
+`jornada_presupuesto_origen`: es la unica via por la que alguien sin ese permiso suma al presupuesto
+de una jornada, y solo con el dinero de la donacion que acaba de registrar, en la jornada para la
+que la registro. Solo aplica a jornadas planificadas o en curso; en una finalizada o cancelada la
+donacion queda con su saldo libre. El aporte se quita y se liquida como cualquier otro. Reflejo en
+el cliente: `entraAlPresupuestoDeLaJornada()` en `donaciones/useRegistroDonacion.js`. Lo afirma
+`donacion_de_dinero_al_presupuesto_de_su_jornada.sql`.
+
 **El sobrante de una jornada finalizada (`00160`).** `sobrante_de_jornada(jornada)` (DEFINER, con la
 misma guarda de lectura que los aportes) dice cuanto usaron los gastos de cada aporte y cuanto
 sobra. `fn_liquidar_sobrante_de_jornada(jornada, decisiones)` (DEFINER) lo devuelve a su origen o lo

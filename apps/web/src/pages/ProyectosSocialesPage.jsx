@@ -803,13 +803,18 @@ export default function ProyectosSocialesPage({ usuarioRol }) {
         </Modal>
       )}
 
-      <ModalProyecto
-        visible={formularioAbierto}
-        proyecto={proyectoEnEdicion}
-        catalogos={catalogos}
-        onClose={() => setFormularioAbierto(false)}
-        onGuardar={guardarProyecto}
-      />
+      {/* Montado solo mientras esta abierto: montado siempre, lo escrito sobrevivia al cierre y el
+          siguiente "Nuevo proyecto" abria con los datos del anterior. Mismo criterio que
+          ModalSalidaMedicamento en InventarioPage.jsx (issue #859). */}
+      {formularioAbierto && (
+        <ModalProyecto
+          visible
+          proyecto={proyectoEnEdicion}
+          catalogos={catalogos}
+          onClose={() => setFormularioAbierto(false)}
+          onGuardar={guardarProyecto}
+        />
+      )}
     </ScreenContainer>
   );
 }

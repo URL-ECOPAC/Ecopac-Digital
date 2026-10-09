@@ -22,14 +22,18 @@ function valoresDe(hito, campos) {
  * de escribir una fecha distinta cuando el hito se anota dias despues. Mismo patron generico
  * dirigido por descriptores (CAMPOS_HITO) que ModalProyecto.jsx.
  */
-export default function ModalHito({ visible, hito, campos, errores, onClose, onGuardar }) {
+export default function ModalHito({ visible, hito, campos, onClose, onGuardar }) {
   const editando = Boolean(hito?.id);
   const [valores, setValores] = useState(() => valoresDe(hito, campos));
+  // Los errores por campo viven aqui y no en el hook de la pantalla: asi se van con el modal, y
+  // un formulario que se cancelo con errores no los ensena al abrirse de nuevo.
+  const [errores, setErrores] = useState({});
   const [error, setError] = useState(null);
   const [enviando, setEnviando] = useState(false);
 
   useEffect(() => {
     setValores(valoresDe(hito, campos));
+    setErrores({});
     setError(null);
   }, [hito, campos]);
 
@@ -44,6 +48,7 @@ export default function ModalHito({ visible, hito, campos, errores, onClose, onG
 
     setEnviando(false);
     if (!resultado.ok) {
+      setErrores(resultado.errores ?? {});
       setError(resultado.error);
       return;
     }
@@ -68,7 +73,7 @@ export default function ModalHito({ visible, hito, campos, errores, onClose, onG
                 requerido={campo.validacion?.requerido}
                 value={valores[campo.id] || null}
                 onChange={(valor) => cambiar(campo.id, valor)}
-                error={errores?.[campo.id]}
+                error={errores[campo.id]}
                 disabled={enviando}
               />
             );
@@ -84,7 +89,7 @@ export default function ModalHito({ visible, hito, campos, errores, onClose, onG
               maxLength={campo.validacion?.maxLongitud}
               value={valores[campo.id] ?? ""}
               onChange={(evento) => cambiar(campo.id, evento.target.value)}
-              error={errores?.[campo.id]}
+              error={errores[campo.id]}
               disabled={enviando}
             />
           );

@@ -691,6 +691,15 @@ de cada aporte uso la jornada lo dice `sobrante_de_jornada()`: primero donacione
 externos, al final fondos propios. Quitar o rebajar un aporte por debajo de lo comprometido en
 gastos se rechaza (`00159`), y un aporte ya liquidado no se toca.
 
+Aporte automatico [+00187]: una donacion de dinero registrada para una jornada
+(`donaciones.jornada_id`, 00153) crea sola su fila de origen `donacion` en esa jornada, por el
+monto donado (`fn_aportar_donacion_a_su_jornada`, trigger de `donacion_detalle`: el primer renglon
+con monto crea el aporte y los siguientes lo suben). Solo si la jornada esta planificada o en
+curso; en una finalizada o cancelada la donacion queda con su saldo libre para asignarla a mano.
+Es un aporte como cualquier otro: se quita desde la jornada y su sobrante se liquida igual. La
+migracion asigno ademas las donaciones de dinero que ya estaban registradas para una jornada
+activa y no tenian ningun aporte.
+
 ### `movimientos_de_caja` [00168]
 
 El libro de la caja, donde queda el sobrante que no vuelve a una donacion: `tipo` (`entrada` o

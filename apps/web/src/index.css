@@ -60,14 +60,24 @@
 
 /* Reglas exclusivas para impresión */
 @media print {
+  /* EL MARGEN DEL PAPEL LO PONE EL DOCUMENTO, NO LA PAGINA. Las tres reglas @page dejan el margen
+     en cero y cada documento imprimible trae el suyo como padding (mas abajo). Antes el margen
+     vivia aqui (0.4in, 0.3in, y 15mm en reportes.css), y el navegador lo ignora en cuanto el
+     dialogo de impresion tiene "Margenes" en algo distinto de "Predeterminado" -un ajuste que
+     ademas recuerda de una impresion a la siguiente-: con "Ninguno" o "Minimo" todos los
+     reportes salian pegados al borde de la hoja. Un padding no depende de ese ajuste. */
+  @page {
+    margin: 0;
+  }
+
   @page carta {
     size: letter portrait;
-    margin: 0.4in;
+    margin: 0;
   }
 
   @page media-carta {
     size: 5.5in 8.5in;
-    margin: 0.3in;
+    margin: 0;
   }
 
   .app-shell {
@@ -90,7 +100,12 @@
     left: 0 !important;
     width: 100% !important;
     margin: 0 !important;
-    padding: 0 !important;
+    /* El margen del papel (ver @page, arriba). `clone` lo repite en cada hoja: sin el, un
+       documento de varias paginas solo tendria margen arriba de la primera y abajo de la ultima. */
+    box-sizing: border-box !important;
+    padding: 14mm 15mm !important;
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
     page-break-before: avoid !important;
     break-before: avoid !important;
     page-break-after: avoid !important;
@@ -101,8 +116,10 @@
     page: carta;
   }
 
+  /* Media carta es una hoja de 5.5in de ancho: el margen de carta se comeria la receta. */
   .doc-imprimible--media-carta {
     page: media-carta;
+    padding: 8mm !important;
   }
 
   .doc-imprimible__encabezado {
@@ -314,6 +331,11 @@
     display: block;
     font-size: 10pt;
     line-height: 1.35;
+    /* Mismo margen de papel que .doc-imprimible: el cuadro de turnos no pasa por
+       DocumentoImprimible, pero sale en la misma hoja carta. */
+    padding: 14mm 15mm;
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
     page-break-before: avoid !important;
     break-before: avoid !important;
   }
