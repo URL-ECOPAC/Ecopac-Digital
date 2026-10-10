@@ -68,7 +68,6 @@ export default function SeguimientoProyectoPage({ proyectoId, proyectoInicial, r
     nuevaNota,
     setNuevaNota,
     errorAccion,
-    erroresHito,
     cargandoAccion,
     guardarSeguimiento,
     cambiarEstadoHito,
@@ -479,14 +478,17 @@ export default function SeguimientoProyectoPage({ proyectoId, proyectoInicial, r
         </Row>
       )}
 
-      <ModalHito
-        visible={formularioHitoAbierto}
-        hito={hitoEnEdicion}
-        campos={campos}
-        errores={erroresHito}
-        onClose={() => setFormularioHitoAbierto(false)}
-        onGuardar={guardarHito}
-      />
+      {/* Montado solo mientras esta abierto, para que cada "Nuevo hito" empiece en blanco (ver
+          ModalProyecto en ProyectosSocialesPage.jsx). */}
+      {formularioHitoAbierto && (
+        <ModalHito
+          visible
+          hito={hitoEnEdicion}
+          campos={campos}
+          onClose={() => setFormularioHitoAbierto(false)}
+          onGuardar={guardarHito}
+        />
+      )}
     </ScreenContainer>
   );
 }

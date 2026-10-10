@@ -642,6 +642,12 @@ va cada capa, no que decide.
 Si al escribir el paso 3 o el 4 aparece una condicion de negocio, va al paso 1 o 2: es senal de
 que se estaba a punto de duplicar logica.
 
+**Un formulario en un modal se monta solo mientras esta abierto** (`{abierto && <ModalX ... />}`),
+no montado siempre con `visible={abierto}`. Montado siempre, su estado sobrevive al cierre y el
+siguiente "Nuevo ..." abre con lo que se escribio la vez anterior; reiniciarlo con un `useEffect`
+atado a la fila en edicion no alcanza, porque entre dos altas seguidas esa fila es `null` las dos
+veces y el efecto no vuelve a correr. Asi estuvieron `ModalProyecto` y `ModalHito`.
+
 ## Modulos que comparten etiqueta de GitHub
 
 `packages/shared/proyectos/` es un modulo propio desde la issue #400, separado de

@@ -191,7 +191,8 @@ La unidad de operacion. Casi todo lo clinico exige una jornada `en curso`.
 pestanas. Cuales ve cada rol lo decide `pestanasDeInventario(rol)`: catalogo, lotes, alertas,
 kardex, administracion, principios activos y presentaciones para todos los que entran al
 modulo; "mis movimientos" para quien registra movimientos y "validacion" para quien tiene
-`inventario.aprobar`.
+`inventario.aprobar`. Catalogo y Lotes se ven de 25 en 25 filas (`useOrdenYPagina` y `Paginacion`,
+en cliente sobre lo ya filtrado); el kardex sigue mostrando todos sus movimientos.
 
 | Pantalla                                                                              | Hook                            | Estado    |
 | ------------------------------------------------------------------------------------- | ------------------------------- | --------- |
@@ -293,6 +294,9 @@ Solo web.
 | [SeguimientoProyectoPage.jsx](../apps/web/src/pages/SeguimientoProyectoPage.jsx) `/proyectos/:id/seguimiento` | `useSeguimientoProyecto` | Conectada |
 | [ModalProyecto.jsx](../apps/web/src/pages/ModalProyecto.jsx), [ModalHito.jsx](../apps/web/src/pages/ModalHito.jsx) | via las dos de arriba | Conectada |
 
+Los dos modales se montan solo mientras estan abiertos: es lo que hace que cada "Nuevo proyecto" y
+cada "Nuevo hito" empiecen en blanco, en vez de traer lo escrito la vez anterior.
+
 ### Movil (dentro de la pestana Jornadas)
 
 | Pantalla                                                          | Hook                   | Estado    |
@@ -336,7 +340,9 @@ Solo web, solo administrador.
 
 - Una donacion de medicamentos **genera el lote en inventario**, y `donacion_detalle.lote_id` es
   UNIQUE para que dos donaciones no reclamen el mismo lote.
-- Una donacion puede destinarse a un proyecto o a una jornada concreta.
+- Una donacion puede destinarse a un proyecto o a una jornada concreta. Si es de dinero y la
+  jornada esta planificada o en curso, entra sola al presupuesto de esa jornada como un aporte
+  (`00187`); no hay que volver a asignarla desde la pestana Presupuesto.
 - Una donacion no se borra: se anula, con motivo y responsable (`fn_anular_donacion`).
 
 ---
@@ -369,6 +375,12 @@ Exportacion a CSV con `exportarFilasACSV` (`reportes/csv.js`).
   y `lotes` directamente, por eso los consultivos conservan esa lectura (ver las divergencias de
   [PERMISOS.md](./PERMISOS.md)).
 - Las cuatro rutas de pestana montan `ReportesPage`, que elige la pestana por la direccion.
+- **El margen del papel lo pone el documento, no la pagina.** Todo lo que se imprime (reportes,
+  constancia, kardex, receta, cuadro de turnos) trae su margen como `padding` de `.doc-imprimible`
+  o `.turnos-imprimible` (`apps/web/src/index.css`), repetido en cada hoja con
+  `box-decoration-break: clone`, y las reglas `@page` lo dejan en cero. Un margen puesto en `@page`
+  se pierde en cuanto el dialogo de impresion del navegador tiene "Margenes" en "Ninguno" o
+  "Minimo", y el papel sale pegado al borde.
 
 ---
 

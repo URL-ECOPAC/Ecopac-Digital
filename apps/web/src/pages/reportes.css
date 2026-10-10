@@ -261,12 +261,10 @@
   text-transform: uppercase;
 }
 
-/* Control de impresión para evitar página en blanco extra */
+/* Control de impresión para evitar página en blanco extra. El margen del papel no va aqui: lo
+   pone el documento (.doc-imprimible, en index.css), para que no dependa del ajuste "Margenes"
+   del dialogo de impresion. */
 @media print {
-  @page {
-    size: auto;
-    margin: 15mm;
-  }
   body,
   html {
     height: auto !important;

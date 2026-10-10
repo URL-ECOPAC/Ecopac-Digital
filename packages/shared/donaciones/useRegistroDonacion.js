@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import {
+  ESTADOS_JORNADA,
   ETIQUETAS_TIPO_DONACION,
   TIPOS_DE_ARTICULO,
   TIPOS_DE_DONACION,
@@ -92,6 +93,26 @@ export function opcionesDeArticuloParaDonacion(articulos, tipoDonacion) {
  */
 export function debeOfrecerIngresoInventario(tipoDonacion, error) {
   return error == null && Boolean(TIPO_DE_ARTICULO_POR_DONACION[tipoDonacion]);
+}
+
+/**
+ * Si el dinero de una donacion entra solo al presupuesto de la jornada para la que se recibe.
+ *
+ * Espejo de fn_aportar_donacion_a_su_jornada (00187), que es quien lo hace: una donacion de dinero
+ * para una jornada planificada o en curso crea su aporte en el presupuesto de esa jornada. En una
+ * finalizada o cancelada el presupuesto ya no se mueve y la donacion queda con su saldo libre.
+ * Pura y exportada para probarla sin montar el hook.
+ *
+ * @param {string} tipoDonacion
+ * @param {string|null|undefined} estadoDeLaJornada `estado` de la jornada elegida, si hay una.
+ * @returns {boolean}
+ */
+export function entraAlPresupuestoDeLaJornada(tipoDonacion, estadoDeLaJornada) {
+  return (
+    tipoDonacion === TIPOS_DE_DONACION.DINERO &&
+    (estadoDeLaJornada === ESTADOS_JORNADA.PLANIFICADA ||
+      estadoDeLaJornada === ESTADOS_JORNADA.EN_CURSO)
+  );
 }
 
 /**
@@ -261,6 +282,8 @@ export function useRegistroDonacion({ _client, usuarioRol, onGuardarExito }) {
           value: jornada.id,
           label: [jornada.nombre, formatearFechaCorta(jornada.fecha)].filter(Boolean).join(" · "),
           proyectoId: jornada.proyectoId ?? null,
+          // Solo el dinero para una jornada planificada o en curso entra a su presupuesto (00187).
+          estado: jornada.estado ?? null,
           // La bodega de botiquin: el ingreso a inventario de la donacion la trae ya puesta.
           bodegaId: jornada.botiquinBodegaId ?? null,
         })),
@@ -483,6 +506,11 @@ export function useRegistroDonacion({ _client, usuarioRol, onGuardarExito }) {
     jornadasOptions,
     // Con jornada elegida el proyecto sale de ella y no se elige a mano.
     proyectoFijadoPorJornada: Boolean(jornadaId),
+    // 00187: el dinero donado para una jornada activa entra solo a su presupuesto.
+    entraAlPresupuestoDeLaJornada: entraAlPresupuestoDeLaJornada(
+      tipoDonacion,
+      jornadasOptions.find((opcion) => opcion.value === jornadaId)?.estado,
+    ),
     fecha,
     setFecha,
     observaciones,
