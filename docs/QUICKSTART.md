@@ -273,10 +273,10 @@ Cuando el proyecto exista, anotar aqui la URL de cada ambiente.
 Con Row Level Security activo, casi todas las tablas exigen un usuario autenticado con rol
 `administrador` para escribir. En una base vacia no hay ninguno, asi que nadie puede crear el
 primero desde la aplicacion. Lo resuelve la migracion
-`supabase/migrations/00063_aprovisionar_primer_admin.sql`, que corre sola con el resto del
+`supabase/migrations/00188_aprovisionar_admin_produccion_ecopac.sql`, que corre sola con el resto del
 esquema.
 
-La migracion es idempotente: si el correo `admin@ecopac.org` ya existe, reutiliza ese usuario en
+La migracion es idempotente: si el correo `ecopac@gmail.com` ya existe, reutiliza ese usuario en
 vez de crear otro, y se limita a asegurar que su perfil tenga rol `administrador`. Se puede
 aplicar tantas veces como haga falta.
 
@@ -284,7 +284,7 @@ aplicar tantas veces como haga falta.
 proposito: una contrasena versionada en un repositorio publico es una credencial publicada. La
 contrasena se establece despues, por uno de estos dos caminos:
 
-- Desde la aplicacion, con "olvide mi contrasena" sobre `admin@ecopac.org`. Es el camino normal
+- Desde la aplicacion, con "olvide mi contrasena" sobre `ecopac@gmail.com`. Es el camino normal
   en `ecopac-dev` y en produccion.
 - Desde el panel de Supabase (Authentication > Users > el usuario > Reset password), o con el CLI
   desde una maquina de confianza. Nunca desde el CI, que no debe manejar credenciales de personas.
