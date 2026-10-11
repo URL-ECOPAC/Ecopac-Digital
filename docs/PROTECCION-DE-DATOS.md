@@ -166,7 +166,7 @@ evaluo y no fue un descuido.
 
 ## Documentos relacionados
 
-- [SEGURIDAD.md](./SEGURIDAD.md) - autenticacion: politica de contrasenas, expiracion de sesion,
-  alta de cuentas (OWASP A07).
+- [SEGURIDAD.md](./SEGURIDAD.md) - autenticacion: politica de contrasenas, expiracion de sesion, alta de cuentas (OWASP A07).
 - [PERMISOS.md](./PERMISOS.md) - matriz de permisos por rol y control de acceso (OWASP A01).
+- [MARCO-LEGAL.md](./MARCO-LEGAL.md) - marco jurídico, consentimiento informado, licencia del repositorio y delimitación de responsabilidad legal.
 - [../AGENTS.md](../AGENTS.md) - regla de confidencialidad de datos de pacientes.

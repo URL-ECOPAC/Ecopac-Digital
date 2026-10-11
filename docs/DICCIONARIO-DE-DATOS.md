@@ -1,6 +1,6 @@
 # Diccionario de datos
 
-> **Documento generado.** No se edita a mano: sale de `npm run docs:diccionario` (`scripts/generar-diccionario-de-datos.mjs`), que lee el catalogo de PostgreSQL de una base con todas las migraciones aplicadas, hasta la `00186_consumo_por_jornada_y_lo_comprometido.sql`. Las descripciones son los `COMMENT ON` de las migraciones: si falta una, se agrega con una migracion nueva y se regenera.
+> **Documento generado.** No se edita a mano: sale de `npm run docs:diccionario` (`scripts/generar-diccionario-de-datos.mjs`), que lee el catalogo de PostgreSQL de una base con todas las migraciones aplicadas, hasta la `00188_aprovisionar_admin_produccion_ecopac.sql`. Las descripciones son los `COMMENT ON` de las migraciones: si falta una, se agrega con una migracion nueva y se regenera.
 
 Complementa a [MODELO-DE-DATOS.md](MODELO-DE-DATOS.md), que explica el porque de cada decision, y a [PERMISOS.md](PERMISOS.md), que explica que puede hacer cada rol. Este documento es la referencia exhaustiva: cada tabla, cada campo, cada restriccion, cada politica y cada trigger.
 
@@ -16,9 +16,9 @@ Complementa a [MODELO-DE-DATOS.md](MODELO-DE-DATOS.md), que explica el porque de
 | Llaves foraneas | 113 |
 | Restricciones CHECK | 70 |
 | Politicas RLS | 157 |
-| Triggers | 151 |
-| Funciones (sin contar las de trigger) | 77 |
-| Funciones de trigger | 64 |
+| Triggers | 154 |
+| Funciones (sin contar las de trigger) | 78 |
+| Funciones de trigger | 67 |
 
 ### Como leer las tablas de este documento
 
@@ -1062,7 +1062,7 @@ Especialidades clinicas de un perfil (medicina general, odontologia, ...). Una p
 | `perfil_especialidad_perfil_id_fkey` | FK | `FOREIGN KEY (perfil_id) REFERENCES perfiles(id) ON DELETE CASCADE` (al borrar: CASCADE) |
 | `perfil_especialidad_pkey` | PK | `PRIMARY KEY (perfil_id, nombre_especialidad)` |
 
-**Proteccion.** RLS activo. Privilegios: `authenticated`: DELETE, INSERT, SELECT; `anon`: ninguno.
+**Proteccion.** RLS activo. Privilegios: `authenticated`: DELETE, INSERT, SELECT, UPDATE; `anon`: ninguno.
 
 | Politica | Operacion | Roles | USING | WITH CHECK |
 | --- | --- | --- | --- | --- |
@@ -1096,7 +1096,7 @@ Catalogo de permisos finos que se pueden delegar por rol (rol_permiso) o por per
 
 **La referencian:** `rol_permiso.permiso_id` (CASCADE), `usuario_permiso.permiso_id` (CASCADE).
 
-**Proteccion.** RLS activo. Privilegios: `authenticated`: SELECT; `anon`: ninguno.
+**Proteccion.** RLS activo. Privilegios: `authenticated`: INSERT, SELECT, UPDATE; `anon`: ninguno.
 
 | Politica | Operacion | Roles | USING | WITH CHECK |
 | --- | --- | --- | --- | --- |
@@ -1118,7 +1118,7 @@ Permisos finos que un rol tiene por defecto.
 | `rol_permiso_permiso_id_fkey` | FK | `FOREIGN KEY (permiso_id) REFERENCES permisos(id) ON DELETE CASCADE` (al borrar: CASCADE) |
 | `rol_permiso_pkey` | PK | `PRIMARY KEY (rol, permiso_id)` |
 
-**Proteccion.** RLS activo. Privilegios: `authenticated`: SELECT; `anon`: ninguno.
+**Proteccion.** RLS activo. Privilegios: `authenticated`: SELECT, UPDATE; `anon`: ninguno.
 
 | Politica | Operacion | Roles | USING | WITH CHECK |
 | --- | --- | --- | --- | --- |
@@ -1189,7 +1189,7 @@ Modulos que la administradora abrio a un rol ademas de los suyos (matriz de acce
 | `rol_modulo_pkey` | PK | `PRIMARY KEY (id)` |
 | `uq_rol_modulo` | UNIQUE | `UNIQUE (rol, modulo)` |
 
-**Proteccion.** RLS activo. Privilegios: `authenticated`: DELETE, INSERT, SELECT; `anon`: ninguno.
+**Proteccion.** RLS activo. Privilegios: `authenticated`: DELETE, INSERT, SELECT, UPDATE; `anon`: ninguno.
 
 | Politica | Operacion | Roles | USING | WITH CHECK |
 | --- | --- | --- | --- | --- |
@@ -1220,7 +1220,7 @@ Contador de limite de peticiones (rate limiting) por recurso y actor, con ventan
 | --- | --- | --- |
 | `limites_de_uso_pkey` | PK | `PRIMARY KEY (recurso, actor_id)` |
 
-**Proteccion.** RLS activo. Privilegios: `authenticated`: ninguno; `anon`: ninguno.
+**Proteccion.** RLS activo. Privilegios: `authenticated`: INSERT, SELECT, UPDATE; `anon`: ninguno.
 
 Sin politicas: con RLS activo y ninguna politica, nadie la lee ni la escribe directamente; solo funciones SECURITY DEFINER.
 
@@ -1246,7 +1246,7 @@ Los 22 departamentos de Guatemala. Catalogo fijo, cargado por migracion.
 
 **La referencian:** `municipios.departamento_id` (CASCADE).
 
-**Proteccion.** RLS activo. Privilegios: `authenticated`: SELECT; `anon`: ninguno.
+**Proteccion.** RLS activo. Privilegios: `authenticated`: INSERT, SELECT, UPDATE; `anon`: ninguno.
 
 | Politica | Operacion | Roles | USING | WITH CHECK |
 | --- | --- | --- | --- | --- |
@@ -1280,7 +1280,7 @@ Municipios de Guatemala, cada uno en su departamento. Catalogo fijo, cargado por
 
 **La referencian:** `comunidades.municipio_id` (CASCADE).
 
-**Proteccion.** RLS activo. Privilegios: `authenticated`: SELECT; `anon`: ninguno.
+**Proteccion.** RLS activo. Privilegios: `authenticated`: INSERT, SELECT, UPDATE; `anon`: ninguno.
 
 | Politica | Operacion | Roles | USING | WITH CHECK |
 | --- | --- | --- | --- | --- |
@@ -1355,7 +1355,7 @@ Catalogo de idiomas del paciente (issue #663). Sustituye al enum idioma_preferid
 
 **La referencian:** `pacientes.idioma` (RESTRICT).
 
-**Proteccion.** RLS activo. Privilegios: `authenticated`: SELECT; `anon`: ninguno.
+**Proteccion.** RLS activo. Privilegios: `authenticated`: INSERT, SELECT, UPDATE; `anon`: ninguno.
 
 | Politica | Operacion | Roles | USING | WITH CHECK |
 | --- | --- | --- | --- | --- |
@@ -1478,7 +1478,7 @@ Registra que expediente absorbio a cual (issue #140). Se escribe solo por fn_fus
 | `fusiones_pacientes_pkey` | PK | `PRIMARY KEY (id)` |
 | `fusiones_pacientes_paciente_absorbido_id_key` | UNIQUE | `UNIQUE (paciente_absorbido_id)` |
 
-**Proteccion.** RLS activo. Privilegios: `authenticated`: SELECT; `anon`: ninguno.
+**Proteccion.** RLS activo. Privilegios: `authenticated`: INSERT, SELECT, UPDATE; `anon`: ninguno.
 
 | Politica | Operacion | Roles | USING | WITH CHECK |
 | --- | --- | --- | --- | --- |
@@ -1621,7 +1621,7 @@ Areas de atencion en las que esta cada paciente; un paciente puede estar en vari
 | `paciente_area_paciente_id_fkey` | FK | `FOREIGN KEY (paciente_id) REFERENCES pacientes(id) ON DELETE RESTRICT` (al borrar: RESTRICT) |
 | `paciente_area_pkey` | PK | `PRIMARY KEY (paciente_id, area_id)` |
 
-**Proteccion.** RLS activo. Privilegios: `authenticated`: DELETE, INSERT, SELECT; `anon`: ninguno.
+**Proteccion.** RLS activo. Privilegios: `authenticated`: DELETE, INSERT, SELECT, UPDATE; `anon`: ninguno.
 
 | Politica | Operacion | Roles | USING | WITH CHECK |
 | --- | --- | --- | --- | --- |
@@ -1850,7 +1850,7 @@ Diagnosticos de una consulta; uno puede marcarse como principal.
 | `consulta_diagnostico_pkey` | PK | `PRIMARY KEY (id)` |
 | `uq_consulta_diagnostico` | UNIQUE | `UNIQUE (consulta_id, diagnostico_id)` |
 
-**Proteccion.** RLS activo. Privilegios: `authenticated`: DELETE, INSERT, SELECT; `anon`: ninguno.
+**Proteccion.** RLS activo. Privilegios: `authenticated`: DELETE, INSERT, SELECT, UPDATE; `anon`: ninguno.
 
 | Politica | Operacion | Roles | USING | WITH CHECK |
 | --- | --- | --- | --- | --- |
@@ -1945,7 +1945,7 @@ Renglones de una receta: cada medicamento, su dosis y cuanto se entrego, de que 
 | `receta_detalle_receta_id_fkey` | FK | `FOREIGN KEY (receta_id) REFERENCES recetas(id) ON DELETE CASCADE` (al borrar: CASCADE) |
 | `receta_detalle_pkey` | PK | `PRIMARY KEY (id)` |
 
-**Proteccion.** RLS activo. Privilegios: `authenticated`: INSERT, SELECT; `anon`: ninguno.
+**Proteccion.** RLS activo. Privilegios: `authenticated`: INSERT, SELECT, UPDATE; `anon`: ninguno.
 
 | Politica | Operacion | Roles | USING | WITH CHECK |
 | --- | --- | --- | --- | --- |
@@ -2154,7 +2154,7 @@ Principios activos de cada medicamento (un medicamento puede tener varios).
 | `medicamento_principio_principio_id_fkey` | FK | `FOREIGN KEY (principio_id) REFERENCES principios_activos(id) ON DELETE RESTRICT` (al borrar: RESTRICT) |
 | `medicamento_principio_pkey` | PK | `PRIMARY KEY (medicamento_id, principio_id)` |
 
-**Proteccion.** RLS activo. Privilegios: `authenticated`: DELETE, INSERT, SELECT; `anon`: ninguno.
+**Proteccion.** RLS activo. Privilegios: `authenticated`: DELETE, INSERT, SELECT, UPDATE; `anon`: ninguno.
 
 | Politica | Operacion | Roles | USING | WITH CHECK |
 | --- | --- | --- | --- | --- |
@@ -2423,6 +2423,8 @@ Ingresos y salidas de inventario. Un movimiento pendiente no cambia existencias;
 | `tr_autoaprobar_movimiento_inventario` | BEFORE INSERT | `fn_autoaprobar_movimiento_inventario()` |
 | `tr_bloquear_movimiento_finalizado` | BEFORE DELETE OR UPDATE | `fn_bloquear_movimiento_finalizado()` |
 | `tr_proteger_decision_de_movimiento` | BEFORE UPDATE | `fn_proteger_decision_de_movimiento()` |
+| `trg_movimientos_anular_receta_al_rechazar_su_entrega` | AFTER UPDATE OF estado cuando `((old.estado = 'pendiente'::estado_movimiento) AND (new.estado = 'rechazado'::estado_movimiento) AND (new.receta_id IS NOT NULL) AND (new.tipo = 'salida'::tipo_movimiento) AND (new.motivo ~~ 'Entrega por receta medica%'::text))` | `fn_anular_receta_al_rechazar_su_entrega()` |
+| `trg_movimientos_aprobar_entrega_completa_de_receta` | AFTER UPDATE OF estado cuando `((old.estado = 'pendiente'::estado_movimiento) AND (new.estado = 'aprobado'::estado_movimiento) AND (new.receta_id IS NOT NULL) AND (new.tipo = 'salida'::tipo_movimiento) AND (new.motivo ~~ 'Entrega por receta medica%'::text))` | `fn_aprobar_entrega_completa_de_receta()` |
 | `trg_movimientos_inventario_auditoria` | AFTER INSERT OR DELETE OR UPDATE | `registrar_evento_auditoria()` |
 | `trg_movimientos_inventario_notificar` | AFTER INSERT cuando `(new.estado = 'pendiente'::estado_movimiento)` | `fn_notificar_movimiento_por_validar()` |
 
@@ -2457,7 +2459,7 @@ Alerta de un lote vencido o por vencer. La genera la rutina diaria y se atiende 
 
 **La referencian:** `alerta_caducidad_detalle.alerta_id` (CASCADE), `avisos_caducidad.alerta_id` (CASCADE).
 
-**Proteccion.** RLS activo. Privilegios: `authenticated`: SELECT; `anon`: ninguno.
+**Proteccion.** RLS activo. Privilegios: `authenticated`: INSERT, SELECT; `anon`: ninguno.
 
 | Politica | Operacion | Roles | USING | WITH CHECK |
 | --- | --- | --- | --- | --- |
@@ -2493,7 +2495,7 @@ Como se reparte la atencion de una alerta entre varias acciones (por ejemplo, pa
 | `alerta_caducidad_detalle_bodega_destino_id_fkey` | FK | `FOREIGN KEY (bodega_destino_id) REFERENCES bodegas(id) ON DELETE RESTRICT` (al borrar: RESTRICT) |
 | `alerta_caducidad_detalle_pkey` | PK | `PRIMARY KEY (id)` |
 
-**Proteccion.** RLS activo. Privilegios: `authenticated`: SELECT; `anon`: ninguno.
+**Proteccion.** RLS activo. Privilegios: `authenticated`: INSERT, SELECT, UPDATE; `anon`: ninguno.
 
 | Politica | Operacion | Roles | USING | WITH CHECK |
 | --- | --- | --- | --- | --- |
@@ -2706,7 +2708,7 @@ Cada cambio de estado de una jornada, con quien lo hizo. Lo escribe un trigger.
 | `jornada_estado_historial_jornada_id_fkey` | FK | `FOREIGN KEY (jornada_id) REFERENCES jornadas(id) ON DELETE CASCADE` (al borrar: CASCADE) |
 | `jornada_estado_historial_pkey` | PK | `PRIMARY KEY (id)` |
 
-**Proteccion.** RLS activo. Privilegios: `authenticated`: SELECT; `anon`: ninguno.
+**Proteccion.** RLS activo. Privilegios: `authenticated`: INSERT, SELECT, UPDATE; `anon`: ninguno.
 
 | Politica | Operacion | Roles | USING | WITH CHECK |
 | --- | --- | --- | --- | --- |
@@ -2834,7 +2836,7 @@ Categorias de gasto (00158). Catalogo que crece desde el formulario de gasto ("C
 
 **La referencian:** `gastos.categoria` (RESTRICT).
 
-**Proteccion.** RLS activo. Privilegios: `authenticated`: INSERT, SELECT; `anon`: ninguno.
+**Proteccion.** RLS activo. Privilegios: `authenticated`: INSERT, SELECT, UPDATE; `anon`: ninguno.
 
 | Politica | Operacion | Roles | USING | WITH CHECK |
 | --- | --- | --- | --- | --- |
@@ -2868,7 +2870,7 @@ Quien aporta de fuera al presupuesto de una jornada (origen aporte_externo). Cat
 
 **La referencian:** `jornada_presupuesto_origen.fuente_id` (RESTRICT).
 
-**Proteccion.** RLS activo. Privilegios: `authenticated`: INSERT, SELECT; `anon`: ninguno.
+**Proteccion.** RLS activo. Privilegios: `authenticated`: INSERT, SELECT, UPDATE; `anon`: ninguno.
 
 | Politica | Operacion | Roles | USING | WITH CHECK |
 | --- | --- | --- | --- | --- |
@@ -3054,7 +3056,7 @@ Bitacora de un proyecto: notas escritas a mano y cambios de porcentaje de avance
 | `proyecto_seguimiento_registrado_por_fkey` | FK | `FOREIGN KEY (registrado_por) REFERENCES perfiles(id) ON DELETE SET NULL` (al borrar: SET NULL) |
 | `proyecto_seguimiento_pkey` | PK | `PRIMARY KEY (id)` |
 
-**Proteccion.** RLS activo. Privilegios: `authenticated`: INSERT, SELECT; `anon`: ninguno.
+**Proteccion.** RLS activo. Privilegios: `authenticated`: INSERT, SELECT, UPDATE; `anon`: ninguno.
 
 | Politica | Operacion | Roles | USING | WITH CHECK |
 | --- | --- | --- | --- | --- |
@@ -3089,7 +3091,7 @@ Cada cambio de estado de un proyecto, con quien lo hizo. Lo escribe un trigger.
 | `proyecto_estado_historial_proyecto_id_fkey` | FK | `FOREIGN KEY (proyecto_id) REFERENCES proyectos(id) ON DELETE CASCADE` (al borrar: CASCADE) |
 | `proyecto_estado_historial_pkey` | PK | `PRIMARY KEY (id)` |
 
-**Proteccion.** RLS activo. Privilegios: `authenticated`: SELECT; `anon`: ninguno.
+**Proteccion.** RLS activo. Privilegios: `authenticated`: INSERT, SELECT, UPDATE; `anon`: ninguno.
 
 | Politica | Operacion | Roles | USING | WITH CHECK |
 | --- | --- | --- | --- | --- |
@@ -3316,6 +3318,7 @@ Renglones de una donacion: que se dono y cuanto. Un renglon de medicamentos pued
 
 | Trigger | Cuando | Funcion |
 | --- | --- | --- |
+| `trg_donacion_detalle_aportar_a_su_jornada` | AFTER INSERT | `fn_aportar_donacion_a_su_jornada()` |
 | `trg_donacion_detalle_auditoria` | AFTER INSERT OR DELETE OR UPDATE | `registrar_evento_auditoria()` |
 | `trg_donacion_detalle_updated_at` | BEFORE UPDATE | `actualizar_timestamp_updated_at()` |
 | `trg_donacion_detalle_validar_lote` | BEFORE INSERT OR UPDATE OF lote_id | `fn_validar_lote_de_renglon_de_donacion()` |
@@ -3386,7 +3389,7 @@ Bitacora de cambios sobre informacion sensible. Se escribe solo por trigger y so
 | --- | --- | --- |
 | `eventos_auditoria_pkey` | PK | `PRIMARY KEY (id)` |
 
-**Proteccion.** RLS activo. Privilegios: `authenticated`: SELECT; `anon`: ninguno.
+**Proteccion.** RLS activo. Privilegios: `authenticated`: INSERT, SELECT, UPDATE; `anon`: ninguno.
 
 | Politica | Operacion | Roles | USING | WITH CHECK |
 | --- | --- | --- | --- | --- |
@@ -3420,7 +3423,7 @@ Libro de la caja (00168): entra el sobrante devuelto de los aportes que no son d
 | `movimientos_de_caja_registrado_por_fkey` | FK | `FOREIGN KEY (registrado_por) REFERENCES perfiles(id) ON DELETE SET NULL` (al borrar: SET NULL) |
 | `movimientos_de_caja_pkey` | PK | `PRIMARY KEY (id)` |
 
-**Proteccion.** RLS activo. Privilegios: `authenticated`: SELECT; `anon`: ninguno.
+**Proteccion.** RLS activo. Privilegios: `authenticated`: INSERT, SELECT, UPDATE; `anon`: ninguno.
 
 | Politica | Operacion | Roles | USING | WITH CHECK |
 | --- | --- | --- | --- | --- |
@@ -3432,7 +3435,7 @@ Libro de la caja (00168): entra el sobrante devuelto de los aportes que no son d
 
 Nombre de cada persona (id, nombres, apellidos, activo), sin datos de contacto, para toda persona activa (00161). Pone nombre a los ids que el RLS de cada tabla ya deja ver.
 
-Seguridad: corre con los permisos de su dueno; filtra con su propio WHERE. Privilegios: `authenticated`: SELECT; `anon`: ninguno.
+Seguridad: corre con los permisos de su dueno; filtra con su propio WHERE. Privilegios: `authenticated`: INSERT, SELECT, UPDATE; `anon`: ninguno.
 
 | Campo | Tipo |
 | --- | --- |
@@ -3445,7 +3448,7 @@ Seguridad: corre con los permisos de su dueno; filtra con su propio WHERE. Privi
 
 Subconjunto no identificable de pacientes (id, comunidad_id) para reportes agregados. SECURITY DEFINER: el owner lee la tabla base pacientes (sin politica para los roles consultivos, 00032); el WHERE de la vista restringe filas a administrador, a los dos roles consultivos y a quien tenga el permiso fino reportes.exportar (issue #409). Acceso controlado por GRANT (las vistas no soportan RLS).
 
-Seguridad: corre con los permisos de su dueno; filtra con su propio WHERE. Privilegios: `authenticated`: SELECT; `anon`: ninguno.
+Seguridad: corre con los permisos de su dueno; filtra con su propio WHERE. Privilegios: `authenticated`: INSERT, SELECT, UPDATE; `anon`: ninguno.
 
 | Campo | Tipo |
 | --- | --- |
@@ -3456,7 +3459,7 @@ Seguridad: corre con los permisos de su dueno; filtra con su propio WHERE. Privi
 
 Perfiles sin datos de contacto sensibles (telefono, email) salvo para administrador y para el propio perfil. Junta directiva leia por aqui hasta la 00141 (issue #864), que la deja con Reportes como unica pantalla; la vista se conserva porque sigue siendo el unico camino enmascarado a perfiles ajenos y porque cada quien lee su propia fila por ella.
 
-Seguridad: corre con los permisos de su dueno; filtra con su propio WHERE. Privilegios: `authenticated`: SELECT; `anon`: ninguno.
+Seguridad: corre con los permisos de su dueno; filtra con su propio WHERE. Privilegios: `authenticated`: INSERT, SELECT, UPDATE; `anon`: ninguno.
 
 | Campo | Tipo |
 | --- | --- |
@@ -3496,7 +3499,7 @@ Seguridad: corre con los permisos de su dueno; filtra con su propio WHERE. Privi
 
 Cola de pacientes de una jornada, por etapa del flujo (issue #173, RF-24): una fila por atencion abierta. La etapa se decide de lo mas avanzado a lo menos (00136). Desde la 00184 (issue #927) una visita con varias consultas o recetas no repite al paciente.
 
-Seguridad: corre con los permisos de su dueno; filtra con su propio WHERE. Privilegios: `authenticated`: SELECT; `anon`: ninguno.
+Seguridad: corre con los permisos de su dueno; filtra con su propio WHERE. Privilegios: `authenticated`: INSERT, SELECT, UPDATE; `anon`: ninguno.
 
 | Campo | Tipo |
 | --- | --- |
@@ -3513,7 +3516,7 @@ Seguridad: corre con los permisos de su dueno; filtra con su propio WHERE. Privi
 
 Combinaciones (lote, bodega) que se pueden entregar: lote vigente (o sin fecha, 00171) y existencia que no este comprometida en una salida pendiente (00186). cantidad_disponible es lo neto; cantidad_fisica y cantidad_comprometida, de donde sale. security_invoker = TRUE respeta la RLS de existencias, lotes, medicamentos y bodegas (00034).
 
-Seguridad: `security_invoker = true` (aplica la RLS de quien consulta). Privilegios: `authenticated`: SELECT; `anon`: ninguno.
+Seguridad: `security_invoker = true` (aplica la RLS de quien consulta). Privilegios: `authenticated`: INSERT, SELECT, UPDATE; `anon`: ninguno.
 
 | Campo | Tipo |
 | --- | --- |
@@ -3534,7 +3537,7 @@ Seguridad: `security_invoker = true` (aplica la RLS de quien consulta). Privileg
 
 Indicadores de impacto por jornada, agrupables por jornada, comunidad y rango de fechas. DECISION (issue #407): los roles consultivos ven agregados, nunca filas clinicas. Las politicas de lectura que la 00041 abrio sobre atenciones, consultas, recetas y receta_detalle se eliminaron aqui: RLS filtra filas, no columnas, y una politica FOR SELECT entrega la fila entera, incluido el texto clinico libre de consultas. La vista no lleva security_invoker: el dueno lee las tablas base y el WHERE de aqui abajo restringe quien obtiene filas, el mismo patron de perfiles_directorio (00038) y pacientes_reporte (00041). Las vistas no soportan RLS, asi que el acceso se gobierna con GRANT. La proxima issue de reportes NO debe volver a abrir las tablas base: si un reporte necesita mas datos, se amplia esta vista o se crea otra con el mismo patron.
 
-Seguridad: corre con los permisos de su dueno; filtra con su propio WHERE. Privilegios: `authenticated`: SELECT; `anon`: ninguno.
+Seguridad: corre con los permisos de su dueno; filtra con su propio WHERE. Privilegios: `authenticated`: INSERT, SELECT, UPDATE; `anon`: ninguno.
 
 | Campo | Tipo |
 | --- | --- |
@@ -3555,7 +3558,7 @@ Seguridad: corre con los permisos de su dueno; filtra con su propio WHERE. Privi
 
 Indicadores de impacto por jornada y por comunidad de origen del paciente (la de la jornada si el paciente no tiene). Una jornada puede tener varias filas; sumadas dan lo mismo que vista_reporte_impacto (00155).
 
-Seguridad: corre con los permisos de su dueno; filtra con su propio WHERE. Privilegios: `authenticated`: SELECT; `anon`: ninguno.
+Seguridad: corre con los permisos de su dueno; filtra con su propio WHERE. Privilegios: `authenticated`: INSERT, SELECT, UPDATE; `anon`: ninguno.
 
 | Campo | Tipo |
 | --- | --- |
@@ -3607,7 +3610,7 @@ Seguridad: corre con los permisos de su dueno; filtra con su propio WHERE. Privi
 | Funcion | Devuelve | Seguridad | Ejecuta | Descripcion |
 | --- | --- | --- | --- | --- |
 | `accede_a_modulo_por_matriz(p_modulo text)` | `boolean` | DEFINER | authenticated | Si la matriz de acceso le abrio este modulo al rol de la sesion. Solo se usa en politicas de LECTURA: abrir un modulo no da escritura. |
-| `alta_de_cuenta_permitida(p_usuario_de_sesion text, p_app_meta jsonb)` | `boolean` | INVOKER | nadie | Decide si un alta en auth.users puede continuar. Recibe el usuario de sesion en vez de leerlo para que sea comprobable desde pgTAP: postgres no puede hacer SET SESSION AUTHORIZATION en el stack local. |
+| `alta_de_cuenta_permitida(p_usuario_de_sesion text, p_app_meta jsonb)` | `boolean` | INVOKER | authenticated | Decide si un alta en auth.users puede continuar. Recibe el usuario de sesion en vez de leerlo para que sea comprobable desde pgTAP: postgres no puede hacer SET SESSION AUTHORIZATION en el stack local. |
 | `comprometido_de_jornada(p_jornada_id uuid, p_sin_gasto uuid)` | `numeric` | DEFINER | nadie | Suma de los gastos pendientes y aprobados de una jornada, sin contar p_sin_gasto (el que se esta revisando). SECURITY DEFINER para ver todos los gastos (00159). |
 | `equipo_de_proyecto(p_proyecto_id uuid)` | `TABLE(id uuid, proyecto_id uuid, perfil_id uuid, rol_en_proyecto text, created_at timestamp with time zone, nombres character varying, apellidos character varying, en_equipo_del_proyecto boolean, jornadas text[])` | DEFINER | authenticated | Equipo de un proyecto: la union de proyecto_personal, del cuadro de turnos de sus jornadas y de sus responsables, una fila por persona, con sus nombres (00150, 00157). |
 | `es_administrador()` | `boolean` | INVOKER | authenticated | TRUE si quien esta conectado tiene rol administrador y su cuenta esta activa. La usan las politicas RLS. |
@@ -3626,7 +3629,7 @@ Seguridad: corre con los permisos de su dueno; filtra con su propio WHERE. Privi
 | `fn_cargar_insumo_a_bodega_de_jornada(p_jornada_id uuid, p_lote_id uuid, p_bodega_origen_id uuid, p_cantidad integer)` | `uuid` | INVOKER | authenticated | Traslada p_cantidad de un lote desde p_bodega_origen_id a la bodega movil de la jornada: un ingreso y una salida aprobados, con jornada_id (00178). Solo la administradora. Devuelve el id del ingreso. |
 | `fn_consumo_de_insumos_de_jornada(p_jornada_id uuid)` | `TABLE(lote_id uuid, medicamento_id uuid, articulo text, concentracion text, numero_lote text, fecha_vencimiento date, costo_unitario numeric, cargado bigint, entregado bigint, devuelto bigint, en_bodega bigint, pendiente bigint, queda bigint)` | DEFINER | authenticated | Por lote: lo cargado a la bodega movil de la jornada, lo entregado en sus recetas emitidas (con el ajuste si lo hay), lo devuelto, lo que hay hoy en toda la bodega (en_bodega), lo que espera aprobacion (pendiente) y lo que le queda a la jornada (queda = cargado - entregado - devuelto). 00178, 00181; pendiente y queda desde la 00186 (issue #925). |
 | `fn_contar_atenciones_incompletas(p_jornada_id uuid)` | `integer` | INVOKER | authenticated | Cuenta las atenciones de una jornada que todavia no tienen consulta asociada. jornadas/api.js la consulta antes de finalizar una jornada para advertir -sin bloquear- si hay atenciones incompletas (issue #171, criterio de aceptacion 4). No es SECURITY DEFINER: respeta las politicas de SELECT de atenciones/consultas (00033). |
-| `fn_crear_usuario_administrativo(p_correo text, p_nombres text, p_apellidos text, p_rol rol_usuario)` | `uuid` | DEFINER | nadie | Da de alta a una persona con el rol indicado, sin contrasena: la establece con "olvide mi contrasena". Es el camino administrativo mientras no exista la Edge Function invitar-usuario. No se concede a ningun rol de la aplicacion: se ejecuta desde el SQL editor del Dashboard. |
+| `fn_crear_usuario_administrativo(p_correo text, p_nombres text, p_apellidos text, p_rol rol_usuario)` | `uuid` | DEFINER | authenticated | Da de alta a una persona con el rol indicado, sin contrasena: la establece con "olvide mi contrasena". Es el camino administrativo mientras no exista la Edge Function invitar-usuario. No se concede a ningun rol de la aplicacion: se ejecuta desde el SQL editor del Dashboard. |
 | `fn_detectar_pacientes_duplicados()` | `TABLE(paciente_a_id uuid, nombres_a character varying, apellidos_a character varying, numero_ficha_a character varying, paciente_b_id uuid, nombres_b character varying, apellidos_b character varying, numero_ficha_b character varying, fecha_nacimiento date, similitud real)` | INVOKER | authenticated | Posibles pacientes duplicados: misma fecha de nacimiento y nombre similar (pg_trgm), ordenados por similitud. SECURITY INVOKER: la ve quien ya puede leer pacientes (00032). |
 | `fn_devolver_de_bodega_de_jornada(p_jornada_id uuid, p_lote_id uuid, p_bodega_destino_id uuid, p_cantidad integer)` | `uuid` | INVOKER | authenticated | Devuelve p_cantidad de un lote de la bodega movil de la jornada a una bodega fija (fn_trasladar_entre_bodegas, marcado con la jornada) (00179). Solo la administradora; tambien con la jornada finalizada. |
 | `fn_disponible_neto(p_lote_id uuid, p_bodega_id uuid)` | `integer` | DEFINER | authenticated | Existencia de un lote en una bodega menos lo comprometido en salidas pendientes (00186). Es lo que se puede recetar, cargar, devolver o trasladar. |
@@ -3655,18 +3658,19 @@ Seguridad: corre con los permisos de su dueno; filtra con su propio WHERE. Privi
 | `fn_registrar_paciente(p_nombres character varying, p_apellidos character varying, p_fecha_nacimiento date, p_sexo character varying, p_comunidad_id uuid, p_telefono_contacto character varying, p_idioma character varying, p_dpi character varying, p_tipo_sangre tipo_sanguineo, p_nombre_responsable character varying, p_parentesco_responsable character varying, p_area_ids uuid[])` | `TABLE(id uuid, nombres character varying, apellidos character varying, fecha_nacimiento date, sexo character varying, comunidad_id uuid, telefono_contacto character varying, idioma character varying, dpi character varying, tipo_sangre tipo_sanguineo, nombre_responsable character varying, parentesco_responsable character varying, fecha_baja date, created_at timestamp with time zone, updated_at timestamp with time zone, numero_ficha character varying)` | INVOKER | authenticated | Inserta un paciente, su expediente y sus areas de atencion (p_area_ids, 00182) en una sola transaccion. numero_ficha lo genera el DEFAULT de expedientes (nextval, 00081), asi que dos dispositivos registrando a la vez no colisionan. No es SECURITY DEFINER: las politicas de INSERT de pacientes, expedientes (00032) y paciente_area (00182) deciden quien puede llamarla. p_idioma es un codigo del catalogo idiomas (issue #663). |
 | `fn_registrar_salida_a_cuenta_de_jornada(p_lote_id uuid, p_bodega_id uuid, p_cantidad integer, p_motivo text, p_jornada_id uuid, p_registrado_por uuid)` | `void` | INVOKER | authenticated | Saca p_cantidad de una bodega movil: a cuenta de p_jornada_id hasta lo que le queda de ese lote, y el resto sin jornada (00186). p_registrado_por, si viene, reemplaza a auth.uid() (el traspaso iniciado sin sesion). |
 | `fn_reporte_enfermedades(p_agrupar_por text, p_desde date, p_hasta date, p_jornada_ids uuid[], p_comunidad_ids uuid[], p_municipio_id integer, p_departamento_id integer, p_proyecto_id uuid, p_diagnostico_id uuid, p_solo_principales boolean, p_comunidad_de text)` | `TABLE(grupo_id text, grupo text, grupo_fecha date, diagnostico_id uuid, codigo text, diagnostico text, orden_diagnostico integer, casos integer, hombres integer, mujeres integer, menores integer, adultos integer, adultos_mayores integer)` | DEFINER | authenticated | Casos por diagnostico del catalogo, agrupados por nada, jornada, comunidad (de la jornada o del paciente) o mes, con desglose por sexo y edad. Solo conteos agregados, siempre con su numero real; ninguna fila por paciente (issue #916, 00177; sin supresion desde la issue #926, 00180). |
-| `fn_reporte_jornada(p_jornada_id uuid)` | `jsonb` | DEFINER | authenticated | Reporte de resultados de una jornada, ya agregado: totales, diagnosticos, medicamentos y personal. Sin filas de paciente. NULL si la jornada no existe. |
+| `fn_reporte_jornada(p_jornada_id uuid)` | `jsonb` | DEFINER | authenticated | Reporte de una jornada: resumen, diagnosticos, medicamentos mas entregados y personal (00148). Desde la 00186 lo entregado es de las recetas emitidas, con la cantidad ajustada si la hay. |
 | `fn_reporte_pacientes_atendidos(p_agrupar_por text, p_jornada_id uuid, p_comunidad_id uuid, p_desde date, p_hasta date)` | `TABLE(grupo_id text, grupo text, pacientes integer, nuevos integer, recurrentes integer, hombres integer, mujeres integer, menores integer, adultos integer, adultos_mayores integer)` | DEFINER | authenticated | Pacientes atendidos agregados por jornada, comunidad o mes, con el desglose por sexo y por rango de edad y la distincion entre pacientes nuevos y recurrentes (issue #202, RF-31). Cuenta pacientes distintos, no atenciones: dos atenciones del mismo paciente en la misma jornada son un solo paciente atendido. La edad se calcula a la fecha de la jornada, no a la de hoy, para que un reporte de hace tres anios no envejezca con el tiempo. SECURITY DEFINER con guarda de rol explicita: los roles consultivos no tienen politica de SELECT sobre pacientes (00032) y esta funcion necesita sexo y fecha_nacimiento para los desgloses. Devuelve UNICAMENTE agregados: ninguna fila del resultado identifica a un paciente, que es la regla que fija la 00054 (issue #407). La 00095 corrigio dos errores de calculo (issue #596): el sexo se comparaba contra la inicial cuando la columna guardaba la palabra completa, asi que hombres y mujeres salian en cero; y un paciente recurrente contaba como nuevo en todos sus grupos. La 00132 (issue #699) retira el parche que dejo la 00095: con sexo convertido en el enum sexo_paciente, el desglose vuelve a compararse por igualdad y no por la inicial con LIKE. |
 | `fn_saldo_de_caja_sin_filtro()` | `numeric` | DEFINER | nadie | Saldo de la caja sin pasar por RLS (00168). Solo la usan los triggers; la pantalla lee saldo_de_caja(). |
 | `fn_sincronizar_alertas_caducidad()` | `integer` | DEFINER | authenticated | Ejecuta fn_generar_alertas_caducidad() a peticion de la administracion o de quien tenga inventario.configurar_alertas, para no depender de cuando corrio la rutina programada (issues #838 y #899). Devuelve cuantas alertas nuevas creo. Sin ese rol o permiso lanza 42501. |
 | `fn_sincronizar_proveedor_de_donante(p_donante_id uuid)` | `uuid` | DEFINER | nadie | Crea o actualiza el proveedor de tipo donante de un donante, con su mismo nombre y su contacto (00175). |
-| `fn_texto_de_hora_guatemala(p_momento timestamp with time zone)` | `text` | INVOKER | nadie | Fecha y hora en America/Guatemala (DD/MM/YYYY HH24:MI) para los mensajes de la agenda (00184). |
+| `fn_texto_de_hora_guatemala(p_momento timestamp with time zone)` | `text` | INVOKER | authenticated | Fecha y hora en America/Guatemala (DD/MM/YYYY HH24:MI) para los mensajes de la agenda (00184). |
 | `fn_trasladar_entre_bodegas(p_lote_id uuid, p_bodega_origen_id uuid, p_bodega_destino_id uuid, p_cantidad integer, p_motivo text, p_jornada_id uuid)` | `uuid` | INVOKER | authenticated | Traslada p_cantidad de un lote de una bodega a otra: un ingreso en la destino y la salida del origen, aprobados y en una transaccion (00179). Solo la administradora. Desde la 00186 compara con lo disponible neto y registra cada lado movil en su jornada: el ingreso en la jornada indicada o en la que tiene la bodega en curso; la salida en la indicada o en la duena, hasta lo que le queda. Devuelve el id del ingreso. |
+| `fn_traspasar_sobrante_a_jornada(p_jornada_id uuid)` | `void` | DEFINER | nadie | Pasa a la cuenta de una jornada con bodega movil lo que hay en su bodega y no es suyo: cargado en ella, devuelto en la anterior. El inventario fisico no cambia (00186, issue #925). |
 | `fn_umbrales_caducidad_validos(p_umbrales integer[])` | `boolean` | INVOKER | authenticated | Regla de las antelaciones de aviso de vencimiento: de 0 a 4 valores, distintos, entre 1 y 365 dias. La usa el CHECK de configuracion_alertas_caducidad; packages/shared/inventario/configuracionAlertas.validaciones.js replica la misma regla. |
 | `fn_valor_de_inventario_disponible(p_bodega_id uuid)` | `TABLE(bodega_id uuid, bodega text, medicamento_id uuid, medicamento text, origen origen_lote, cantidad_disponible bigint, valor_disponible numeric, unidades_sin_costo bigint, lotes_sin_costo bigint)` | DEFINER | authenticated | Valor monetario del inventario disponible (existencias.cantidad_disponible, no lotes.cantidad_ingresada), agregado por bodega, medicamento y origen. p_bodega_id nulo suma todas las bodegas. valor_disponible solo suma lotes con costo_unitario conocido; unidades_sin_costo y lotes_sin_costo cuentan aparte lo que no tiene costo capturado, para que el reporte declare cuanto del inventario queda sin valorizar en vez de contarlo como cero. SECURITY DEFINER: solo administrador y los roles consultivos (junta directiva, socio fundador) reciben resultado, por la misma razon que protege presupuesto_de_jornada/proyecto/sistema (00080) y obtenerIndicadoresImpacto (reportes/api.js) -- costo_unitario es informacion financiera que la 00121 no pudo restringir a nivel de columna. Issue #752. |
 | `fn_verificar_limite_busqueda_pacientes()` | `void` | DEFINER | authenticated | Limite de busquedas por usuario (issue #761): 60 cada minuto. La llama fn_buscar_pacientes() en una CTE al inicio, antes de la busqueda real. SECURITY DEFINER para poder escribir en limites_de_uso, que authenticated no puede tocar directamente; se concede EXECUTE a authenticated porque fn_buscar_pacientes corre SECURITY INVOKER y necesita poder llamarla. |
-| `fn_verificar_limite_invitaciones(p_administrador_id uuid)` | `void` | DEFINER | nadie | Limite de invitaciones por administrador (issue #761): 20 cada hora. La llama supabase/functions/invitar-usuario/index.ts antes de fn_crear_usuario_administrativo(), con la llave de servicio. No se concede a ningun rol de la aplicacion, solo a service_role. |
-| `fn_verificar_y_contar_limite(p_recurso text, p_actor_id uuid, p_maximo integer, p_ventana interval)` | `void` | DEFINER | nadie | Incrementa atomicamente el contador de (recurso, actor_id) y falla con SQLSTATE 53400 (configuration_limit_exceeded) si supera p_maximo dentro de la ventana p_ventana. Reinicia la ventana sola cuando expiro. Nucleo compartido; llamarla siempre a traves de una funcion companera con el recurso y el umbral ya fijos (issue #761). |
+| `fn_verificar_limite_invitaciones(p_administrador_id uuid)` | `void` | DEFINER | authenticated | Limite de invitaciones por administrador (issue #761): 20 cada hora. La llama supabase/functions/invitar-usuario/index.ts antes de fn_crear_usuario_administrativo(), con la llave de servicio. No se concede a ningun rol de la aplicacion, solo a service_role. |
+| `fn_verificar_y_contar_limite(p_recurso text, p_actor_id uuid, p_maximo integer, p_ventana interval)` | `void` | DEFINER | authenticated | Incrementa atomicamente el contador de (recurso, actor_id) y falla con SQLSTATE 53400 (configuration_limit_exceeded) si supera p_maximo dentro de la ventana p_ventana. Reinicia la ventana sola cuando expiro. Nucleo compartido; llamarla siempre a traves de una funcion companera con el recurso y el umbral ya fijos (issue #761). |
 | `mis_accesos()` | `jsonb` | DEFINER | authenticated | Modulos abiertos por la matriz al rol de la sesion y sus permisos finos efectivos. Solo describe a quien llama. |
 | `modulo_por_defecto(p_rol rol_usuario, p_modulo text)` | `boolean` | INVOKER | authenticated | Modulos que un rol ve por defecto, espejo de MODULOS[].roles (packages/shared/navegacion.js). La matriz de acceso (rol_modulo) solo concede modulos fuera de esta lista. |
 | `participa_en_jornada(p_jornada_id uuid)` | `boolean` | DEFINER | authenticated | TRUE si quien esta conectado, con la cuenta activa, esta en el equipo de la jornada (jornada_personal). La usan las politicas RLS. |
@@ -3691,6 +3695,9 @@ Seguridad: corre con los permisos de su dueno; filtra con su propio WHERE. Privi
 | `actualizar_timestamp_updated_at()` | INVOKER | Actualiza automaticamente updated_at antes de cada UPDATE; usada por los triggers BEFORE UPDATE de las tablas con esa columna. |
 | `crear_perfil_nuevo_usuario()` | DEFINER | Crea el perfil correspondiente cada vez que se inserta un usuario en auth.users, y rechaza el alta si viene del registro publico de GoTrue sin la marca administrativa (issue #508). |
 | `fn_actualizar_existencias()` | INVOKER | Aplica el ajuste de existencias cuando un movimiento pasa a aprobado (00023, sobre existencias desde la 00047). Desde la 00112 lleva SET search_path = '' y llama calificado, por el mismo motivo que fn_autoaprobar_movimiento_inventario. |
+| `fn_anular_receta_al_rechazar_su_entrega()` | DEFINER | Rechazar la salida que entrega una receta la anula entera, con un motivo que dice que fue la administracion (00186, issue #925). |
+| `fn_aportar_donacion_a_su_jornada()` | DEFINER | Trigger de donacion_detalle (00187): el monto de una donacion de dinero registrada para una jornada planificada o en curso entra a su presupuesto como aporte de origen donacion. DEFINER: quien registra donaciones puede no gestionar jornadas. |
+| `fn_aprobar_entrega_completa_de_receta()` | DEFINER | Aprobar una salida de la entrega de una receta aprueba las demas: la receta se valida completa o nada (00186, issue #925). |
 | `fn_autoaprobar_gasto_administrador()` | INVOKER | Si quien inserta es administrador (es_administrador(), leido del rol en perfiles via auth.uid(), nunca de un campo del cliente), hace nacer el gasto en estado aprobado, con aprobado_por y aprobado_en fijados automaticamente. Espejo de fn_autoaprobar_movimiento_inventario (00094), sin ajuste de existencias: un gasto no mueve inventario (00089). Cualquier otro rol conserva el DEFAULT 'pendiente' de la columna estado (00025), sin cambios. |
 | `fn_autoaprobar_movimiento_inventario()` | INVOKER | Hace nacer aprobado el movimiento que inserta la administradora, o el que registra el sistema (fn_es_aprobacion_de_sistema, 00186), con aprobado_por, aprobado_en y aprobacion_automatica, y aplica el ajuste de existencias. Cualquier otro caso conserva el DEFAULT 'pendiente' (00023). SET search_path = '' desde la 00112. |
 | `fn_bloquear_gasto_finalizado()` | INVOKER | Trigger: un gasto aprobado o rechazado ya no se modifica ni se borra. |
@@ -3716,7 +3723,7 @@ Seguridad: corre con los permisos de su dueno; filtra con su propio WHERE. Privi
 | `fn_notificar_aviso_caducidad()` | DEFINER | Trigger: avisa en el buzon (y por correo) de la administracion cada vez que se registra un aviso de vencimiento: "Lote por vencer en N dias", "Lote vence hoy" o "Lote vencido" (issue #899). Reemplaza a fn_notificar_alerta_caducidad (00138), que avisaba una sola vez por alerta. |
 | `fn_notificar_gasto_por_aprobar()` | DEFINER | Trigger: avisa a quien aprueba gastos cuando se registra uno pendiente (00138). |
 | `fn_notificar_medicamento_sin_stock()` | DEFINER | Trigger: avisa cuando un medicamento se queda sin existencias en todas las bodegas (00138). |
-| `fn_notificar_movimiento_por_validar()` | DEFINER | Trigger: avisa a quien valida movimientos cuando se registra uno pendiente (00138). |
+| `fn_notificar_movimiento_por_validar()` | DEFINER | Trigger: avisa a quien valida movimientos cuando se registra uno pendiente (00138). Desde la 00186 la entrega de una receta avisa una sola vez, por receta, y no una por medicamento. |
 | `fn_origen_del_presupuesto_inicial()` | DEFINER | Trigger: una jornada que se crea con presupuesto_asignado mayor que cero registra ese monto como un origen sin_clasificar, para que el asignado siga siendo la suma de sus origenes (00135). |
 | `fn_paciente_area_area_vigente()` | DEFINER | Rechaza asignar a un paciente un area de atencion retirada (00182). |
 | `fn_proteger_decision_de_movimiento()` | DEFINER | Impide que quien registro un movimiento escriba las columnas que documentan la decision de quien lo aprueba o lo rechaza (issue #625). Desde la 00186 tampoco frena al sistema (fn_es_aprobacion_de_sistema): la anulacion de una receta rechaza sus salidas pendientes. |
@@ -3727,7 +3734,7 @@ Seguridad: corre con los permisos de su dueno; filtra con su propio WHERE. Privi
 | `fn_proyecto_de_la_jornada_de_la_donacion()` | DEFINER | Trigger: si una donacion es para una jornada, su proyecto es el de esa jornada (00153). |
 | `fn_registrar_salida_de_caja()` | DEFINER | Trigger de jornada_presupuesto_origen (00168): un aporte con origen caja deja su salida en movimientos_de_caja. |
 | `fn_sincronizar_presupuesto_de_jornada()` | DEFINER | Mantiene jornadas.presupuesto_asignado igual a la suma de sus filas de jornada_presupuesto_origen (issue #840). Es la unica via que escribe esa columna. |
-| `fn_traspasar_sobrante_al_iniciar_jornada()` | DEFINER | Al iniciar una jornada con bodega movil, lo que haya en la bodega y no sea ya suyo pasa a su cuenta: devuelto en la jornada anterior, cargado en esta. El inventario fisico no cambia (00186, issue #925). |
+| `fn_traspasar_sobrante_al_iniciar_jornada()` | DEFINER | Al iniciar una jornada (planificada a en curso), fn_traspasar_sobrante_a_jornada() (00186). |
 | `fn_validar_aporte_de_caja()` | DEFINER | Trigger de jornada_presupuesto_origen (00168): un aporte con origen caja no saca mas de lo que hay en ella. |
 | `fn_validar_cita()` | DEFINER | Reglas de la cita (00184): cupo de la clinica con bloqueo, traslapes de paciente y profesional, profesional del cuadro de turnos, estado de la jornada, fecha, paciente sin baja, clinica y area vigentes, transiciones e inmutabilidad de la atendida o cancelada. |
 | `fn_validar_gasto_contra_presupuesto()` | DEFINER | Trigger de gastos (00159): una jornada finalizada no admite gastos nuevos, la fecha llega hasta el dia de la jornada o hasta hoy, y un gasto que compromete mas dinero no deja lo comprometido (pendiente + aprobado) por encima del presupuesto asignado. |

@@ -71,6 +71,7 @@ export default function RegistroDonacionPage({ usuarioRol }) {
     setJornadaId,
     jornadasOptions,
     proyectoFijadoPorJornada,
+    entraAlPresupuestoDeLaJornada,
     fecha,
     setFecha,
     observaciones,
@@ -249,6 +250,11 @@ export default function RegistroDonacionPage({ usuarioRol }) {
                     </option>
                   ))}
                 </Form.Select>
+                {entraAlPresupuestoDeLaJornada && (
+                  <Form.Text muted>
+                    El dinero entra solo al presupuesto de esta jornada, como un aporte.
+                  </Form.Text>
+                )}
               </Form.Group>
             </Col>
 
