@@ -46,7 +46,7 @@ cambio de politica o de `GRANT` necesita un caso pgTAP o e2e, no solo pruebas en
 | Tipo | Herramienta | Quien lo ejecuta | Cuando | Criterio de aprobacion | Estado |
 | --- | --- | --- | --- | --- | --- |
 | **Unitarias** | Vitest en `packages/shared` y `packages/ui-tokens` | Quien abre el PR, y el CI | Antes de subir, y en cada PR | Cero fallos en `npm test`. La cobertura de las validaciones no baja de 97 % statements, 94 % branches, 100 % functions y 98 % lines | Ejecutable |
-| **Integracion** | Vitest contra el stack local real (`pruebas/e2e/`) | El CI | En cada PR que toca `supabase/`, `packages/shared/` o `pruebas/`, y en cada push a `develop` y `main` | Las 49 pruebas de los flujos criticos en verde | Ejecutable |
+| **Integracion** | Vitest contra el stack local real (`pruebas/e2e/`) | El CI | En cada PR que toca `supabase/`, `packages/shared/` o `pruebas/`, y en cada push a `develop` y `main` | Las 55 pruebas de los flujos criticos en verde | Ejecutable |
 | **Funcionales** | Vitest y Testing Library en `apps/web`; Jest en `apps/mobile` | Quien abre el PR, y el CI | Antes de subir, y en cada PR | Cero fallos. Cada pantalla que consulta datos prueba tambien su camino de error | Ejecutable |
 | **Seguridad basica** | pgTAP (`supabase/tests/database/`) y `npm audit` | El CI; la auditoria, quien prepara una entrega | pgTAP con la misma regla que la integracion; la auditoria antes de cada entrega y antes de produccion | pgTAP con `Result: PASS`. Ninguna vulnerabilidad critica en dependencias de produccion; las altas quedan revisadas y anotadas en la evidencia | Ejecutable |
 | **Usabilidad** | Sesion guiada con tareas y observacion | El equipo, con personal de la organizacion | Una vez antes de produccion, y despues de cada cambio grande de flujo | Propuesta a validar con la PM: el personal completa sin ayuda al menos 8 de cada 10 tareas de HU01 a HU07 | **No ejecutada**: requiere a la organizacion |
@@ -61,8 +61,8 @@ plantilla del PR nombra lint, pruebas y build, pero el CI tambien comprueba el f
 
 ## Que mide y que no mide la cobertura
 
-El resumen del CI de `packages/shared` dice **97.91 %**, y es facil leerlo como la cobertura del
-paquete. **No lo es.** `packages/shared/vitest.config.js` solo mide `**/validaciones.js`,
+El resumen del CI de `packages/shared` dice **98.71 %** (ejecucion del 2026-10-11), y es facil
+leerlo como la cobertura del paquete. **No lo es.** `packages/shared/vitest.config.js` solo mide `**/validaciones.js`,
 `**/*.validaciones.js` y `validations/index.js`: las reglas de negocio que se pueden probar enteras
 sin base de datos. El propio archivo lo explica, y es una decision razonada, pero el efecto es que
 un numero alto convive con areas enteras sin medir:
@@ -70,7 +70,7 @@ un numero alto convive con areas enteras sin medir:
 | Paquete | Que entra en el porcentaje | Que queda fuera |
 | --- | --- | --- |
 | `packages/shared` | Solo las validaciones | Las APIs, los hooks, los descriptores y el formato |
-| `apps/mobile` | Todo `src/` (51.97 % en la ultima medicion) | Nada del alcance, pero casi la mitad de las lineas no se ejecuta en ninguna prueba |
+| `apps/mobile` | Todo `src/` (67.48 % en la ultima medicion) | Nada del alcance, pero un tercio de las lineas no se ejecuta en ninguna prueba |
 | `apps/web` | **Nada**: no recolecta cobertura | Las 77 paginas |
 
 Y ninguna cobertura, por alta que sea, dice si una consulta tiene la forma que PostgREST acepta o
@@ -171,6 +171,9 @@ Problemas del entorno que ya ocurrieron y que hacen parecer roto algo que no lo 
 | `supabase start` o `db reset` fallan con `bind: An attempt was made to access a socket in a way forbidden` | Windows reserva tramos de puertos con WinNAT, y pueden cubrir los 544xx de `supabase/config.toml` | Revisar con `netsh interface ipv4 show excludedportrange protocol=tcp`. Liberarlos requiere permisos de administrador |
 | La suite pgTAP sale roja en local y verde en el CI | Una version de la CLI de Supabase distinta de la que fija el CI (2.115.0) | Usar `npx supabase@2.115.0`. Con otra version cambian los privilegios por defecto de la base |
 | Las pruebas e2e fallan con `No se pudo leer la configuracion del stack local` | El arnes llama a `supabase status` y la CLI no esta en el `PATH` | Instalar la CLI de forma que `supabase` se resuelva en la terminal |
+| `supabase db reset` termina con `LegacyDbSetupError: error running container: exit 1`, y pgTAP y e2e salen rojos con `relation ... does not exist` | El contenedor que inicializa el esquema choca con `schema_migrations_pkey`; pasa de forma intermitente, tambien con la 2.115.0. La base queda sin esquema y todo lo que corre despues falla | Repetir el `db reset` hasta que termine con `Finished supabase db reset`, y solo entonces correr pgTAP, e2e o la carga. Una corrida sobre un reset fallido se descarta, no se anota |
+| `npm run prueba:carga-jornada` o `verificar:concurrencia-ficha` fallan y todo lo demas esta en verde | Son scripts manuales que no corren en el CI: nadie se entera cuando una migracion les cambia una regla. Paso con la bodega movil obligatoria (00176/00178) y con el sexo como enum (00132) | Leer el error de Postgres (`docker logs` del contenedor de la base) y actualizar el script en el mismo PR que la evidencia |
+| Diferencias en las pruebas entre maquinas | Node distinto del que fija el proyecto (`.nvmrc`, `engines` y el CI usan 22) | `nvm use 22` y `npm ci` antes de ejecutar el plan |
 
 ## Baseline de cobertura de `apps/mobile` (issue #775)
 
@@ -220,6 +223,17 @@ nueva trae consigo desde la medicion anterior.
 | Lines      | 66.31%          |
 
 Registro completo en [evidencias/2026-09-29.md](./evidencias/2026-09-29.md).
+
+**Medicion del 2026-10-11** (develop `2e27160`, 49 suites, 422 pruebas), con Node 22 como el CI:
+
+| Metrica    | % de cobertura |
+| ---------- | --------------- |
+| Statements | 67.48%          |
+| Branches   | 60.71%          |
+| Functions  | 59.44%          |
+| Lines      | 68.83%          |
+
+Registro completo en [evidencias/2026-10-11.md](./evidencias/2026-10-11.md).
 
 ## Prueba de carga: jornada de 50 pacientes (issue #774)
 
