@@ -38,6 +38,7 @@ configuracion de GitHub (plantillas de issues, PR y los workflows de CI/CD) esta
 | [CASOS-DE-PRUEBA.md](./CASOS-DE-PRUEBA.md)             | Cada caso de prueba vinculado a su requerimiento, y los requerimientos que no tienen ninguno |
 | [CUMPLIMIENTO-DE-REQUERIMIENTOS.md](./CUMPLIMIENTO-DE-REQUERIMIENTOS.md) | Los 34 RF y 15 RNF: donde esta cada uno, que issues lo cubren, su evidencia y su estado (issue #253) |
 | [evidencias/](./evidencias/)                           | Registro de cada ejecucion completa del plan, con fecha y commit      |
+| [DESPLIEGUE_BASE_DE_DATOS.md](./DESPLIEGUE_BASE_DE_DATOS.md) | Guía de orden de migraciones, catálogos sembrados, usuario admin y despliegue en producción |
 
 ## Dependencias y Herramientas
 
