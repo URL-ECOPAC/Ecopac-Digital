@@ -58,24 +58,24 @@ SELECT is(
 );
 
 -- ============================================================================
--- 3. El administrador que aprovisiona la 00063
+-- 3. El administrador de producción que aprovisiona la 00188
 -- ============================================================================
--- Es el caso que llega a ecopac-dev y a produccion: los seeds no corren en db push, asi que
--- esta es la unica fila afectada fuera de local. Ademas nace sin contrasena a proposito, de
+-- Es el caso que llega a ecopac-dev y a producción: los seeds no corren en db push, así que
+-- esta es la única fila afectada fuera de local. Además nace sin contraseña a propósito, de
 -- modo que si su recovery_token queda en NULL no puede entrar NI usar el flujo de
--- recuperacion con el que docs/QUICKSTART.md espera que se le fije una.
+-- recuperación con el que docs/QUICKSTART.md espera que se le fije una.
 SELECT is(
   (
     SELECT count(*)::int
     FROM auth.users
-    WHERE email = 'admin@ecopac.org'
+    WHERE email = 'ecopac@gmail.com'
       AND confirmation_token IS NOT NULL
       AND recovery_token IS NOT NULL
       AND email_change IS NOT NULL
       AND email_change_token_new IS NOT NULL
   ),
   1,
-  'el primer administrador queda con las columnas de token normalizadas'
+  'el administrador de producción ecopac@gmail.com queda con las columnas de token normalizadas'
 );
 
 SELECT * FROM finish();

@@ -18,6 +18,10 @@ BEGIN
       email,
       encrypted_password,
       email_confirmed_at,
+      confirmation_token,      -- <- AÑADIR
+      recovery_token,          -- <- AÑADIR
+      email_change,            -- <- AÑADIR
+      email_change_token_new,  -- <- AÑADIR
       raw_app_meta_data,
       raw_user_meta_data,
       created_at,
@@ -28,8 +32,12 @@ BEGIN
       'authenticated',
       'authenticated',
       v_correo,
-      NULL, -- La contraseña se establece mediante recuperación ("olvidé mi contraseña")
+      NULL,
       NOW(),
+      '',                      -- <- AÑADIR
+      '',                      -- <- AÑADIR
+      '',                      -- <- AÑADIR
+      '',                      -- <- AÑADIR
       '{"provider": "email", "providers": ["email"]}',
       '{"nombres": "Administrador", "apellidos": "Ecopac"}',
       NOW(),
