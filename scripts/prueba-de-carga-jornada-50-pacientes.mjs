@@ -34,7 +34,13 @@ import {
   registrarTriaje,
 } from "@ecopac/shared";
 
-import { bodegaPrincipal, cerrarConexion, consultar, DEMO, limpiar } from "../pruebas/e2e/datos.js";
+import {
+  cerrarConexion,
+  consultar,
+  DEMO,
+  instantaneaDeExistencias,
+  limpiar,
+} from "../pruebas/e2e/datos.js";
 import { CUENTAS, entrarComo, salir } from "../pruebas/e2e/sesiones.js";
 
 const CANTIDAD_DE_PACIENTES = 50;
@@ -42,6 +48,7 @@ const CODIGO_DIAGNOSTICO = "J00";
 const CANTIDAD_RECETADA = 1;
 
 const creados = { pacientes: [], atenciones: [], movimientos: [] };
+let existenciasIniciales = [];
 const tiempos = { registro: [], triaje: [], consulta: [], receta: [] };
 
 function datosDelPaciente(indice) {
@@ -198,14 +205,28 @@ function imprimirResultados() {
 async function limpiarTodo() {
   await salir();
   // Los movimientos pendientes nunca se aprobaron (esta prueba no llama a aprobarMovimiento()),
-  // asi que no tocaron existencias y no hace falta restaurar ninguna cantidad -- limpiar() solo
-  // necesita borrar las filas.
-  await limpiar({ pacientes: creados.pacientes, movimientos: creados.movimientos });
+  // asi que no tocaron existencias. Lo unico que se restaura es la existencia que la prueba le
+  // puso a la bodega movil antes de empezar.
+  await limpiar({
+    pacientes: creados.pacientes,
+    movimientos: creados.movimientos,
+    existencias: existenciasIniciales,
+  });
   await cerrarConexion();
 }
 
 it(`registra, hace triaje y receta a ${CANTIDAD_DE_PACIENTES} pacientes, midiendo el tiempo de cada paso`, async () => {
-  const bodega = await bodegaPrincipal();
+  // Lo que se receta en una jornada sale de su bodega movil (00176), obligatoria desde la 00178,
+  // igual que en atencion-clinica.e2e.test.js. Se le pone existencia del lote sano para las 50
+  // recetas, como si se hubiera cargado desde la pestana Insumos.
+  const bodega = DEMO.bodegaMovil;
+  existenciasIniciales = await instantaneaDeExistencias([[DEMO.loteSano, bodega]]);
+  await consultar(
+    `INSERT INTO existencias (lote_id, bodega_id, cantidad_disponible)
+     VALUES ($1, $2, $3)
+     ON CONFLICT (lote_id, bodega_id) DO UPDATE SET cantidad_disponible = EXCLUDED.cantidad_disponible`,
+    [DEMO.loteSano, bodega, CANTIDAD_DE_PACIENTES * CANTIDAD_RECETADA],
+  );
 
   try {
     await fase1RegistroYTriaje();

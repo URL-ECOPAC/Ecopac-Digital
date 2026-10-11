@@ -106,7 +106,7 @@ el numero del backlog. Este documento usa siempre la numeracion de la matriz.
 | CP-RF04-06 | Lotes provisionales | Un lote de voluntario nace provisional y no se dispensa hasta aprobarse | `inventario-validacion.e2e.test.js`, casos 8 a 11 |
 | CP-RF04-07 | Una salida tambien espera aprobacion | El stock baja solo al aprobar | `inventario-validacion.e2e.test.js`, salidas 1 a 3; `atencion-clinica.e2e.test.js`, casos 7 a 9 |
 | CP-RF04-08 | Reglas de aprobacion en la base | Solo la administradora aprueba | `aprobacion_movimientos_inventario.sql` (11) |
-| CP-RF04-09 | Registrar ingresos en web y en movil | El formulario crea el movimiento pendiente | `apps/web/src/pages/ModalRegistroIngreso.test.jsx`, `ModalAltaLote.test.jsx`; `apps/mobile/src/screens/RegistroIngresoScreen.test.js` |
+| CP-RF04-09 | Registrar ingresos en web y en movil | El formulario crea el movimiento pendiente | `apps/web/src/pages/ModalRegistroIngreso.test.jsx`; `apps/mobile/src/screens/RegistroIngresoScreen.test.js` |
 
 ### RF-05: alertas de vencimiento con un mes de anticipacion
 
@@ -116,19 +116,19 @@ el numero del backlog. Este documento usa siempre la numeracion de la matriz.
 
 | ID | Caso | Resultado esperado | Ejecucion |
 | --- | --- | --- | --- |
-| CP-RF05-01 | Lote con stock que vence en 10 dias | Genera alerta | `generar_alertas_caducidad.sql` (9) |
+| CP-RF05-01 | Lote con stock que vence en 10 dias | Genera alerta | `generar_alertas_caducidad.sql` (13) |
 | CP-RF05-02 | Lote que vence en 45 dias | No genera alerta: esta fuera de los 30 dias | `generar_alertas_caducidad.sql` |
 | CP-RF05-03 | Lote sin stock que vence pronto | No genera alerta | `generar_alertas_caducidad.sql` |
 | CP-RF05-04 | Lote ya alertado | No duplica la alerta | `generar_alertas_caducidad.sql` |
 | CP-RF05-05 | Panel de alertas en web y resumen en movil | Muestra las alertas pendientes | `apps/web/src/pages/PanelAlertasVencimiento.test.jsx`; `apps/mobile/src/screens/InventarioResumenAlertasScreen.test.js` |
 | CP-RF05-06 | Reporte de medicamentos por vencer | Clasifica los lotes por horizonte | `reportes.e2e.test.js`, casos de `obtenerReporteDeVencimientos` |
 | CP-RF05-07 | Bordes de la ventana: vence hoy, en 30 y en 31 dias | Los dos primeros generan alerta, el tercero no | `generar_alertas_caducidad.sql` (13) |
-| CP-RF05-08 | Una alerta, movimiento por validar, gasto por aprobar o medicamento sin stock nuevo | Notifica una vez a cada administrador activo; nada a un inactivo ni a otros roles; lo autoaprobado no notifica; repetir no repite | `notificaciones.sql` (26) |
+| CP-RF05-08 | Una alerta, movimiento por validar, gasto por aprobar o medicamento sin stock nuevo | Notifica una vez a cada administrador activo; nada a un inactivo ni a otros roles; lo autoaprobado no notifica; repetir no repite | `notificaciones.sql` (27) |
 | CP-RF05-09 | El correo de cada notificacion | Uno por notificacion, en orden; solo se marca enviado lo que el SMTP acepto; sin SMTP no se reclama nada | `supabase/functions/_shared/correo_test.ts` |
 | CP-RF05-10 | Notificaciones en web y en movil | La campana abre las recientes sin salir de la pantalla y lleva a la ventana dedicada; ahi se filtra por texto, por una categoria y por estado, y se ve por llegada o agrupado; abrir marca como leida y lleva a donde se resuelve; si falla no navega y lo dice | `apps/web/src/components/CampanaNotificaciones.test.jsx`; `apps/web/src/pages/NotificacionesPage.test.jsx`; `apps/mobile/src/screens/NotificacionesScreen.test.js`; `packages/shared/notificaciones/*.test.js` |
 | CP-RF05-13 | Aviso del sistema del telefono | Cuando llega una notificacion nueva con la app abierta, sale como notificacion del sistema; lo que ya estaba al abrir no se avisa; tocarla abre la ventana de notificaciones. No disponible en Expo Go sobre Android (ver COSTOS-Y-LIMITES) | `apps/mobile/src/components/AvisosDelSistema.test.js`; `packages/shared/notificaciones/avisos.test.js` |
 | CP-RF05-11 | Alertas ya atendidas | El panel muestra la accion, quien y cuando | `apps/web/src/pages/PanelAlertasVencimiento.test.jsx` |
-| CP-RF05-12 | Atender una alerta | Descartado/donado dan de baja todo el lote (salidas en el Kardex); reubicado traslada a la bodega destino y no se ofrece para un vencido; la alerta no se vuelve a generar ni a notificar; nadie la cierra con un UPDATE directo | `atender_alerta_caducidad.sql` (17); `packages/shared/inventario/alertas.api.test.js`; `PanelAlertasVencimiento.test.jsx` |
+| CP-RF05-12 | Atender una alerta | Descartado/donado dan de baja todo el lote (salidas en el Kardex); reubicado traslada a la bodega destino y no se ofrece para un vencido; la alerta no se vuelve a generar ni a notificar; nadie la cierra con un UPDATE directo | `atender_alerta_caducidad.sql` (18); `packages/shared/inventario/alertas.api.test.js`; `PanelAlertasVencimiento.test.jsx` |
 
 ### RF-06: busqueda de pacientes e historial medico completo
 
@@ -175,14 +175,14 @@ el numero del backlog. Este documento usa siempre la numeracion de la matriz.
 | CP-RNF06-01 | RNF-6: crecimiento de la base | Consultas sobre mas de 1000 filas | No se truncan en silencio | `paginacion-max-rows.e2e.test.js`; volumen de anos: sin caso |
 | CP-RNF07-01 | RNF-7: confidencialidad e integridad | Mismas suites que CP-RF01-01 a 06 | Solo el personal autorizado accede | pgTAP de politicas y privilegios |
 | CP-RNF08-01 | RNF-8: HTTPS | Abrir la web por `http://` y revisar la URL de Supabase que usan las apps | Redirige a HTTPS; ninguna llamada viaja en claro | **Manual** |
-| CP-RNF09-01 | RNF-9: historiales solo para medicos y administrador | Un rol sin permiso intenta leer consultas, recetas e historial | La base lo niega | `politicas_rls_atenciones_consultas_recetas.sql` (33), `politicas_rls_pacientes_expedientes.sql` (25) |
+| CP-RNF09-01 | RNF-9: historiales solo para medicos y administrador | Un rol sin permiso intenta leer consultas, recetas e historial | La base lo niega | `politicas_rls_atenciones_consultas_recetas.sql` (33), `politicas_rls_pacientes_expedientes.sql` (28) |
 | CP-RNF10-01 | RNF-10: autenticacion segura | Reglas de contrasena y restablecimiento | Rechaza contrasenas que no cumplen la politica | `packages/shared/usuarios/validaciones.test.js`, `useNuevaContrasena.test.js`. Solo del lado del cliente: `supabase/config.toml` no fija una longitud minima en el servidor |
 | CP-RNF10-02 | RNF-10: las cuentas pueden iniciar sesion | Ninguna cuenta queda con columnas de token nulas que GoTrue no sabe leer | Las siete cuentas de demostracion inician sesion | `tokens_auth_users.sql` (3) |
-| CP-RNF11-01 | RNF-11: confiabilidad en jornada | Los flujos criticos de una jornada funcionan de punta a punta | 49 de 49 pruebas e2e en verde en cada PR que toca la base | `pruebas/e2e/` en el CI |
+| CP-RNF11-01 | RNF-11: confiabilidad en jornada | Los flujos criticos de una jornada funcionan de punta a punta | 55 de 55 pruebas e2e en verde en cada PR que toca la base | `pruebas/e2e/` en el CI |
 | CP-RNF12-01 | RNF-12: respaldos | Restaurar la base desde un respaldo | La informacion vuelve integra | **No ejecutable hoy**: se ejecuta en la salida a produccion (#252), con el respaldo que un workflow guarda en Google Drive |
 | CP-RNF13-01 | RNF-13: codigo mantenible | Lint, formato y guarda de esquema | Cero errores | `npm run lint`, `npm run format:check`, `scripts/verificar-shared-vs-esquema.mjs` |
 | CP-RNF14-01 | RNF-14: herramientas abiertas y capas gratuitas | Revisar el costo de cada servicio | Todo en capa gratuita o con justificacion | Verificacion documental en `docs/COSTOS-Y-LIMITES.md` |
-| CP-RNF15-01 | RNF-15: responsiva y compatible | Recorrer las pantallas principales en Chrome, Firefox y Safari, a 1366, 768 y 375 px | Sin desbordes ni controles inaccesibles | **Manual**, sin ejecutar |
+| CP-RNF15-01 | RNF-15: responsiva y compatible | Recorrer las pantallas principales en Chrome, Firefox y Safari, a 1366, 768 y 375 px | Sin desbordes ni controles inaccesibles | **Manual**, parcial: el 2026-10-11 solo Chrome, la lista de pacientes a 1568, 768 y 500 px sin desborde ([evidencias/2026-10-11.md](./evidencias/2026-10-11.md)); faltan Firefox, Safari, 375 px y el resto de las pantallas |
 | CP-ACC-01 | Accesibilidad web (sin RNF oficial) | Navegar las pantallas principales solo con teclado y revisarlas con Lighthouse | Todo control es alcanzable; sin fallos criticos de contraste o etiquetas | **Manual**, sin ejecutar |
 
 ## Requerimientos sin ningun caso que los cubra
@@ -193,9 +193,9 @@ Lo que hoy no se puede afirmar que este probado:
 | --- | --- | --- |
 | **RNF-12** respaldos | Pendiente de produccion: el plan Free de Supabase no incluye respaldos, y la organizacion decidio un workflow de GitHub Actions que guarde el volcado en Google Drive | Se implementa en la issue de salida a produccion (#252), con el plan de `docs/CI-CD.md`, "Plan para produccion". Sin respaldo no hay restauracion que probar |
 | **RNF-1** interfaz intuitiva | Caso definido, nunca ejecutado | Sesion de usabilidad con el personal de la organizacion |
-| **RNF-2** registro agil | Solo existe el piso de la prueba de carga (5.8 ms por registro contra el stack local), que no mide el tiempo de una persona | Cronometraje en una jornada real |
+| **RNF-2** registro agil | Solo existe el piso de la prueba de carga (8.3 ms por registro contra el stack local, corrida del 2026-10-11), que no mide el tiempo de una persona | Cronometraje en una jornada real |
 | **RNF-8** HTTPS | Sin caso ejecutado | Revision manual de la web desplegada |
-| **RNF-15** responsiva y navegadores | Sin caso ejecutado | Recorrido manual en la matriz de navegadores y anchos |
+| **RNF-15** responsiva y navegadores | Ejecutado solo en parte: una pantalla, un navegador | Recorrido manual en la matriz completa de navegadores y anchos |
 | **RNF-6** crecimiento de la base | Cubierto solo el limite de 1000 filas de PostgREST | Una prueba con volumen de varios anos de jornadas |
 | **Aceptacion** de HU01 a HU07 | Ningun criterio de aceptacion validado con la organizacion | Sesion de aceptacion antes de pasar a produccion |
 

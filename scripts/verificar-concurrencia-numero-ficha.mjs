@@ -4,7 +4,7 @@
 //
 // pgTAP (supabase/tests/database/) corre en una sola sesion/transaccion y no puede probar dos
 // conexiones simultaneas de verdad. Este script si abre conexiones paralelas reales contra el
-// Postgres local que levanta `supabase start` (puerto 54322, ver supabase/config.toml) y llama
+// Postgres local que levanta `supabase start` (puerto 54422, ver supabase/config.toml) y llama
 // fn_registrar_paciente() al mismo tiempo desde varias de ellas, para comprobar que
 // expedientes_numero_ficha_seq (00081) nunca reparte el mismo numero_ficha dos veces.
 //
@@ -18,7 +18,7 @@
 import pg from "pg";
 
 const CONEXION =
-  process.env.SUPABASE_DB_URL ?? "postgresql://postgres:postgres@localhost:54322/postgres";
+  process.env.SUPABASE_DB_URL ?? "postgresql://postgres:postgres@localhost:54422/postgres";
 const COMUNIDAD_DE_PRUEBA_ID = "40000000-0000-0000-0000-000000000001";
 const CANTIDAD_DE_REGISTROS_EN_PARALELO = 20;
 
@@ -35,7 +35,7 @@ async function registrarUnPaciente(pool, indice) {
   const telefono = `5555-30${String(indice).padStart(2, "0")}`;
   const { rows } = await pool.query(
     `SELECT id, numero_ficha
-     FROM fn_registrar_paciente($1, $2, '1990-01-01', 'F', $3, $4, 'espanol')`,
+     FROM fn_registrar_paciente($1, $2, '1990-01-01', 'Femenino', $3, $4, 'espanol')`,
     ["Concurrencia", `Prueba ${indice}`, COMUNIDAD_DE_PRUEBA_ID, telefono],
   );
   return rows[0];
