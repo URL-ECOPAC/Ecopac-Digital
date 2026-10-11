@@ -68,14 +68,14 @@ SELECT is(
   (
     SELECT count(*)::int
     FROM auth.users
-    WHERE email = 'ecopac@gmail.com'
+    WHERE email = 'ecopac.digital@gmail.com'
       AND confirmation_token IS NOT NULL
       AND recovery_token IS NOT NULL
       AND email_change IS NOT NULL
       AND email_change_token_new IS NOT NULL
   ),
   1,
-  'el administrador de producción ecopac@gmail.com queda con las columnas de token normalizadas'
+  'el administrador de producción ecopac.digital@gmail.com queda con las columnas de token normalizadas'
 );
 
 SELECT * FROM finish();

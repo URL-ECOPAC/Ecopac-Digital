@@ -1,7 +1,7 @@
--- Aprovisiona el correo de producción ecopac@gmail.com como administrador inicial (Issue #913)
+-- Aprovisiona el correo de producción ecopac.digital@gmail.com como administrador inicial (Issue #913)
 DO $$
 DECLARE
-  v_correo CONSTANT text := 'ecopac@gmail.com';
+  v_correo CONSTANT text := 'ecopac.digital@gmail.com';
   v_id     uuid;
 BEGIN
   -- 1. Usuario de autenticación
