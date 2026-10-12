@@ -7,8 +7,8 @@
 | Código | Pieza | Archivo | Estado |
 | --- | --- | --- | --- |
 | - | Plan de capacitaciones | [PLAN-DE-CAPACITACIONES.md](./PLAN-DE-CAPACITACIONES.md) y [PDF](../formal/plan-de-capacitaciones.pdf) | Escrito |
-| M-ADM | Manual de la administradora (es también el manual de administración) | `MANUAL-ADMINISTRADORA.md` | Pendiente |
-| M-MED | Manual del médico | `MANUAL-MEDICO.md` | Pendiente |
+| M-ADM | Manual de la administradora (es también el manual de administración) | [PDF](../formal/manual-del-administrador.pdf) | Escrito, solo en PDF |
+| M-MED | Manual del médico | [PDF](../formal/manual-del-medico.pdf) | Escrito, solo en PDF |
 | M-VOL | Manual del colaborador (voluntario general) | `MANUAL-COLABORADOR.md` | Pendiente |
 | M-JD | Manual de junta directiva | `MANUAL-JUNTA-DIRECTIVA.md` | Pendiente |
 | M-SF | Manual del socio fundador | `MANUAL-SOCIO-FUNDADOR.md` | Pendiente |
