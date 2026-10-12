@@ -16,6 +16,7 @@ configuracion de GitHub (plantillas de issues, PR y los workflows de CI/CD) esta
 | [DISENO-MOVIL.md](./DISENO-MOVIL.md) | Criterio de diseno de la app movil: reglas, fuentes y donde se aplicaron |
 | [CI-CD.md](./CI-CD.md)               | Que valida y despliega cada workflow, y que hacer cuando falla         |
 | [SEGURIDAD.md](./SEGURIDAD.md)       | Politica de contrasenas, expiracion de sesion, credenciales y observabilidad (errores, fallos de red, bitacora, respaldos) |
+| [RESPALDO-Y-RECUPERACION.md](./RESPALDO-Y-RECUPERACION.md) | Plan de respaldo y recuperacion de la base de produccion: que se respalda, cada cuanto, quien puede abrirlo y como se restaura paso a paso (issue #914). Version formal en PDF: [formal/plan-de-respaldo-y-recuperacion.pdf](./formal/plan-de-respaldo-y-recuperacion.pdf) |
 | [CONFIGURACION-SUPABASE.md](./CONFIGURACION-SUPABASE.md) | Lista de verificacion de lo que se configura a mano en el Dashboard de cada ambiente |
 | [PROTECCION-DE-DATOS.md](./PROTECCION-DE-DATOS.md) | Logs, almacenamiento movil, cifrado de columnas y secretos (OWASP A02) |
 | [MARCO-LEGAL.md](./MARCO-LEGAL.md) | Marco jurídico guatemalteco aplicable: obligaciones, riesgos, licencia, consentimiento, transferencia internacional y delimitación de responsabilidad del equipo de desarrollo |

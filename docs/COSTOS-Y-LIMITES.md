@@ -286,8 +286,9 @@ Salidas:
 
 **Decidido (27 de septiembre de 2026):** la salida 2. Dev se queda sin respaldos (no tiene datos
 reales), y para produccion un workflow de GitHub Actions saca el volcado y lo guarda cifrado en
-Google Drive, en la cuenta dedicada al proyecto. Se implementa en la issue de salida a produccion
-(#252), antes del primer dato real; el detalle esta en `docs/CI-CD.md`, "Plan para produccion".
+Google Drive, en la cuenta dedicada al proyecto. El workflow esta implementado (issue #914) y el
+plan esta en `docs/RESPALDO-Y-RECUPERACION.md`; la primera restauracion real se hace en la salida a
+produccion (#252), antes del primer dato real.
 
 ### 6.3 Dos proyectos activos por organizacion
 
