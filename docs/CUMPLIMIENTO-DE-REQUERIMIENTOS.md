@@ -116,7 +116,7 @@ Lo que queda para produccion y para pruebas esta en [Lo que queda pendiente](#lo
 | 9 | Diagnosticos e historiales restringidos a medicos, administracion "y segun se defina" | Por RLS. La organizacion definio (issue #886) que el colaborador tambien lee el historial completo, sin escribir consultas ni recetas; los roles consultivos no lo leen salvo que la administradora les abra Pacientes | #52, #121, #125, #886 | `CP-RNF09-01`; `acceso_a_modulos_por_rol.sql` | **Cumple**, con la definicion de la organizacion documentada en [PERMISOS.md](./PERMISOS.md) |
 | 10 | Autenticacion con credenciales seguras | Supabase Auth (contrasenas con hash bcrypt), registro publico cerrado, politica de contrasena en el cliente, expiracion de sesion y cierre por inactividad | #96, #230, #508 | `CP-RNF10-01`, `CP-RNF10-02`; `registro_publico_cerrado.sql` | **Se verifica en pruebas** (#758); la longitud minima del servidor se fija en el Dashboard de produccion (#252) |
 | 11 | Confiable, sin errores ni caidas en jornada | Errores centralizados y limpios de datos, aviso sin conexion, pruebas e2e de los flujos de la jornada en cada PR, monitoreo listo para Sentry | #762, #759 | `CP-RNF11-01` | **Cumple**. El DSN de Sentry se carga con la #252 |
-| 12 | Respaldo de la base central | Procedimiento de respaldo y restauracion ensayado en local; en produccion, un workflow de GitHub Actions que saca el respaldo y lo guarda en Google Drive | #762, #879, #252 | `CP-RNF12-01` | **Se verifica en produccion**: se implementa en la #252 |
+| 12 | Respaldo de la base central | Procedimiento de respaldo y restauracion ensayado en local; en produccion, un workflow de GitHub Actions que saca el respaldo y lo guarda en Google Drive | #762, #879, #914, #252 | `CP-RNF12-01` | **Implementado y ensayado en local** (#914); **se verifica en produccion** con la primera restauracion real (#252) |
 | 13 | Codigo con buenas practicas, modular y documentado | Monorepo con logica compartida, reglas de arquitectura verificadas en CI, JSDoc en todo lo exportado, documentacion en `docs/` | todas | `CP-RNF13-01`; `verificar:contratos`, `verificar:jsdoc`, `verificar:shared-esquema` | **Cumple** |
 | 14 | Herramientas abiertas y capas gratuitas | Supabase, Vercel, Expo, GitHub y Sentry en capa gratuita; costos del siguiente escalon documentados | #216, #761 | `CP-RNF14-01`; [COSTOS-Y-LIMITES.md](./COSTOS-Y-LIMITES.md) | **Cumple** |
 | 15 | Web responsiva y compatible con Chrome, Firefox y Safari | Tablas que pasan a fichas en pantalla angosta, sin desplazamiento horizontal | #865 | `CP-RNF15-01` | **Se verifica en pruebas**: recorrer la matriz de navegadores y anchos (#758) |
@@ -138,11 +138,12 @@ papel y los dio por buenos el 27 de septiembre de 2026.
 
 ### RNF-12: respaldos con GitHub Actions a Google Drive
 
-El plan Free de Supabase no incluye respaldos, y no se contrata Pro. El respaldo sera un workflow
-de GitHub Actions que saca el volcado de la base de produccion y lo guarda en Google Drive, en la
-cuenta dedicada al proyecto que se va a crear. El procedimiento de volcado y restauracion ya esta
-ensayado en local ([CI-CD.md](./CI-CD.md#respaldos-y-restauracion)); el plan para produccion esta
-en [CI-CD.md](./CI-CD.md#plan-para-produccion-se-implementa-en-la-252).
+El plan Free de Supabase no incluye respaldos, y no se contrata Pro. El respaldo es un workflow de
+GitHub Actions (`.github/workflows/respaldo-base.yml`, issue #914) que saca todos los dias el
+volcado de la base de produccion, lo cifra y lo guarda en Google Drive, en la cuenta de la
+organizacion. El respaldo y la restauracion estan ensayados en local
+([CI-CD.md](./CI-CD.md#respaldos-y-restauracion)); el plan de respaldo y recuperacion esta en
+[RESPALDO-Y-RECUPERACION.md](./RESPALDO-Y-RECUPERACION.md).
 
 ## Lo que queda pendiente
 
@@ -154,7 +155,7 @@ ejecutar.
 | Que | Requerimiento |
 | --- | --- |
 | Activar la corrida diaria de alertas de vencimiento (secret de la llave de servicio y el workflow en `main`) | RF-19 |
-| Crear la cuenta dedicada del proyecto en Google Drive y el workflow que guarda ahi el respaldo; hacer la primera restauracion real | RNF-12 |
+| Cargar la credencial de Drive de la cuenta de la organizacion y su llave publica en los secrets del workflow de respaldo (ya escrito, #914); hacer la primera restauracion real | RNF-12 |
 | Abrir la web desplegada por `http://` y comprobar que redirige a `https://` | RNF-8 |
 | Fijar la longitud minima de contrasena en el Dashboard de produccion | RNF-10 |
 | Cargar el DSN de Sentry | RNF-11 |

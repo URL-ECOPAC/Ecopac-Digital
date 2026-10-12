@@ -567,7 +567,8 @@ El CI (`.github/workflows/ci.yml`) corre todo esto en cada PR. El plan y los cas
   `slug: ecopac-digital`).
 - **Tareas programadas** (GitHub Actions): alertas de vencimiento diarias, mantener activa la base
   del plan gratuito y verificar que el despliegue responde.
-- **Respaldos y restauración**: [CI-CD.md](CI-CD.md), sección "Respaldos y restauración".
+- **Respaldos y restauración**: [RESPALDO-Y-RECUPERACION.md](RESPALDO-Y-RECUPERACION.md) (el plan y el
+  procedimiento de recuperación) y [CI-CD.md](CI-CD.md), sección "Respaldos y restauración".
 - **Costos y límites** del plan gratuito y cuánto crece la base: [COSTOS-Y-LIMITES.md](COSTOS-Y-LIMITES.md).
 
 ## 13. Cómo hacer un cambio típico

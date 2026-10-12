@@ -179,7 +179,7 @@ el numero del backlog. Este documento usa siempre la numeracion de la matriz.
 | CP-RNF10-01 | RNF-10: autenticacion segura | Reglas de contrasena y restablecimiento | Rechaza contrasenas que no cumplen la politica | `packages/shared/usuarios/validaciones.test.js`, `useNuevaContrasena.test.js`. Solo del lado del cliente: `supabase/config.toml` no fija una longitud minima en el servidor |
 | CP-RNF10-02 | RNF-10: las cuentas pueden iniciar sesion | Ninguna cuenta queda con columnas de token nulas que GoTrue no sabe leer | Las siete cuentas de demostracion inician sesion | `tokens_auth_users.sql` (3) |
 | CP-RNF11-01 | RNF-11: confiabilidad en jornada | Los flujos criticos de una jornada funcionan de punta a punta | 55 de 55 pruebas e2e en verde en cada PR que toca la base | `pruebas/e2e/` en el CI |
-| CP-RNF12-01 | RNF-12: respaldos | Restaurar la base desde un respaldo | La informacion vuelve integra | **No ejecutable hoy**: se ejecuta en la salida a produccion (#252), con el respaldo que un workflow guarda en Google Drive |
+| CP-RNF12-01 | RNF-12: respaldos | Restaurar la base desde un respaldo | La informacion vuelve integra | **Ensayado en local** (11-10-2026, #914): respaldo cifrado, descifrado y restaurado con 96 tablas y 1195 filas identicas. Contra produccion se ejecuta en la salida a produccion (#252), con un respaldo bajado de Google Drive; procedimiento en `docs/RESPALDO-Y-RECUPERACION.md` |
 | CP-RNF13-01 | RNF-13: codigo mantenible | Lint, formato y guarda de esquema | Cero errores | `npm run lint`, `npm run format:check`, `scripts/verificar-shared-vs-esquema.mjs` |
 | CP-RNF14-01 | RNF-14: herramientas abiertas y capas gratuitas | Revisar el costo de cada servicio | Todo en capa gratuita o con justificacion | Verificacion documental en `docs/COSTOS-Y-LIMITES.md` |
 | CP-RNF15-01 | RNF-15: responsiva y compatible | Recorrer las pantallas principales en Chrome, Firefox y Safari, a 1366, 768 y 375 px | Sin desbordes ni controles inaccesibles | **Manual**, parcial: el 2026-10-11 solo Chrome, la lista de pacientes a 1568, 768 y 500 px sin desborde ([evidencias/2026-10-11.md](./evidencias/2026-10-11.md)); faltan Firefox, Safari, 375 px y el resto de las pantallas |
@@ -191,7 +191,7 @@ Lo que hoy no se puede afirmar que este probado:
 
 | Requerimiento | Situacion | Que falta |
 | --- | --- | --- |
-| **RNF-12** respaldos | Pendiente de produccion: el plan Free de Supabase no incluye respaldos, y la organizacion decidio un workflow de GitHub Actions que guarde el volcado en Google Drive | Se implementa en la issue de salida a produccion (#252), con el plan de `docs/CI-CD.md`, "Plan para produccion". Sin respaldo no hay restauracion que probar |
+| **RNF-12** respaldos | Workflow de respaldo implementado y ensayado contra el stack local, restauracion incluida (#914). Nunca ha corrido contra produccion ni ha subido a Google Drive | La credencial de Drive de la cuenta de la organizacion y la primera restauracion desde un respaldo bajado de Drive, en la salida a produccion (#252). Plan en `docs/RESPALDO-Y-RECUPERACION.md` |
 | **RNF-1** interfaz intuitiva | Caso definido, nunca ejecutado | Sesion de usabilidad con el personal de la organizacion |
 | **RNF-2** registro agil | Solo existe el piso de la prueba de carga (8.3 ms por registro contra el stack local, corrida del 2026-10-11), que no mide el tiempo de una persona | Cronometraje en una jornada real |
 | **RNF-8** HTTPS | Sin caso ejecutado | Revision manual de la web desplegada |

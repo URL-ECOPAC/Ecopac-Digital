@@ -134,7 +134,7 @@ la issue.
 | Comportamiento ante fallo de red en movil | **Definido y aplicado** (aviso sin conexion) |
 | Ningun error de escritura con `alert()` | **Hecho** |
 | Deriva entre receta emitida y stock no descontado | **Resuelto** (#711) |
-| Respaldos confirmados, restauracion probada, procedimiento documentado | Dev confirmado **sin respaldos** (Free); procedimiento **corregido y ensayado en local**. Los de produccion **se implementan en la #252** con el plan fijado en `docs/CI-CD.md`, "Plan para produccion" |
+| Respaldos confirmados, restauracion probada, procedimiento documentado | Dev confirmado **sin respaldos** (Free); procedimiento **corregido y ensayado en local**. El respaldo de produccion esta **implementado y ensayado en local** (#914): workflow diario, cifrado, a Google Drive, con su plan en [RESPALDO-Y-RECUPERACION.md](./RESPALDO-Y-RECUPERACION.md). Falta la credencial de Drive y la primera restauracion real, que dependen de la #252 |
 | `docs/SEGURIDAD.md` y `docs/CI-CD.md` actualizados | Hecho |
 
 ### Reporte de errores
@@ -331,7 +331,8 @@ cuanto tiempo debe poder reconstruir quien toco un expediente:
 
 ### Respaldos
 
-Procedimiento en [CI-CD.md, "Respaldos y restauracion"](./CI-CD.md#respaldos-y-restauracion).
+Plan completo en [RESPALDO-Y-RECUPERACION.md](./RESPALDO-Y-RECUPERACION.md); el detalle del volcado y
+de la prueba, en [CI-CD.md, "Respaldos y restauracion"](./CI-CD.md#respaldos-y-restauracion).
 
 - **Que respalda Supabase:** en `Ecopac-Digital-Dev`, nada; el plan Free no incluye respaldos
   (confirmado en el Dashboard, #879). `Ecopac-Digital-Prod` se confirma al reanudarlo (#252).
@@ -339,12 +340,18 @@ Procedimiento en [CI-CD.md, "Respaldos y restauracion"](./CI-CD.md#respaldos-y-r
   septiembre encontro que, tal como estaba escrito, la restauracion daba 29 errores y dejaba
   tablas enteras sin cargar, porque el reset y las propias migraciones siembran datos que chocan
   con el volcado. La version corregida paso los tres criterios de la prueba.
-- **Como se cierra: en la salida a produccion (#252).** Dev no tiene datos reales y se queda sin
+- **El respaldo de produccion esta implementado (#914).** Dev no tiene datos reales y se queda sin
   respaldos. Para produccion la organizacion decidio (27 de septiembre de 2026) un workflow de
   GitHub Actions que saca el volcado de la base, lo cifra y lo guarda en Google Drive, en la cuenta
-  dedicada al proyecto (`docs/CI-CD.md`, "Plan para produccion"). Antes del primer dato real se
-  hace la primera restauracion con el procedimiento ensayado. Hasta que eso pase **no existe
-  ninguna copia de la base**, y por eso produccion no se abre sin ello.
+  de la organizacion. Es `.github/workflows/respaldo-base.yml`: corre todos los dias, cifra con la
+  llave **publica** de la organizacion antes de subir -la privada no esta en GitHub, asi que ni el
+  workflow ni quien lea sus secrets puede abrir un respaldo-, conserva 30 y falla en rojo si algo
+  falla. El 11 de octubre de 2026 se ensayo de punta a punta contra el stack local, restauracion
+  incluida.
+- **Lo que falta, y depende de la #252:** la credencial de Drive y el par de llaves (el equipo no
+  tiene acceso a la cuenta de Google de la organizacion), la primera corrida desde `main` y la
+  primera restauracion desde un respaldo bajado de Drive. Hasta que eso pase **no existe ninguna
+  copia de la base**, y por eso produccion no recibe datos reales sin ello.
 
 ## Alta de cuentas: quien entra al sistema y como (issue #508)
 

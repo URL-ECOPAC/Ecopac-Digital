@@ -2,7 +2,7 @@
 
 Que corre automaticamente, cuando, contra que ambiente, y que hacer cuando algo falla.
 
-## Los cinco workflows
+## Los seis workflows
 
 | Workflow                 | Archivo                                      | Cuando corre                                 |
 | ------------------------ | -------------------------------------------- | -------------------------------------------- |
@@ -11,6 +11,7 @@ Que corre automaticamente, cuando, contra que ambiente, y que hacer cuando algo 
 | Verificar despliegue     | `.github/workflows/verificar-despliegue.yml` | Todos los dias a las 13:00 UTC, y a mano     |
 | Mantener Supabase activo | `.github/workflows/keep-alive-supabase.yml`  | Cada 3 dias, y a mano                        |
 | Alertas de vencimiento   | `.github/workflows/alertas-vencimiento.yml`  | Todos los dias a las 06:00 UTC, y a mano     |
+| Respaldo de la base      | `.github/workflows/respaldo-base.yml`        | Todos los dias a las 07:00 UTC, y a mano     |
 
 El despliegue de la web **no** es un workflow: esta pensado para la app de Vercel conectada al
 repositorio. Vercel publica un preview por cada PR y produccion desde `main`, al margen del
@@ -387,7 +388,7 @@ cadena de Expo se actualice o cuando aparezca una vulnerabilidad `critical` real
 - **[`.github/dependabot.yml`](../.github/dependabot.yml)** abre PRs mensuales hacia `develop`
   para el ecosistema `npm` (todo el arbol de workspaces via `package-lock.json`, agrupado por
   `dependency-type`) y para `github-actions`.
-- **Las ~17 referencias a acciones de terceros en los cinco workflows estan fijadas por SHA**,
+- **Las ~17 referencias a acciones de terceros en los seis workflows estan fijadas por SHA**,
   no por etiqueta movil (`actions/checkout`, `actions/setup-node`, `supabase/setup-cli`,
   `denoland/setup-deno`, `actions/github-script`), con el tag como comentario al lado
   (`uses: owner/accion@<sha> # v5`). Una etiqueta puede volver a apuntar a otro commit sin que
@@ -746,6 +747,10 @@ Se configuran en Settings > Secrets and variables > Actions.
 | `SUPABASE_URL_DEV`, `SUPABASE_ANON_KEY_DEV`             | Keep-alive de la rama `main`   |
 | `VITE_SUPABASE_URL_DEV`, `VITE_SUPABASE_ANON_KEY_DEV`   | Build de la web en develop y keep-alive |
 | `VITE_SUPABASE_URL_PROD`, `VITE_SUPABASE_ANON_KEY_PROD` | Build de la web en main        |
+| `SUPABASE_DB_PASSWORD_PROD`                             | Respaldo de la base: contrasena de la base de produccion, distinta de la de desarrollo (#252, punto 2) |
+| `RESPALDO_GPG_CLAVE_PUBLICA`                            | Respaldo de la base: llave **publica** GPG de la organizacion con la que se cifra. La privada nunca va aqui |
+| `RESPALDO_DRIVE_CLIENT_ID`, `RESPALDO_DRIVE_CLIENT_SECRET` | Respaldo de la base: cliente de OAuth del proyecto de Google Cloud de la organizacion |
+| `RESPALDO_DRIVE_TOKEN`                                  | Respaldo de la base: token de rclone de la cuenta de Drive de la organizacion |
 
 Los valores SMTP y las entradas de Vault del correo de notificaciones **no** van aqui: son secrets de
 las Edge Functions y de la base, ver "Las notificaciones al administrador y su correo".
@@ -774,14 +779,22 @@ el resumen de la corrida y una anotacion de warning. La idea es no bloquear al e
 termina de configurar los ambientes, pero que una omision nunca se vea igual que un despliegue
 exitoso.
 
+**La excepcion es el respaldo de la base**, que con un secret de menos falla en rojo y abre una
+issue: un respaldo que no se hizo no puede verse en verde. De donde sale cada uno de sus secrets
+esta en [RESPALDO-Y-RECUPERACION.md](./RESPALDO-Y-RECUPERACION.md), seccion 7. Los cinco secrets
+nuevos de la tabla y `SUPABASE_PROJECT_REF_PROD` **todavia no existen** (11 de octubre de 2026):
+dependen de la cuenta de Google de la organizacion y de `Ecopac-Digital-Prod` (#252).
+
 ## Respaldos y restauracion
 
-Issue #762, bloque 4. **Estado: procedimiento ensayado de punta a punta contra el stack local (24
-de septiembre de 2026); restauracion desde un proyecto remoto todavia no probada. Los respaldos de
-produccion se implementan en la #252, con el plan de "Plan para produccion", abajo.** Un respaldo sin
-restauracion probada no es un respaldo, asi que esta seccion no da por cerrado nada hasta que
-alguien complete la prueba de abajo con un volcado de `Ecopac-Digital-Dev` y anote la fecha en la
-tabla del final.
+Issues #762 (bloque 4) y #914. **Estado: respaldo cifrado y restauracion ensayados de punta a punta
+contra el stack local (11 de octubre de 2026); restauracion desde un proyecto remoto todavia no
+probada.** El plan completo de produccion -que se respalda, cada cuanto, quien puede abrirlo y el
+procedimiento de recuperacion paso a paso- esta en
+[RESPALDO-Y-RECUPERACION.md](./RESPALDO-Y-RECUPERACION.md). Esta seccion conserva el detalle del
+volcado, el porque de cada paso de la prueba y la tabla "Registro". Un respaldo sin restauracion
+probada no es un respaldo, asi que nada se da por cerrado hasta que se restaure un respaldo bajado
+de Drive y se anote la fecha en la tabla del final.
 
 ### Que respalda Supabase por su cuenta
 
@@ -871,6 +884,7 @@ La prueba solo cuenta si, despues de restaurar:
 | Ecopac-Digital-Dev | **ninguno**: plan Free (24-09-2026) | nunca | - |
 | Ecopac-Digital-Prod | pendiente de confirmar | nunca | - |
 | Stack local (ensayo del procedimiento) | no aplica | 24-09-2026: conteos identicos en las nueve tablas comparadas, sesion del administrador demo y lectura de pacientes con su expediente, `supabase test db` 48 archivos / 754 pruebas en verde | PR de la #762 |
+| Stack local (ensayo del workflow de respaldo, `scripts/respaldo-base.sh`) | no aplica | 11-10-2026: respaldo cifrado con GPG, subido con rclone a un destino local, descifrado y restaurado. `scripts/comprobar-restauracion.sh`: 96 tablas y 1195 filas identicas a las del respaldo; carga con solo los dos errores esperados; `supabase test db` 1211 de 1212, con el mismo fallo que una base recien creada (`limites_de_uso.sql`, prueba 13), ajeno a la restauracion | PR de la #914 |
 
 El ensayo local **no sustituye** la prueba con `Ecopac-Digital-Dev`: prueba que los comandos y el
 orden son correctos con el esquema y los datos de demostracion actuales, no que un volcado remoto
@@ -888,31 +902,30 @@ vincular la CLI, y vincular pide la contrasena de la base. Queda como procedimie
 que la persona responsable de la base lo corra, y esta fila es la que hay que actualizar cuando
 pase.
 
-### Plan para produccion (se implementa en la #252)
+### Plan para produccion
 
 `Ecopac-Digital-Dev` se queda sin respaldos a proposito: no tiene datos reales y el plan Free no los
-ofrece. Lo que no puede pasar es que **produccion** arranque igual. Por eso los respaldos no se
-cierran en la #762 sino en la issue de salida a produccion (#252), que es donde se crea
-`Ecopac-Digital-Prod`.
+ofrece. Lo que no puede pasar es que **produccion** arranque igual.
 
 **Decision de la organizacion (27 de septiembre de 2026):** produccion se queda en el plan Free, y
 el respaldo es un **workflow de GitHub Actions que saca el volcado de la base y lo guarda en Google
-Drive**, en la cuenta dedicada al proyecto que se va a crear. Queda asi:
+Drive**, en la cuenta de la organizacion.
 
-1. **La cuenta:** una cuenta de Google a nombre de la organizacion, dedicada al proyecto, no la de
-   una persona. Su acceso a Drive lo usa el workflow con una credencial guardada como secret del
-   repositorio.
-2. **El workflow:** programado (semanal como minimo, y a mano cuando haga falta), corre los tres
-   `supabase db dump --linked` de "Respaldo propio" contra `Ecopac-Digital-Prod`, cifra los archivos
-   con una llave de la organizacion **antes de que salgan del runner**, y los sube a una carpeta de
-   esa cuenta. **Nunca como artefacto de GitHub Actions**: en un repositorio publico los artefactos
-   los descarga cualquier cuenta de GitHub. Conserva un numero fijo de respaldos y borra los mas
-   viejos, para no llenar el Drive.
-3. **Quien los ve:** un volcado de produccion contiene expedientes clinicos. La carpeta la ve solo
-   la persona responsable de la base (`docs/PROTECCION-DE-DATOS.md`).
-4. **La prueba:** la primera restauracion real se hace con el procedimiento de arriba, desde un
-   respaldo bajado de Drive, y se anota su fecha en "Registro" antes de dar produccion por abierta.
-   Despues, una vez por ano, al cierre de temporada de jornadas.
+Eso ya esta implementado (issue #914): `.github/workflows/respaldo-base.yml` corre todos los dias y
+a mano, llama a `scripts/respaldo-base.sh`, cifra con la llave publica de la organizacion antes de
+subir, conserva los 30 respaldos mas recientes y falla en rojo si cualquier paso falla. **Nunca
+como artefacto de GitHub Actions**: en un repositorio publico los artefactos los descarga cualquier
+cuenta de GitHub. El plan, el procedimiento de recuperacion y la puesta en marcha estan en
+[RESPALDO-Y-RECUPERACION.md](./RESPALDO-Y-RECUPERACION.md).
+
+Lo que la #252 sigue teniendo como requisito para abrir produccion, y que no se puede hacer antes:
+
+1. La credencial de Drive y el par de llaves, que salen de la cuenta de Google de la organizacion.
+2. `develop` en `main` y los secrets de produccion: el workflow solo corre desde la rama por
+   defecto.
+3. **La primera restauracion real**, desde un respaldo bajado de Drive, anotada en "Registro"
+   antes de que produccion reciba datos reales. Despues, una vez por ano, al cierre de temporada de
+   jornadas.
 
 ## La regla mas importante: una migracion aplicada no se edita
 
