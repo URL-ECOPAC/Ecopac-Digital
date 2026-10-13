@@ -99,6 +99,26 @@ describe("ResumenJornadaScreen", () => {
     expect(screen.getByText("2")).toBeTruthy();
   });
 
+  // ISSUE #937: fn_reporte_jornada cuenta pacientes con consulta y medicos con consultas. Decian
+  // "Pacientes Atendidos" y "Personal Participante", y la web llama "Pacientes atendidos" a los
+  // pacientes con atencion, que dan otro numero.
+  it("las tarjetas nombran lo que cuentan", () => {
+    mockEstadoHook.ficha = {
+      nombre: "Jornada Vista Hermosa",
+      fecha: "2026-03-01",
+      comunidad: "Vista Hermosa",
+      estado: "en curso",
+      pacientes_atendidos: 2,
+      total_consultas: 3,
+    };
+    pantalla();
+
+    expect(screen.getByText("Pacientes con Consulta")).toBeTruthy();
+    expect(screen.getByText("Médicos con Consultas")).toBeTruthy();
+    expect(screen.queryByText("Pacientes Atendidos")).toBeNull();
+    expect(screen.queryByText("Personal Participante")).toBeNull();
+  });
+
   // Camino de error: antes se veia el mensaje generico de conexion, nunca error.mensaje, y sin
   // boton de reintentar (issue #792).
   it("camino de error: muestra el mensaje real y permite reintentar", () => {

@@ -95,6 +95,8 @@ export function useReporteJornada(jornadaId, { rol } = {}) {
       comunidad: datos.jornada.comunidad?.nombre ?? "",
       estado: datos.jornada.estado,
       total_consultas: datos.resumen?.total_consultas ?? 0,
+      // Pacientes distintos con consulta, no con atencion: no es el "Pacientes atendidos" de
+      // vista_reporte_impacto (issue #937).
       pacientes_atendidos: datos.resumen?.pacientes_atendidos ?? 0,
     };
   }, [datos]);

@@ -25,6 +25,12 @@ import StatCard from "../components/StatCard";
 //   - "Personal participante" era la unica de las tres secciones SIN boton de CSV.
 //   - El "Exportar PDF" no funcionaba (ver ReporteImprimible.jsx). Ahora la jornada entera sale
 //     en una sola hoja, con sus tres tablas, en vez de tres descargas sueltas.
+//
+// ISSUE #937: la cifra de fn_reporte_jornada cuenta pacientes con consulta, y el detalle de la
+// jornada llama "Pacientes atendidos" a los pacientes con atencion (vista_reporte_impacto). Con
+// la misma etiqueta, la misma jornada mostraba 4 en el detalle y 2 aqui. Cada etiqueta dice
+// ahora lo que cuenta, y "Personal participante", que solo listaba a los medicos con
+// consultas, pasa a llamarse "Consultas por médico".
 
 export default function ReporteJornada() {
   const { id } = useParams();
@@ -110,7 +116,7 @@ export default function ReporteJornada() {
         <>
           <section className="reporte-seccion">
             <div className="ec-kpis">
-              <StatCard label="Pacientes atendidos" value={ficha.pacientes_atendidos} />
+              <StatCard label="Pacientes con consulta" value={ficha.pacientes_atendidos} />
               <StatCard label="Consultas realizadas" value={ficha.total_consultas} />
               <StatCard label="Diagnósticos distintos" value={diagnosticos.length} />
               <Card>
@@ -172,7 +178,7 @@ export default function ReporteJornada() {
 
           <section className="reporte-seccion">
             <div className="reporte-cabecera-tabla">
-              <h2 className="ec-seccion-titulo">Personal participante</h2>
+              <h2 className="ec-seccion-titulo">Consultas por médico</h2>
               {/* ISSUE #862: era la unica de las tres secciones sin su CSV. */}
               <BotonExportarCSV
                 onClick={() =>
@@ -195,7 +201,7 @@ export default function ReporteJornada() {
           titulo={ficha.nombre ?? "Resultados de la jornada"}
           periodo={periodo}
           totales={[
-            { etiqueta: "Pacientes atendidos", valor: ficha.pacientes_atendidos },
+            { etiqueta: "Pacientes con consulta", valor: ficha.pacientes_atendidos },
             { etiqueta: "Consultas realizadas", valor: ficha.total_consultas },
             { etiqueta: "Diagnósticos distintos", valor: diagnosticos.length },
           ]}
@@ -210,7 +216,7 @@ export default function ReporteJornada() {
               columnas: columnasDeMedicamentos,
               filas: medicamentos,
             },
-            { titulo: "Personal participante", columnas: columnasDePersonal, filas: personal },
+            { titulo: "Consultas por médico", columnas: columnasDePersonal, filas: personal },
           ]}
           alTerminar={() => setImprimiendo(false)}
         />

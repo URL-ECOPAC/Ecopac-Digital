@@ -207,6 +207,11 @@ export const CAMPOS_TOTALES_INVENTARIO_REPORTE = [
  * solo objeto (`{ nombre: datos.jornada.nombre, fecha: datos.jornada.fecha, comunidad:
  * datos.jornada.comunidad.nombre, estado: datos.jornada.estado, ...datos.resumen }`) antes de
  * pasarlo a la ficha. Estas columnas declaran los `id` de ese objeto ya aplanado.
+ *
+ * ISSUE #937: `pacientes_atendidos` se llama asi en el JSON de fn_reporte_jornada, pero cuenta
+ * pacientes distintos con CONSULTA en la jornada. "Pacientes atendidos" en el resto del sistema
+ * (detalle de la jornada, dashboard, reportes de impacto) cuenta pacientes con ATENCION
+ * (vista_reporte_impacto) y da otro numero, asi que aqui no puede llevar esa etiqueta.
  */
 export const CAMPOS_FICHA_RESULTADOS_JORNADA = [
   { id: "nombre", label: "Jornada", tipo: TIPOS_DE_PRESENTACION.TEXTO, ordenable: true },
@@ -221,7 +226,7 @@ export const CAMPOS_FICHA_RESULTADOS_JORNADA = [
   { id: "total_consultas", label: "Consultas realizadas", tipo: TIPOS_DE_PRESENTACION.NUMERO },
   {
     id: "pacientes_atendidos",
-    label: "Pacientes atendidos",
+    label: "Pacientes con consulta",
     tipo: TIPOS_DE_PRESENTACION.NUMERO,
     ordenable: true,
   },
@@ -254,21 +259,21 @@ export const COLUMNAS_MEDICAMENTOS_MAS_ENTREGADOS = [
   },
 ];
 
-// obtenerReporteJornada() no embebe el nombre del perfil junto al conteo, solo el UUID
-// (jornada.api.js, personal_participante: [{ usuario_id, total_atenciones }]) -- mostrar un
-// nombre en vez del id es trabajo del hook de la pantalla (resolverlo contra la lista de
-// jornada_personal que ya trae obtenerJornada(), o pedirlo aparte), no de este descriptor.
+// `personal_participante` de fn_reporte_jornada (jornada.api.js): un renglon por medico que
+// registro consultas en la jornada, con su `nombre` (00148) y en `total_atenciones` cuantas
+// CONSULTAS registro. No es el equipo de jornada_personal (issue #937): por eso las etiquetas
+// dicen lo que mide. useReporteJornada() pone el nombre en `usuario_id` antes de pintarlo.
 export const COLUMNAS_PERSONAL_PARTICIPANTE = [
   {
     id: "usuario_id",
-    label: "Persona",
+    label: "Médico",
     tipo: TIPOS_DE_PRESENTACION.TEXTO,
     principal: true,
     ordenable: true,
   },
   {
     id: "total_atenciones",
-    label: "Atenciones registradas",
+    label: "Consultas registradas",
     tipo: TIPOS_DE_PRESENTACION.NUMERO,
     ordenable: true,
   },

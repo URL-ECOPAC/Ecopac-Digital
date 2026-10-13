@@ -17,6 +17,11 @@ import { Card, ErrorState, LoadingState, StatusChip } from "../components";
  * escritos a mano) ni el resto del catalogo (Card, StatusChip), mismo patron ya corregido en
  * StockScreen.js (#165) y en ExistenciasInventarioScreen.js/InventarioResumenAlertasScreen.js
  * (#785).
+ *
+ * ISSUE #937: las cifras salen de fn_reporte_jornada, que cuenta pacientes con consulta y
+ * medicos con consultas. Decian "Pacientes Atendidos" (que en la web, en el detalle de la
+ * jornada, son los pacientes con atencion y dan otro numero) y "Personal Participante" (que no
+ * es el equipo de la jornada).
  */
 export default function ResumenJornadaScreen() {
   const { jornada } = useJornadaActivaCompartida();
@@ -69,7 +74,7 @@ export default function ResumenJornadaScreen() {
           <Text style={estilos.seccionTitulo}>Avance del día</Text>
 
           <View style={estilos.fila}>
-            <TarjetaResumen etiqueta="Pacientes Atendidos" valor={ficha.pacientes_atendidos} />
+            <TarjetaResumen etiqueta="Pacientes con Consulta" valor={ficha.pacientes_atendidos} />
             <TarjetaResumen etiqueta="Consultas Realizadas" valor={ficha.total_consultas} />
           </View>
 
@@ -80,7 +85,7 @@ export default function ResumenJornadaScreen() {
                 medicamentos.length ? medicamentos.reduce((s, m) => s + (m.cantidad || 0), 0) : 0
               }
             />
-            <TarjetaResumen etiqueta="Personal Participante" valor={personal.length} />
+            <TarjetaResumen etiqueta="Médicos con Consultas" valor={personal.length} />
           </View>
         </>
       )}
