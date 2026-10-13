@@ -290,4 +290,18 @@ describe("los catalogos de estado reflejan los enum reales", () => {
       ].sort(),
     );
   });
+
+  // ISSUE #937: fn_reporte_jornada cuenta pacientes con consulta y medicos con consultas. Con la
+  // etiqueta "Pacientes atendidos" chocaba con la cifra por atenciones del detalle de la jornada.
+  it("la ficha y el personal del reporte de jornada nombran lo que cuentan", () => {
+    const etiqueta = (lista, id) => lista.find((c) => c.id === id).label;
+
+    expect(etiqueta(CAMPOS_FICHA_RESULTADOS_JORNADA, "pacientes_atendidos")).toBe(
+      "Pacientes con consulta",
+    );
+    expect(etiqueta(COLUMNAS_PERSONAL_PARTICIPANTE, "usuario_id")).toBe("Médico");
+    expect(etiqueta(COLUMNAS_PERSONAL_PARTICIPANTE, "total_atenciones")).toBe(
+      "Consultas registradas",
+    );
+  });
 });

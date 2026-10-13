@@ -134,6 +134,19 @@ describe("ReporteJornada", () => {
     expect(screen.getByText("Loratadina")).toBeInTheDocument();
   });
 
+  // ISSUE #937: la cifra de fn_reporte_jornada cuenta pacientes con consulta. Decia "Pacientes
+  // atendidos", la etiqueta que el detalle de la jornada usa para los pacientes con atencion, y
+  // la misma jornada daba 4 alli y 2 aqui.
+  it("nombra lo que cuenta: pacientes con consulta y consultas por medico", () => {
+    mockEstadoHook.ficha = FICHA_DE_EJEMPLO;
+    pantalla();
+
+    expect(screen.getByText("Pacientes con consulta").closest(".ec-kpi")).toHaveTextContent("28");
+    expect(screen.getByText("Consultas por médico")).toBeInTheDocument();
+    expect(screen.queryByText("Pacientes atendidos")).not.toBeInTheDocument();
+    expect(screen.queryByText("Personal participante")).not.toBeInTheDocument();
+  });
+
   // ISSUE #862: volvia a /reportes, donde no se puede llegar a este reporte -no es una de sus
   // cuatro pestanas-, asi que devolvia a una pantalla por la que no se habia pasado. El unico
   // sitio que enlaza aqui es el detalle de la jornada, y es donde uno espera salir.
