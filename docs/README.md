@@ -33,6 +33,10 @@ pantallas usan los datos de demostracion.
 | ------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
 | [formal/manual-del-administrador.pdf](./formal/manual-del-administrador.pdf) | Rol administrador. Es tambien el manual de administracion: usuarios, catalogos, aprobaciones, jornadas, inventario, presupuestos, proyectos, donaciones y reportes |
 | [formal/manual-del-medico.pdf](./formal/manual-del-medico.pdf)               | Rol medico: expedientes, consulta, receta, entrega de medicamentos, citas, jornadas e inventario |
+| [formal/manual-del-voluntario.pdf](./formal/manual-del-voluntario.pdf)       | Rol voluntario general (Colaborador): proyectos, jornadas, presupuestos, inventario y pacientes. Solo la web |
+| [formal/manual-de-junta-directiva-y-socio-fundador.pdf](./formal/manual-de-junta-directiva-y-socio-fundador.pdf) | Roles junta directiva y socio fundador, en un solo manual: los reportes |
+| [formal/guia-rapida-voluntario.pdf](./formal/guia-rapida-voluntario.pdf)     | Guia rapida imprimible para voluntarios |
+| [formal/guia-rapida-junta-directiva-y-socio-fundador.pdf](./formal/guia-rapida-junta-directiva-y-socio-fundador.pdf) | Guia rapida imprimible para junta directiva y socio fundador |
 
 ## Referencia tecnica
 
