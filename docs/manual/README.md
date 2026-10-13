@@ -9,13 +9,15 @@
 | - | Plan de capacitaciones | [PLAN-DE-CAPACITACIONES.md](./PLAN-DE-CAPACITACIONES.md) y [PDF](../formal/plan-de-capacitaciones.pdf) | Escrito |
 | M-ADM | Manual de la administradora (es también el manual de administración) | [PDF](../formal/manual-del-administrador.pdf) | Escrito, solo en PDF |
 | M-MED | Manual del médico | [PDF](../formal/manual-del-medico.pdf) | Escrito, solo en PDF |
-| M-VOL | Manual del colaborador (voluntario general) | `MANUAL-COLABORADOR.md` | Pendiente |
-| M-JD | Manual de junta directiva | `MANUAL-JUNTA-DIRECTIVA.md` | Pendiente |
-| M-SF | Manual del socio fundador | `MANUAL-SOCIO-FUNDADOR.md` | Pendiente |
-| G-VOL | Guía rápida para voluntarios nuevos, imprimible | `GUIA-RAPIDA-VOLUNTARIOS.md` | Pendiente |
+| M-VOL | Manual del voluntario (rol Colaborador) | [PDF](../formal/manual-del-voluntario.pdf) | Escrito, solo en PDF. Solo computadora y con numeración propia |
+| M-JD | Manual de junta directiva y socio fundador, uno solo para los dos roles porque tienen los mismos permisos | [PDF](../formal/manual-de-junta-directiva-y-socio-fundador.pdf) | Escrito, solo en PDF. Con numeración propia |
+| G-VOL | Guía rápida del voluntario, imprimible | [PDF](../formal/guia-rapida-voluntario.pdf) | Escrita, solo en PDF |
+| G-JD | Guía rápida de junta directiva y socio fundador, imprimible | [PDF](../formal/guia-rapida-junta-directiva-y-socio-fundador.pdf) | Escrita, solo en PDF |
 | V-01 a V-07 | Videos cortos de los flujos clave | Enlaces en la tabla de videos, abajo | Pendiente |
 
-Cuando una pieza se publica, se cambia su estado aquí y se pone el enlace. El plan de capacitaciones cita las demás por código y por nombre de capítulo, así que no hay que tocarlo.
+Cuando una pieza se publica, se cambia su estado aquí y se pone el enlace. El plan de capacitaciones cita cada manual por código y número de sección ("M-MED 7.3"): si un manual cambia su numeración, hay que revisar el plan.
+
+M-VOL y M-JD se escribieron antes de que existiera el formato común de abajo y no lo siguen (capítulos, flujos en el teléfono, "Estados y mensajes", "Ayuda"). Lo que les falta frente a ese formato y a la issue #251 está anotado en la propia issue.
 
 ## Formato común
 
@@ -57,7 +59,7 @@ Todos los manuales llevan estos capítulos, **con estos nombres exactos** y en e
 | Catálogos | Medicamentos, insumos, principios activos, presentaciones, bodegas, proveedores, diagnósticos, condiciones crónicas y comunidades | M-ADM |
 | Colaboradores y permisos | Invitar, cambiar rol, dar de baja, funciones por persona y módulos por rol | M-ADM |
 | Bitácora y notificaciones | La bitácora de auditoría, las notificaciones y los correos del sistema | M-ADM |
-| Reportes | Qué reportes hay, sus filtros, cómo leerlos, exportar e imprimir | M-ADM, M-JD, M-SF |
+| Reportes | Qué reportes hay, sus filtros, cómo leerlos, exportar e imprimir | M-ADM, M-JD |
 | Estados y mensajes | Qué significa cada estado (de una jornada, de un movimiento, de un gasto) y cada mensaje de error, y qué hacer | Todos |
 | Ayuda | A quién preguntar y qué decirle | Todos |
 
