@@ -23,6 +23,17 @@ configuracion de GitHub (plantillas de issues, PR y los workflows de CI/CD) esta
 | [manual/](./manual/README.md) | Manual de usuario y material de capacitacion (issue #251): indice de las piezas, formato comun y el [plan de capacitaciones](./manual/PLAN-DE-CAPACITACIONES.md) ([PDF](./formal/plan-de-capacitaciones.pdf)) |
 | [formal/documentacion-tecnica.docx](./formal/documentacion-tecnica.docx) | Documento formal para quien no tiene acceso al repositorio (issue #867): permisos, modelo de datos, pantallas, conexion con Supabase, configuracion y herramientas, consolidados de los `.md` de esta carpeta |
 
+## Manuales de usuario
+
+Cada tarea paso a paso, con la
+pantalla de cada paso en la web y en la aplicacion movil, los mensajes de error y que hacer. Las
+pantallas usan los datos de demostracion.
+
+| Documento                                                                 | Para quien                                                                 |
+| ------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| [formal/manual-del-administrador.pdf](./formal/manual-del-administrador.pdf) | Rol administrador. Es tambien el manual de administracion: usuarios, catalogos, aprobaciones, jornadas, inventario, presupuestos, proyectos, donaciones y reportes |
+| [formal/manual-del-medico.pdf](./formal/manual-del-medico.pdf)               | Rol medico: expedientes, consulta, receta, entrega de medicamentos, citas, jornadas e inventario |
+
 ## Referencia tecnica
 
 | Documento                                              | Para que sirve                                                        |
