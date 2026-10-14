@@ -13,7 +13,7 @@
 | M-JD | Manual de junta directiva y socio fundador, uno solo para los dos roles porque tienen los mismos permisos | [PDF](../formal/manual-de-junta-directiva-y-socio-fundador.pdf) | Escrito, solo en PDF. Con numeración propia |
 | G-VOL | Guía rápida del voluntario, imprimible | [PDF](../formal/guia-rapida-voluntario.pdf) | Escrita, solo en PDF |
 | G-JD | Guía rápida de junta directiva y socio fundador, imprimible | [PDF](../formal/guia-rapida-junta-directiva-y-socio-fundador.pdf) | Escrita, solo en PDF |
-| V-01 a V-07 | Videos cortos de los flujos clave | Enlaces en la tabla de videos, abajo | Pendiente |
+| V-01 a V-07 | Videos cortos de los flujos clave | Enlaces en la [tabla de videos](#videos), abajo | Publicados en YouTube |
 
 Cuando una pieza se publica, se cambia su estado aquí y se pone el enlace. El plan de capacitaciones cita cada manual por código y número de sección ("M-MED 7.3"): si un manual cambia su numeración, hay que revisar el plan.
 
@@ -97,15 +97,17 @@ La guía rápida (G-VOL) no sigue estos capítulos: son pocas páginas, con esta
 
 De pocos minutos, uno por flujo, con narración o subtítulos, grabados sobre los datos de demostración.
 
-| Código | Video | Enlace |
-| --- | --- | --- |
-| V-01 | Primer ingreso al sistema y cambio de contraseña | Pendiente |
-| V-02 | La consulta completa: recibir al paciente, triaje, consulta, receta y entrega de medicamentos | Pendiente |
-| V-03 | Ingreso de lotes por compra y por donación, y su aprobación | Pendiente |
-| V-04 | Movimientos entre bodegas y su aprobación | Pendiente |
-| V-05 | Insumos que salen a una jornada y lo que regresa | Pendiente |
-| V-06 | Medicamentos vencidos o por vencer y sus alertas | Pendiente |
-| V-07 | Planificar y cerrar una jornada | Pendiente |
+| Código | Video | En la computadora | En el teléfono |
+| --- | --- | --- | --- |
+| V-01 | Primer ingreso al sistema y cambio de contraseña | https://youtu.be/DFRs3Te8VC4 | https://youtu.be/8umqLyAj0nE |
+| V-02 | La consulta completa: recibir al paciente, triaje, consulta, receta y entrega de medicamentos | https://youtu.be/Knd4ATnlUUs | https://youtu.be/hbmSSMQ3oJQ |
+| V-03 | Ingreso de lotes por compra y por donación, y su aprobación | https://youtu.be/syuIWsvOSMY | https://youtu.be/KvrXnOd6_RE |
+| V-04 | Movimientos entre bodegas y su aprobación | https://youtu.be/Rz50VTEznu4 | https://youtu.be/2Gtyj1r2Y_g |
+| V-05 | Insumos que salen a una jornada y lo que regresa | https://youtu.be/X_Qt1l8gGwc | No aplica |
+| V-06 | Medicamentos vencidos o por vencer y sus alertas | https://youtu.be/Zbg-o5bG48o | https://youtu.be/1ugbkPWuQlk |
+| V-07 | Planificar y cerrar una jornada | https://youtu.be/3RO6gtUiXpg | No aplica |
+
+V-05 y V-07 no tienen versión en el teléfono: el tablero y el detalle de una jornada (insumos, consumo, cierre) solo se usan en la computadora.
 
 ## Antes de entregar
 
