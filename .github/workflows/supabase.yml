@@ -302,7 +302,7 @@ jobs:
       # se esquiva fijando la version.
       - name: Instalar Supabase CLI
         if: needs.cambios.outputs.supabase == 'true'
-        uses: supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520 # v3
+        uses: supabase/setup-cli@45a513f8c64c0bc8e0e3dfe572b5c95be85f6359 # v3
         with:
           version: 2.115.0
 
@@ -436,7 +436,7 @@ jobs:
       # Version fija: ver el comentario del job "Validar migraciones y funciones" (issue #422).
       - name: Instalar Supabase CLI
         if: steps.check.outputs.listo == 'true'
-        uses: supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520 # v3
+        uses: supabase/setup-cli@45a513f8c64c0bc8e0e3dfe572b5c95be85f6359 # v3
         with:
           version: 2.115.0
 
@@ -606,7 +606,7 @@ jobs:
       # Version fija: ver el comentario del job "Validar migraciones y funciones" (issue #422).
       # Este es el paso donde el rate limit tumbo el despliegue del 25 de agosto.
       - name: Instalar Supabase CLI
-        uses: supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520 # v3
+        uses: supabase/setup-cli@45a513f8c64c0bc8e0e3dfe572b5c95be85f6359 # v3
         with:
           version: 2.115.0
 
