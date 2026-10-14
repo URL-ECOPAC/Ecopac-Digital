@@ -15,7 +15,7 @@
   },
   "dependencies": {
     "@ecopac/ui-tokens": "*",
-    "@supabase/supabase-js": "^2.112.2"
+    "@supabase/supabase-js": "^2.117.3"
   },
   "devDependencies": {
     "@vitest/coverage-v8": "^4.1.11",
