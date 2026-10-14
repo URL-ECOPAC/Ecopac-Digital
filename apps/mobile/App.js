@@ -1,26 +1,155 @@
-import { StatusBar } from "expo-status-bar";
-import { StyleSheet, Text, View } from "react-native";
+import { useEffect, useState } from "react";
+import * as Linking from "expo-linking";
+import { SafeAreaProvider } from "react-native-safe-area-context";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import {
+  configurarDestinoDeErrores,
+  crearDestinoSentry,
+  ESTADOS_DE_RESTAURACION,
+  inicializarSupabase,
+  intercambiarSesionDeRecuperacion,
+  puedeUsarAppMovil,
+  reportarError,
+} from "@ecopac/shared";
+import { almacenamientoMovil } from "./src/almacenamiento";
+import AvisoSinConexion from "./src/components/AvisoSinConexion";
+import LimiteDeError from "./src/components/LimiteDeError";
+import { useEnLinea } from "./src/useEnLinea";
+import { JornadaActivaProvider } from "./src/contexto/JornadaActivaProvider";
+import { RegistroSinGuardarProvider } from "./src/contexto/RegistroSinGuardarProvider";
+import { SesionProvider, useSesionCompartida } from "./src/contexto/SesionProvider";
+import AppNavigator from "./src/navigation/AppNavigator";
+import AppSoloParaCampoScreen from "./src/screens/AppSoloParaCampoScreen";
+import NuevaContrasenaScreen from "./src/screens/NuevaContrasenaScreen";
+import RestaurandoSesionScreen from "./src/screens/RestaurandoSesionScreen";
 
-export default function App() {
-  return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Ecopac Digital</Text>
-      <Text>Aplicacion movil para jornadas en campo. Esqueleto listo para desarrollo.</Text>
-      <StatusBar style="auto" />
-    </View>
+function codigoDeRecuperacion(url) {
+  if (!url) return null;
+  try {
+    return new URL(url).searchParams.get("code");
+  } catch {
+    return null;
+  }
+}
+
+// Inicializamos Supabase y guardamos si tuvo éxito
+let supabaseListo = false;
+try {
+  inicializarSupabase({ almacenamiento: almacenamientoMovil });
+  supabaseListo = true;
+} catch (error) {
+  console.error(
+    "Supabase no se inicializo: la aplicacion arranca pero no habra datos.",
+    error.message,
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#fff",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 24,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: "bold",
-  },
+// Errores que no pasan por ningun `catch` ni por el limite de error de React: una excepcion en un
+// manejador de eventos o en un temporizador (issue #762). Espejo del `window.addEventListener
+// ("error")` de apps/web/src/main.jsx. Se reporta y despues se le pasa al manejador que ya estaba,
+// que es el que muestra la pantalla roja en desarrollo y decide si un error fatal cierra la app:
+// esto agrega un registro, no cambia el comportamiento.
+const manejadorAnterior = globalThis.ErrorUtils?.getGlobalHandler?.();
+globalThis.ErrorUtils?.setGlobalHandler?.((error, esFatal) => {
+  reportarError(error, { origen: esFatal ? "error-global-fatal" : "error-global" });
+  manejadorAnterior?.(error, esFatal);
 });
+
+// Monitoreo de errores (issue #762), espejo de apps/web/src/main.jsx: con EXPO_PUBLIC_SENTRY_DSN
+// definido, cada reporte ya limpio va tambien a Sentry.
+try {
+  const destino = crearDestinoSentry({
+    dsn: process.env.EXPO_PUBLIC_SENTRY_DSN,
+    ambiente: process.env.NODE_ENV === "production" ? "production" : "development",
+    plataforma: "movil",
+  });
+  if (destino) configurarDestinoDeErrores(destino);
+} catch (error) {
+  console.error("El monitoreo de errores no quedo conectado.", error.message);
+}
+
+// Promesas rechazadas que nadie espero (issue #762). La web las ve con `unhandledrejection`; React
+// Native no tiene ese evento, pero Hermes -el motor de Expo- expone su rastreador. Solo fuera de
+// desarrollo: en desarrollo React Native ya lo usa para el aviso amarillo, y reemplazarlo lo apagaria.
+if (process.env.NODE_ENV === "production") {
+  globalThis.HermesInternal?.enablePromiseRejectionTracker?.({
+    allRejections: true,
+    onUnhandled: (_id, motivo) => reportarError(motivo, { origen: "promesa-sin-capturar" }),
+  });
+}
+
+function Raiz() {
+  const { estadoRestauracion, haySesion, perfil } = useSesionCompartida();
+  const [estaEnRecuperacion, setEstaEnRecuperacion] = useState(false);
+
+  useEffect(() => {
+    let codigoYaProcesado = null;
+    async function manejarUrl(url) {
+      const codigo = codigoDeRecuperacion(url);
+      if (!codigo || codigo === codigoYaProcesado) return;
+      codigoYaProcesado = codigo;
+      setEstaEnRecuperacion(true);
+      const { error } = await intercambiarSesionDeRecuperacion(codigo);
+      if (error) {
+        console.error("No se pudo canjear el enlace:", error.mensaje);
+        setEstaEnRecuperacion(false);
+      }
+    }
+    Linking.getInitialURL().then(manejarUrl);
+    const suscripcion = Linking.addEventListener("url", ({ url }) => manejarUrl(url));
+    return () => suscripcion.remove();
+  }, []);
+
+  if (estaEnRecuperacion) {
+    return <NuevaContrasenaScreen alTerminar={() => setEstaEnRecuperacion(false)} />;
+  }
+
+  if (estadoRestauracion === ESTADOS_DE_RESTAURACION.CARGANDO) {
+    return <RestaurandoSesionScreen />;
+  }
+
+  if (haySesion && perfil?.rol && !puedeUsarAppMovil(perfil.rol)) {
+    return <AppSoloParaCampoScreen />;
+  }
+
+  return <AppNavigator haySesion={haySesion} />;
+}
+
+// Componente principal: NO renderiza nada hasta que Supabase esté listo
+export default function App() {
+  const [listo, setListo] = useState(supabaseListo);
+  const enLinea = useEnLinea();
+
+  useEffect(() => {
+    if (!listo) {
+      try {
+        inicializarSupabase({ almacenamiento: almacenamientoMovil });
+        setListo(true);
+      } catch {
+        console.warn("Reintentando inicialización...");
+      }
+    }
+  }, [listo]);
+
+  // Mientras no esté listo → no monta los Providers
+  if (!listo) {
+    return null;
+  }
+
+  return (
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <SesionProvider>
+          <JornadaActivaProvider>
+            <RegistroSinGuardarProvider>
+              <AvisoSinConexion enLinea={enLinea} />
+              <LimiteDeError>
+                <Raiz />
+              </LimiteDeError>
+            </RegistroSinGuardarProvider>
+          </JornadaActivaProvider>
+        </SesionProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
+  );
+}

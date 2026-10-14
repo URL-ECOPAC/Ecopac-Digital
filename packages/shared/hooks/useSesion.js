@@ -1,0 +1,482 @@
+import { useCallback, useEffect, useRef, useState } from "react";
+
+import { obtenerSupabase } from "../api/cliente.js";
+import {
+  CODIGOS_DE_ERROR_DE_SUPABASE,
+  construirError,
+  normalizarError,
+} from "../api/errores-de-supabase.js";
+import {
+  cerrarSesion,
+  consumirCierreDeliberado,
+  evaluarPerfilDeSesion,
+  requiereCerrarSesion,
+} from "../api/sesion.js";
+import { claveDeAlmacenamiento } from "../jornadas/useJornadaActiva.js";
+import { reportarError } from "../observabilidad/errores.js";
+import { fijarAccesoDeSesion, limpiarAccesoDeSesion } from "../usuarios/acceso.js";
+import { obtenerMisAccesos } from "../usuarios/permisos.api.js";
+
+/**
+ * Perfil y accesos de un usuario ya autenticado (00148): lo que evaluarPerfilDeSesion() dice del
+ * perfil, mas los modulos que la matriz le abrio a su rol y sus permisos finos efectivos. Sin los
+ * accesos la sesion no se da por resuelta: una persona con una funcion delegada se veria como una
+ * sin ella, y el menu no le mostraria el modulo donde la tiene que usar.
+ */
+async function resolverPerfilYAccesos(usuario) {
+  // Las dos lecturas en paralelo: no dependen una de otra (mis_accesos() resuelve por auth.uid()),
+  // y en serie cada inicio de sesion -y cada vuelta a la pestana- esperaba dos viajes al servidor.
+  const [evaluacion, respuestaDeAccesos] = await Promise.all([
+    evaluarPerfilDeSesion(usuario),
+    obtenerMisAccesos(),
+  ]);
+  if (evaluacion.error) return { ...evaluacion, accesos: null };
+
+  const { accesos, error } = respuestaDeAccesos;
+  if (error) return { perfil: null, rol: null, accesos: null, error };
+
+  return { ...evaluacion, accesos };
+}
+
+/**
+ * Esperas entre los reintentos de leer el perfil cuando el fallo es pasajero (issue #911).
+ *
+ * Al iniciar sesion, la primera lectura del perfil a veces fallaba -la red, o el token recien
+ * emitido todavia sin llegar a la consulta- y la pantalla se quedaba en "No se pudo confirmar tu
+ * rol" hasta recargar. Dos reintentos cortos lo resuelven sin que la persona note nada.
+ */
+const ESPERAS_DE_REINTENTO_MS = [400, 1200];
+
+/**
+ * resolverPerfilYAccesos() con reintentos ante un fallo pasajero. Un rechazo de la cuenta (perfil
+ * ausente o desactivado, requiereCerrarSesion) no se reintenta: no va a cambiar.
+ *
+ * @param {object} usuario
+ * @param {() => boolean} sigueVigente Falso si mientras se esperaba llego otra sesion: se deja de
+ *   reintentar, la respuesta ya no describiria la sesion actual.
+ */
+async function resolverConReintentos(usuario, sigueVigente) {
+  let resultado = await resolverPerfilYAccesos(usuario);
+  for (const espera of ESPERAS_DE_REINTENTO_MS) {
+    if (!resultado.error || requiereCerrarSesion(resultado.error) || !sigueVigente()) break;
+    await new Promise((resolver) => setTimeout(resolver, espera));
+    if (!sigueVigente()) break;
+    resultado = await resolverPerfilYAccesos(usuario);
+  }
+  return resultado;
+}
+
+/** Mismo contenido, aunque sean objetos distintos: evita redibujar la app entera por nada. */
+function mismoContenido(uno, otro) {
+  return JSON.stringify(uno ?? null) === JSON.stringify(otro ?? null);
+}
+
+const ESTADOS_DE_RESTAURACION = {
+  CARGANDO: "cargando",
+  LISTO: "listo",
+};
+
+const SIN_SESION = {
+  usuario: null,
+  perfil: null,
+  cargando: false,
+  error: null,
+};
+
+/**
+ * Cierra la sesion de Supabase y, si se conoce el usuario, borra tambien su jornada activa
+ * persistida (issue #110, criterio 3): jornada_activa:<perfilId>, que escribe useJornadaActiva
+ * con el mismo adaptador cifrado, no la borraba nadie.
+ *
+ * El removeItem nunca puede tumbar el cierre de sesion (issue #97: la sesion local se limpia
+ * aunque falle lo demas): un fallo se traga y se registra, nunca se propaga.
+ */
+async function cerrarSesionYLimpiarJornada(almacenamiento, usuarioId) {
+  await cerrarSesion();
+
+  if (!almacenamiento || !usuarioId) return;
+
+  try {
+    await almacenamiento.removeItem(claveDeAlmacenamiento(usuarioId));
+  } catch (error) {
+    // Por reportarError y no console.error con el id en claro: el reporte sale ya limpio (#762).
+    reportarError(error, { origen: "cerrar-sesion", modulo: "sesion" });
+  }
+}
+
+/**
+ * Estado compartido de la sesion: quien es el usuario, cual es su perfil y cual su rol.
+ *
+ * Supabase obtiene la sesion usando el adaptador que recibio durante su inicializacion. Si el
+ * access token vencio, getSession() usa el refresh token para renovarlo antes de devolverlo.
+ *
+ * El perfil se lee aparte porque la sesion de Supabase solo trae la identidad (id y correo):
+ * el nombre y el rol viven en la tabla perfiles, y de ese rol dependen el guard de rutas web
+ * y la navegacion movil.
+ *
+ * No hay ninguna rama por plataforma en este archivo. Lo unico que cambia entre web y movil
+ * es el adaptador de almacenamiento, y eso se decidio al construir el cliente.
+ *
+ * @param {object} [opciones]
+ * @param {import("../api/almacenamiento.js").AdaptadorDeAlmacenamiento} [opciones.almacenamiento]
+ *   Adaptador de la app (el mismo contrato que ya usa useJornadaActiva). Opcional: sin uno, el
+ *   cierre de sesion sigue funcionando igual que antes, solo que no borra la jornada activa
+ *   persistida. apps/web no pasa ninguno todavia y no cambia de comportamiento.
+ * @returns {{
+ *   usuario: object|null,
+ *   perfil: object|null,
+ *   rol: string|null,
+ *   cargando: boolean,
+ *   error: object|null,
+ *   estadoRestauracion: string,
+ *   haySesion: boolean,
+ *   logout: () => Promise<void>,
+ *   refrescarPerfil: () => Promise<void>,
+ * }}
+ */
+export function useSesion({ almacenamiento } = {}) {
+  const [estadoRestauracion, setEstadoRestauracion] = useState(ESTADOS_DE_RESTAURACION.CARGANDO);
+  const [sesion, setSesion] = useState({
+    usuario: null,
+    perfil: null,
+    cargando: true,
+    error: null,
+  });
+
+  // Cada resolucion de sesion se numera. Si mientras se lee un perfil llega otro evento de
+  // Supabase, la lectura vieja termina despues y pisaria al usuario nuevo; comparar el numero
+  // al volver descarta esa respuesta tardia.
+  const resolucion = useRef(0);
+  // logout() y una sesion expirada llegan las dos como SIGNED_OUT. Sin esta marca, cerrar
+  // sesion a proposito mostraria el aviso de sesion expirada.
+  const cierreIntencional = useRef(false);
+
+  // ISSUE #864. Verdadero desde que se publica "sin sesion" hasta que vuelve a haber una.
+  //
+  // Un intento de login con cuenta desactivada cierra la sesion DOS veces: aplicarSesion() al ver
+  // el perfil, e iniciarSesion() al volver de su propia lectura. El segundo SIGNED_OUT llegaba sin
+  // marca y sin cierreIntencional -- los habia consumido el primero --, asi que se leia como "la
+  // sesion expiro" y PISABA el mensaje correcto que el primero acababa de publicar. En el telefono
+  // eso es lo unico que la persona ve, porque el login ya se desmonto.
+  //
+  // La regla que lo resuelve vale para cualquier doble cierre: un SIGNED_OUT sobre una sesion que
+  // ya esta cerrada no describe nada nuevo y no tiene nada que anunciar.
+  const sinSesionPublicada = useRef(true);
+  const activo = useRef(true);
+  // Los ultimos accesos publicados: si una relectura trae los mismos, la sesion no se republica.
+  const ultimosAccesos = useRef(null);
+
+  useEffect(() => {
+    activo.current = true;
+    const cliente = obtenerSupabase();
+
+    /** Deja el estado en "sin sesion", con el aviso que corresponda o sin ninguno. */
+    function limpiarSesion(error) {
+      resolucion.current += 1;
+      sinSesionPublicada.current = true;
+      ultimosAccesos.current = null;
+      limpiarAccesoDeSesion();
+      cliente.auth.stopAutoRefresh();
+      if (!activo.current) return;
+      setSesion({ ...SIN_SESION, error: error ?? null });
+    }
+
+    /**
+     * Cierra la sesion local para un cierre que decidimos aqui mismo (perfil ausente, cuenta
+     * desactivada, o un error al restaurar), no uno que pidio la persona con logout().
+     *
+     * Marca cierreIntencional ANTES de llamar a cerrarSesion(): el signOut que dispara por
+     * dentro emite un SIGNED_OUT sincronicamente (onAuthStateChange lo espera antes de que
+     * signOut() resuelva), y sin esta marca ese evento se leeria como "la sesion expiro sola"
+     * y pintaria ese aviso un instante antes de que el codigo de aqui abajo lo reemplace por
+     * el error especifico. La escritura final ya era la correcta sin esta marca (la de aqui
+     * abajo siempre llega despues), pero con la marca no hay ni ese parpadeo intermedio.
+     */
+    async function cerrarSesionInterna(usuarioId) {
+      cierreIntencional.current = true;
+      await cerrarSesionYLimpiarJornada(almacenamiento, usuarioId);
+    }
+
+    /** Guarda al usuario de la sesion y resuelve su perfil. */
+    async function aplicarSesion(sesionDeSupabase) {
+      const turno = (resolucion.current += 1);
+      const usuario = sesionDeSupabase.user;
+
+      cliente.auth.startAutoRefresh();
+
+      if (activo.current) {
+        setSesion((anterior) => {
+          // supabase-js vuelve a emitir SIGNED_IN cada vez que la pestana recupera el foco. Para
+          // el mismo usuario con su perfil ya resuelto no se toca el estado mientras se relee: el
+          // valor de la sesion alcanza a toda la app, y cambiarlo dos veces por cada vuelta a la
+          // pestana la redibujaba entera. La relectura sigue ocurriendo (una cuenta desactivada
+          // tiene que notarse), solo que sin parpadeo.
+          if (anterior.perfil?.id === usuario.id && !anterior.error) return anterior;
+          return {
+            usuario,
+            // Conservar el perfil cuando es el mismo usuario evita que la pantalla se quede sin
+            // nombre ni rol mientras se vuelve a leer.
+            perfil: anterior.perfil?.id === usuario.id ? anterior.perfil : null,
+            cargando: true,
+            error: null,
+          };
+        });
+      }
+
+      const sigueVigente = () => activo.current && turno === resolucion.current;
+      const { perfil, accesos, error } = await resolverConReintentos(usuario, sigueVigente);
+
+      // Llego otro evento mientras se leia: esta respuesta ya no describe la sesion actual.
+      if (!sigueVigente()) return;
+
+      if (error) {
+        if (!requiereCerrarSesion(error)) {
+          // Fallo transitorio leyendo el perfil (red, servidor), aun despues de reintentar: la
+          // sesion sigue siendo valida. Se conserva para que la aplicacion pueda reintentar, en
+          // vez de mandar al login a alguien que si tiene sesion. Si ya habia un perfil de este
+          // mismo usuario (una relectura al volver a la pestana), se queda: perderlo por un fallo
+          // de red dejaba la pantalla en "no se pudo confirmar tu rol" (issue #911).
+          setSesion((anterior) => ({
+            usuario,
+            perfil: anterior.perfil?.id === usuario.id ? anterior.perfil : null,
+            cargando: false,
+            error,
+          }));
+          return;
+        }
+
+        // Perfil ausente o cuenta desactivada (RNF-10): dar de baja a alguien tiene que
+        // surtir efecto aunque su token siga vigente.
+        //
+        // ISSUE #864. Si esto viene de un INTENTO DE LOGIN, el mensaje no es el especifico sino
+        // el generico que dejo marcado iniciarSesion(): la cuenta desactivada y la contrasena
+        // incorrecta responden lo mismo (criterio 2, OWASP A07). Sin marca -- a quien desactivan
+        // con la sesion ya abierta -- se publica el especifico, que es el que corresponde ahi.
+        //
+        // Se consume aqui ademas de en el SIGNED_OUT porque las dos lecturas del perfil corren en
+        // paralelo y cual termina antes no esta determinado: consuma quien consuma, el mensaje
+        // que llega a la pantalla es el mismo.
+        const deliberado = consumirCierreDeliberado();
+        await cerrarSesionInterna(usuario.id);
+        limpiarSesion(deliberado.marcado ? deliberado.error : error);
+        return;
+      }
+
+      sinSesionPublicada.current = false;
+      // Antes de publicar el perfil: el primer render con este perfil ya tiene que ver sus accesos.
+      fijarAccesoDeSesion({ rol: perfil.rol, ...accesos });
+      const accesosCambiaron = !mismoContenido(ultimosAccesos.current, accesos);
+      ultimosAccesos.current = accesos;
+      setSesion((anterior) =>
+        !accesosCambiaron &&
+        // Si la relectura trajo lo mismo que ya habia, se conserva el objeto: ningun componente
+        // que dependa de la sesion tiene por que volver a pintarse ni a pedir sus datos.
+        anterior.usuario?.id === usuario.id &&
+        !anterior.cargando &&
+        !anterior.error &&
+        mismoContenido(anterior.perfil, perfil)
+          ? anterior
+          : { usuario, perfil, cargando: false, error: null },
+      );
+    }
+
+    /**
+     * Restauracion al montar.
+     *
+     * estadoRestauracion no pasa a LISTO hasta que el perfil tambien esta resuelto: si pasara
+     * antes, la aplicacion pintaria un instante sin rol y el guard de rutas mandaria al login
+     * a alguien que si tiene sesion. Ese es el parpadeo que hay que evitar.
+     */
+    async function restaurarSesion() {
+      try {
+        const { data, error } = await cliente.auth.getSession();
+        const sesionDeSupabase = data?.session;
+
+        if (error) {
+          // Hueco declarado: getSession() fallo antes de resolver ningun usuario, asi que no
+          // hay un id con el que borrar jornada_activa. No se puede saber de quien era. Se
+          // queda como una limpieza pendiente para la proxima vez que esa persona inicie
+          // sesion y la vuelva a pisar con una seleccion vigente.
+          await cerrarSesionInterna();
+          limpiarSesion(normalizarError(error));
+          return;
+        }
+
+        if (!sesionDeSupabase) {
+          // Nadie ha iniciado sesion todavia. No es un error y no se avisa de nada.
+          limpiarSesion(null);
+          return;
+        }
+
+        await aplicarSesion(sesionDeSupabase);
+      } catch (error) {
+        // Mismo hueco declarado que en el error de getSession() de arriba: si la excepcion
+        // salto antes de llegar a aplicarSesion(), tampoco aca se conoce el usuario.
+        await cerrarSesionInterna();
+        limpiarSesion(normalizarError(error));
+      } finally {
+        if (activo.current) {
+          setEstadoRestauracion(ESTADOS_DE_RESTAURACION.LISTO);
+        }
+      }
+    }
+
+    const { data: suscripcion } = cliente.auth.onAuthStateChange((evento, sesionDeSupabase) => {
+      if (!activo.current) return;
+
+      // INITIAL_SESSION describe lo mismo que getSession() y llega casi a la vez. Atenderlo
+      // aqui significaria leer el perfil dos veces en cada arranque.
+      if (evento === "INITIAL_SESSION") return;
+
+      if (evento === "SIGNED_OUT" || !sesionDeSupabase) {
+        // Ya no habia sesion que perder: este cierre es el eco de otro (ver sinSesionPublicada).
+        if (sinSesionPublicada.current) {
+          cierreIntencional.current = false;
+          return;
+        }
+
+        // Un SIGNED_OUT que nadie pidio es la sesion que expiro y no se pudo refrescar. Hay
+        // que decirlo: la pantalla que el usuario tiene enfrente dejo de servir.
+        //
+        // "Nadie" son dos: este hook (cierreIntencional) y api/sesion.js, que cierra por su
+        // cuenta cuando iniciarSesion() encuentra un perfil que no sirve (issue #864). Ese
+        // segundo caso no lo puede marcar el hook, porque no es el quien dispara el signOut.
+        const deliberado = consumirCierreDeliberado();
+        const fueIntencional = cierreIntencional.current || deliberado.marcado;
+        cierreIntencional.current = false;
+        limpiarSesion(
+          fueIntencional
+            ? // Un cierre de este hook no publica nada (era logout o un perfil que el hook ya
+              // resolvio). El de api/sesion.js si trae lo que hay que decir.
+              deliberado.error
+            : construirError(CODIGOS_DE_ERROR_DE_SUPABASE.SESION_EXPIRADA),
+        );
+        return;
+      }
+
+      if (evento === "PASSWORD_RECOVERY") {
+        // supabase-js dispara este evento en vez de SIGNED_IN al canjear un enlace de
+        // recuperacion (issue #644): la sesion es de un solo proposito -fijar la contrasena
+        // nueva, la resuelve useNuevaContrasena() con su propio getUser()- y no "quien esta
+        // usando la app". Si cayera en aplicarSesion() como cualquier login, un perfil
+        // desactivado activaria aqui el mismo cierre automatico de la linea 154 antes de que
+        // useNuevaContrasena() alcance a leer su propio chequeo de `activo` y explicarlo: la
+        // pantalla veria "Auth session missing!" en vez del mensaje especifico. Se ignora a
+        // proposito: ni aplicarSesion() ni haySesion cambian por esta sesion.
+        return;
+      }
+
+      if (evento === "TOKEN_REFRESHED") {
+        // Renovar el token no cambia de usuario. Se refresca la identidad y se deja el perfil
+        // como esta, para no consultar la base de datos cada vez que vence un access token.
+        cliente.auth.startAutoRefresh();
+        setSesion((anterior) =>
+          anterior.usuario === null
+            ? anterior
+            : { ...anterior, usuario: sesionDeSupabase.user, error: null },
+        );
+        return;
+      }
+
+      aplicarSesion(sesionDeSupabase);
+    });
+
+    restaurarSesion();
+
+    return () => {
+      activo.current = false;
+      suscripcion.subscription.unsubscribe();
+    };
+    // almacenamiento se recibe una sola vez desde quien monta el provider (el modulo
+    // almacenamientoMovil/almacenamientoWeb, no un objeto que cambie entre renders) y no debe
+    // reiniciar la restauracion de sesion si de todos modos fuera a cambiar de identidad.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const logout = useCallback(async () => {
+    // Se marca antes de cerrar, porque signOut() dispara SIGNED_OUT antes de resolver.
+    cierreIntencional.current = true;
+    await cerrarSesionYLimpiarJornada(almacenamiento, sesion.usuario?.id);
+    resolucion.current += 1;
+    limpiarAccesoDeSesion();
+    setSesion({ ...SIN_SESION });
+  }, [sesion.usuario, almacenamiento]);
+
+  /**
+   * Vuelve a leer de la base el perfil del usuario de la sesion actual.
+   *
+   * Hace falta porque un UPDATE a la tabla perfiles hecho por fuera de este hook (por ejemplo
+   * actualizarUsuario() en usuarios/api.js, al guardar la pantalla de perfil propio, issue
+   * #102) no dispara ningun evento de onAuthStateChange: sin esto, la sesion compartida se
+   * queda con el perfil viejo hasta el proximo evento de Auth, que puede tardar en llegar o no
+   * llegar nunca en esa pestana. Se relee de la base en vez de aceptar los datos que quien
+   * llama cree haber guardado, para que la sesion nunca muestre algo que RLS o el trigger de
+   * rol (impedir_cambio_de_rol_propio, migracion 00038) terminaron rechazando.
+   *
+   * Reutiliza el mismo mecanismo de turnos (resolucion) que ya usa aplicarSesion() dentro del
+   * efecto, para que una respuesta tardia de esta funcion no pise un estado mas nuevo ni al
+   * reves; no abre ninguna suscripcion nueva ni toca el efecto de arriba.
+   *
+   * Si el usuario ya no tiene perfil o quedo desactivado justo antes de refrescar (por ejemplo
+   * un administrador que se cambio el rol a si mismo y perdio acceso, o alguien que otro
+   * administrador desactivo mientras tanto), cierra la sesion local igual que aplicarSesion().
+   * No hace nada si no hay sesion.
+   */
+  const refrescarPerfil = useCallback(async () => {
+    if (!sesion.usuario) return;
+
+    const cliente = obtenerSupabase();
+    const usuarioActual = sesion.usuario;
+    const turno = (resolucion.current += 1);
+    const sigueVigente = () => activo.current && turno === resolucion.current;
+
+    // Sin perfil todavia (el "Reintentar" de la pantalla de acceso, issue #911), la ruta muestra
+    // "Comprobando tu sesion" mientras se lee, en vez del mismo error.
+    setSesion((anterior) => (anterior.perfil ? anterior : { ...anterior, cargando: true }));
+
+    const { perfil, accesos, error } = await resolverConReintentos(usuarioActual, sigueVigente);
+
+    if (!sigueVigente()) return;
+
+    if (error) {
+      if (!requiereCerrarSesion(error)) {
+        setSesion((anterior) => ({ ...anterior, cargando: false, error }));
+        return;
+      }
+
+      cierreIntencional.current = true;
+      await cerrarSesionYLimpiarJornada(almacenamiento, usuarioActual.id);
+      resolucion.current += 1;
+      cliente.auth.stopAutoRefresh();
+      limpiarAccesoDeSesion();
+      setSesion({ ...SIN_SESION, error });
+      return;
+    }
+
+    sinSesionPublicada.current = false;
+    fijarAccesoDeSesion({ rol: perfil.rol, ...accesos });
+    setSesion((anterior) => ({
+      ...anterior,
+      usuario: usuarioActual,
+      perfil,
+      cargando: false,
+      error: null,
+    }));
+  }, [sesion.usuario, almacenamiento]);
+
+  return {
+    usuario: sesion.usuario,
+    perfil: sesion.perfil,
+    rol: sesion.perfil?.rol ?? null,
+    cargando: sesion.cargando,
+    error: sesion.error,
+
+    // Lo que ya consumian apps/mobile/App.js y AjustesScreen. Se mantiene tal cual.
+    estadoRestauracion,
+    haySesion: sesion.usuario !== null,
+    logout,
+    refrescarPerfil,
+  };
+}
+
+export { ESTADOS_DE_RESTAURACION };

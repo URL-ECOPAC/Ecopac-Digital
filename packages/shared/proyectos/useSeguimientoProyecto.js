@@ -1,0 +1,314 @@
+import { useCallback, useEffect, useMemo, useState } from "react";
+
+import { ESTADOS_JORNADA } from "../enums.js";
+import { aCadenaFechaLocal } from "../formato/fechas.js";
+import { obtenerPresupuestoProyecto } from "../presupuestos/api.js";
+import {
+  cambiarEstadoProyecto,
+  listarJornadasDelProyecto,
+  obtenerHistorialDeProyecto,
+  obtenerProyecto,
+} from "./api.js";
+import { permisosDeProyectos, puedeVerHistorialProyecto } from "./permisos.js";
+import {
+  MENSAJE_PROYECTO_CANCELADO,
+  proyectoAdmiteCambios,
+  transicionesDeProyectoDesde,
+} from "./validaciones.js";
+import {
+  actualizarAvance,
+  actualizarHito,
+  esPorcentajeDeAvanceValido,
+  listarHitos,
+  listarSeguimiento,
+  marcarHitoCumplido,
+  reabrirHito,
+  registrarHito,
+  registrarNota,
+} from "./avance.api.js";
+import { CAMPOS_HITO } from "./campos.js";
+import { useCambiosEnTiempoReal } from "../hooks/useCambiosEnTiempoReal.js";
+
+/**
+ * Anota esCumplido/esVencido en un hito. Pura y exportada aparte del hook -packages/shared corre
+ * vitest en environment "node", sin DOM, asi que la unica forma de probar esta cuenta sin montar
+ * React es tenerla aparte- para poder fijar fechaHoy en la prueba en vez de depender del reloj.
+ *
+ * @param {{ fechaReal?: string, fechaPrevista?: string }} hito
+ * @param {string} fechaHoy "AAAA-MM-DD", normalmente aCadenaFechaLocal(hoy).
+ * @returns {object} Los campos de la fila de origen, mas: esCumplido, esVencido.
+ */
+export function procesarHito(hito, fechaHoy) {
+  const esCumplido = Boolean(hito.fechaReal);
+  const esVencido = !esCumplido && Boolean(hito.fechaPrevista) && hito.fechaPrevista < fechaHoy;
+  return { ...hito, esCumplido, esVencido };
+}
+
+/**
+ * View model de la ficha de seguimiento de un proyecto (pantalla de las issues #303/#304,
+ * hitos y presupuesto ampliados por la auditoria #756).
+ *
+ * Hasta aqui el hook no consultaba nada: recibia `hitosIniciales`/`bitacoraInicial`/
+ * `jornadasIniciales` por prop, y SeguimientoProyectoEnrutado (App.jsx) solo tenia el proyecto
+ * que ya traia el listado en location.state -sin recargar la pagina no habia forma de perder ese
+ * estado, pero los hitos, la bitacora y las jornadas asociadas estaban siempre vacios, porque
+ * nada se los pasaba. Las lecturas (obtenerProyecto, listarHitos, listarSeguimiento,
+ * listarJornadasDelProyecto) ya existian en el modulo sin que ningun hook las llamara. Ahora el
+ * hook las llama el mismo con `proyectoId`, igual que useProyectosSociales hace con
+ * listarProyectos().
+ *
+ * @param {object} [opciones]
+ * @param {string} [opciones.proyectoId]
+ * @param {object|null} [opciones.proyectoInicial] El proyecto que ya traia el listado.
+ * @param {Date} [opciones.hoy]
+ * @param {string} [opciones.rol]
+ * @returns {object} Con: proyecto, proyectoCancelado, puedeRegistrarSeguimiento, estadosSiguientes, cambiarEstado, hitos, bitacora, jornadas, historial, puedeVerHistorial, indicadoresJornadas, campos, cargando, errorCarga, nuevoPorcentaje, setNuevoPorcentaje, nuevaNota, setNuevaNota, errorAccion, erroresHito, cargandoAccion, guardarSeguimiento, cambiarEstadoHito, guardarHito, recargar.
+ */
+export function useSeguimientoProyecto({
+  proyectoId,
+  proyectoInicial = null,
+  hoy = new Date(),
+  rol,
+} = {}) {
+  const [proyecto, setProyecto] = useState(proyectoInicial);
+  const [hitos, setHitos] = useState([]);
+  const [bitacora, setBitacora] = useState([]);
+  const [jornadas, setJornadas] = useState([]);
+  const [presupuesto, setPresupuesto] = useState(null);
+  const [historial, setHistorial] = useState([]);
+  const [cargando, setCargando] = useState(true);
+  const [errorCarga, setErrorCarga] = useState(null);
+
+  // El historial es una seccion, no el contenido central (mismo criterio que
+  // useDetalleJornada.js): no se pide si el rol no va a poder verlo.
+  const puedeVerHistorialDeEstados = puedeVerHistorialProyecto(rol);
+
+  const [nuevoPorcentaje, setNuevoPorcentaje] = useState(proyectoInicial?.porcentajeAvance ?? 0);
+  const [nuevaNota, setNuevaNota] = useState("");
+  const [errorAccion, setErrorAccion] = useState(null);
+  const [erroresHito, setErroresHito] = useState({});
+  const [enviando, setEnviando] = useState(false);
+
+  const cargarHitos = useCallback(async () => {
+    if (!proyectoId) return;
+    const { hitos: datos } = await listarHitos(proyectoId);
+    setHitos(datos ?? []);
+  }, [proyectoId]);
+
+  const cargar = useCallback(async () => {
+    if (!proyectoId) {
+      setCargando(false);
+      return;
+    }
+
+    setCargando(true);
+    const [resProyecto, resHitos, resBitacora, resJornadas, resPresupuesto, resHistorial] =
+      await Promise.all([
+        obtenerProyecto(proyectoId),
+        listarHitos(proyectoId),
+        listarSeguimiento(proyectoId),
+        listarJornadasDelProyecto(proyectoId),
+        obtenerPresupuestoProyecto(proyectoId),
+        puedeVerHistorialDeEstados
+          ? obtenerHistorialDeProyecto(proyectoId, { rol })
+          : Promise.resolve({ historial: [], error: null }),
+      ]);
+
+    setProyecto(resProyecto.proyecto);
+    setErrorCarga(resProyecto.error);
+    setHitos(resHitos.hitos ?? []);
+    setBitacora(resBitacora.bitacora ?? []);
+    setJornadas(resJornadas.jornadas ?? []);
+    setPresupuesto(resPresupuesto.presupuesto);
+    setHistorial(resHistorial.historial ?? []);
+    setNuevoPorcentaje(resProyecto.proyecto?.porcentajeAvance ?? 0);
+    setCargando(false);
+  }, [proyectoId, rol, puedeVerHistorialDeEstados]);
+
+  useEffect(() => {
+    cargar();
+  }, [cargar]);
+
+  // Dia local, no UTC: despues de las 18:00 un hito se marcaba cumplido con fecha de manana.
+  const fechaHoy = aCadenaFechaLocal(hoy);
+
+  // Hitos procesados con estado de vencimiento
+  const hitosProcesados = useMemo(() => {
+    return hitos.map((hito) => procesarHito(hito, fechaHoy));
+  }, [hitos, fechaHoy]);
+
+  // Indicadores agregados de las jornadas vinculadas. El presupuesto sale de
+  // obtenerPresupuestoProyecto() (presupuestos/api.js), que ya suma jornadas.presupuesto_asignado
+  // en el servidor (decision #274: un proyecto no tiene columna de presupuesto propia).
+  const indicadoresJornadas = useMemo(() => {
+    const totalJornadas = jornadas.length;
+    const completadas = jornadas.filter((j) => j.estado === ESTADOS_JORNADA.FINALIZADA).length;
+
+    return {
+      totalJornadas,
+      completadas,
+      presupuestoTotal: presupuesto?.asignado ?? 0,
+    };
+  }, [jornadas, presupuesto]);
+
+  // Lo que se puede modificar de ESTE proyecto: avance, notas, hitos y estado. Uno cancelado no se
+  // modifica (00154), y el rol que ve el seguimiento en solo lectura tampoco escribe (00148).
+  const permisos = permisosDeProyectos(rol, proyecto);
+  const puedeRegistrarSeguimiento = permisos.puedeRegistrarSeguimiento;
+  const proyectoCancelado = Boolean(proyecto) && !proyectoAdmiteCambios(proyecto.estado);
+
+  // Handler para actualizar avance y registrar la nota en la bitácora
+  const guardarSeguimiento = async () => {
+    if (!proyecto?.id || !puedeRegistrarSeguimiento) return false;
+
+    setErrorAccion(null);
+    const porcentajeNum = Number(nuevoPorcentaje);
+
+    if (!esPorcentajeDeAvanceValido(porcentajeNum)) {
+      setErrorAccion("El porcentaje de avance debe estar entre 0 y 100.");
+      return false;
+    }
+
+    setEnviando(true);
+
+    const resAvance = await actualizarAvance(proyecto.id, porcentajeNum);
+    if (resAvance.error) {
+      setErrorAccion(resAvance.error.mensaje || "Error al actualizar avance.");
+      setEnviando(false);
+      return false;
+    }
+
+    if (nuevaNota.trim() !== "") {
+      const resNota = await registrarNota(proyecto.id, nuevaNota.trim());
+      if (resNota.error) {
+        setErrorAccion(resNota.error.mensaje || "Error al registrar nota.");
+        setEnviando(false);
+        return false;
+      }
+      if (resNota.entrada) {
+        setBitacora((prev) => [resNota.entrada, ...prev]);
+      }
+    }
+
+    setProyecto((prev) => ({ ...prev, porcentajeAvance: porcentajeNum }));
+    setNuevaNota("");
+    setEnviando(false);
+    return true;
+  };
+
+  // Handler para cambiar cumplimiento del hito
+  const cambiarEstadoHito = async (hitoId, completado) => {
+    if (!puedeRegistrarSeguimiento) return;
+    setEnviando(true);
+    const fechaRealActualizada = completado ? fechaHoy : null;
+
+    const res = completado
+      ? await marcarHitoCumplido(hitoId, fechaRealActualizada)
+      : await reabrirHito(hitoId);
+
+    if (res.error) {
+      setErrorAccion(res.error.mensaje || "Error al actualizar hito.");
+      setEnviando(false);
+      return;
+    }
+
+    setHitos((prev) =>
+      prev.map((h) => (h.id === hitoId ? { ...h, fechaReal: fechaRealActualizada } : h)),
+    );
+    setEnviando(false);
+  };
+
+  /**
+   * Crea o corrige un hito (issue #756: proyecto_hitos no tenia formulario de alta, y fechaReal
+   * solo se podia poner en hoy/NULL desde el checkbox de cambiarEstadoHito). Valida solo lo que
+   * CAMPOS_HITO declara requerido: no hay validarHito() propio, es la unica pantalla que escribe
+   * esta tabla a mano.
+   */
+  const guardarHito = useCallback(
+    async (hitoId, datosFormulario) => {
+      const errores = {};
+      if (!datosFormulario?.nombre?.trim()) errores.nombre = "El nombre del hito es obligatorio.";
+      if (!datosFormulario?.fechaPrevista) {
+        errores.fechaPrevista = "La fecha prevista es obligatoria.";
+      }
+      setErroresHito(errores);
+      if (Object.keys(errores).length > 0) return { ok: false, errores };
+
+      if (!proyecto?.id) return { ok: false };
+      if (!puedeRegistrarSeguimiento) {
+        const mensaje = proyectoCancelado
+          ? MENSAJE_PROYECTO_CANCELADO
+          : "No tienes permiso para modificar los hitos de este proyecto.";
+        return { ok: false, error: { mensaje } };
+      }
+
+      const resultado = hitoId
+        ? await actualizarHito(hitoId, datosFormulario)
+        : await registrarHito(proyecto.id, datosFormulario);
+
+      if (resultado.error) return { ok: false, error: resultado.error };
+
+      await cargarHitos();
+      return { ok: true, hito: resultado.hito };
+    },
+    [proyecto, puedeRegistrarSeguimiento, proyectoCancelado, cargarHitos],
+  );
+
+  // Cambio de estado del proyecto. La web no tenia donde hacerlo: solo el kanban de la app movil
+  // lo movia. Se ofrecen las transiciones que el trigger de la 00029 acepta desde el estado actual
+  // (TRANSICIONES_PROYECTO), y solo a quien puede editar proyectos.
+  const puedeCambiarEstado = permisos.puedeCambiarEstado;
+  const estadosSiguientes = puedeCambiarEstado ? transicionesDeProyectoDesde(proyecto?.estado) : [];
+
+  const cambiarEstado = useCallback(
+    async (nuevoEstado) => {
+      if (!proyecto?.id || !puedeCambiarEstado) return { ok: false };
+      setErrorAccion(null);
+      setEnviando(true);
+      const resultado = await cambiarEstadoProyecto(proyecto.id, nuevoEstado);
+      setEnviando(false);
+      if (resultado.error) {
+        setErrorAccion(resultado.error.mensaje || "No se pudo cambiar el estado del proyecto.");
+        return { ok: false, error: resultado.error };
+      }
+      // Se recarga todo: el historial de estados lo escribe un trigger y no llega en la respuesta.
+      await cargar();
+      return { ok: true };
+    },
+    [proyecto?.id, puedeCambiarEstado, cargar],
+  );
+
+  // Se recarga sola cuando cambian estas tablas (00163).
+  useCambiosEnTiempoReal(
+    ["proyectos", "proyecto_hitos", "proyecto_seguimiento", "jornadas"],
+    cargar,
+  );
+
+  return {
+    proyecto,
+    proyectoCancelado,
+    puedeRegistrarSeguimiento,
+    estadosSiguientes,
+    cambiarEstado,
+    hitos: hitosProcesados,
+    bitacora,
+    jornadas,
+    historial,
+    puedeVerHistorial: puedeVerHistorialDeEstados,
+    indicadoresJornadas,
+    campos: CAMPOS_HITO,
+    cargando,
+    errorCarga,
+    nuevoPorcentaje,
+    setNuevoPorcentaje,
+    nuevaNota,
+    setNuevaNota,
+    errorAccion,
+    erroresHito,
+    cargandoAccion: enviando,
+    guardarSeguimiento,
+    cambiarEstadoHito,
+    guardarHito,
+    recargar: cargar,
+  };
+}

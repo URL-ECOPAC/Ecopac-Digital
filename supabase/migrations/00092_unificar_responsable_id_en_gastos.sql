@@ -1,0 +1,12 @@
+-- Ecopac Digital - Unificar gastos.encargado_id a responsable_id (issue #412)
+--
+-- jornadas.responsable_id (00012) y proyectos.responsable_id (00007) ya usan el mismo nombre
+-- para "la persona a cargo de esta entidad". gastos.encargado_id (00025) es el mismo concepto
+-- a nivel de un gasto puntual -no se confunde con gastos.registrado_por, que ya existe aparte
+-- y significa "quien creo la fila"-, asi que se renombra para dejar un solo vocabulario en las
+-- tres tablas.
+--
+-- RENAME COLUMN es un cambio de metadato: no hay ningun indice ni politica RLS que nombre a
+-- encargado_id en su definicion (solo la propia columna, 00025), asi que no hace falta tocar
+-- nada mas aca. Los datos no se mueven.
+ALTER TABLE gastos RENAME COLUMN encargado_id TO responsable_id;

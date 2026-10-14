@@ -1,0 +1,440 @@
+// Consultas de Supabase del catalogo de medicamentos.
+//
+// packages/shared/api es la infraestructura del cliente; las consultas de cada modulo van en
+// el api.js de su carpeta, como indica el encabezado de api/index.js. Este archivo es el unico
+// lugar del monorepo que lee y escribe la tabla medicamentos. Se llama medicamentos.api.js y no
+// api.js por el mismo motivo que principios-activos.api.js: inventario/ lo construye mas de una
+// issue en paralelo (lotes, movimientos...); un api.js unico seria un iman de conflictos.
+//
+// Todas las funciones devuelven `{ dato, error }` en vez de lanzar, igual que supabase-js: quien
+// las consume es un hook que tiene que reflejar el fallo en pantalla, no reventar el render.
+//
+// Ninguna funcion valida aqui quien puede crear, editar o desactivar: esa regla la aplican las
+// politicas de 00034_politicas_rls_inventario.sql y las funciones de 00050_catalogo_medicamentos.sql
+// (solo administrador), y un intento sin permiso vuelve como error 42501, que normalizarError()
+// ya traduce. El cliente pregunta para dibujar, el servidor decide.
+
+import { obtenerSupabase } from "../api/cliente.js";
+import {
+  CODIGOS_DE_ERROR_DE_SUPABASE,
+  construirError,
+  normalizarError,
+} from "../api/errores-de-supabase.js";
+import { pideDatosFarmacologicos } from "./campos.js";
+
+// Las columnas se enumeran en lugar de pedir "*" para que una columna nueva no empiece a viajar
+// sola hasta el cliente.
+// presentacion_id (00144) es un embed a presentaciones, no una columna propia: PostgREST siempre
+// devuelve un embed anidado ({ nombre: "..." }), nunca aplanado en la fila -- aplanarPresentacion()
+// mas abajo es lo unico que lo desenreda a la forma plana que el resto del catalogo espera
+// (medicamento.presentacion como string).
+const COLUMNAS_DEL_MEDICAMENTO = [
+  "id",
+  "nombre",
+  "tipoArticulo:tipo_articulo",
+  "concentracion",
+  "presentacionId:presentacion_id",
+  "presentacion:presentaciones(nombre)",
+  "marca",
+  "formaFarmaceutica:forma_farmaceutica",
+  "esPediatrico:es_pediatrico",
+  "activo",
+  "createdAt:created_at",
+  "updatedAt:updated_at",
+].join(", ");
+
+/**
+ * Quita los acentos de un texto para compararlo contra nombre_normalizado.
+ *
+ * Calcado de principios-activos.api.js: mismo tratamiento (descomposicion NFD) y mismo motivo
+ * (nombre_normalizado, 00046, se calcula con lower(public.f_unaccent(nombre)); ILIKE ignora
+ * mayusculas por su cuenta pero no acentos).
+ */
+function quitarAcentos(texto) {
+  return texto.normalize("NFD").replace(new RegExp("[\\u0300-\\u036f]", "g"), "");
+}
+
+/** Escapa los comodines de ILIKE (%, _) para que una busqueda literal no se interprete como patron. */
+function escaparPatron(texto) {
+  return texto.replace(/[%_]/g, " ").trim();
+}
+
+/** Traduce del camelCase de las pantallas al snake_case de la tabla, omitiendo lo no enviado. */
+function aColumnasDeTabla(datos = {}) {
+  const mapa = {
+    nombre: "nombre",
+    tipoArticulo: "tipo_articulo",
+    concentracion: "concentracion",
+    presentacionId: "presentacion_id",
+    marca: "marca",
+    formaFarmaceutica: "forma_farmaceutica",
+    esPediatrico: "es_pediatrico",
+  };
+
+  const fila = {};
+  for (const [campo, columna] of Object.entries(mapa)) {
+    // Solo se envia lo que venga en el objeto: un update parcial no debe borrar lo que no toca.
+    if (Object.prototype.hasOwnProperty.call(datos, campo)) fila[columna] = datos[campo];
+  }
+  return fila;
+}
+
+/**
+ * Aplana el embed de presentacion que trae COLUMNAS_DEL_MEDICAMENTO (presentaciones(nombre)) a
+ * un string plano. PostgREST siempre devuelve un embed anidado, nunca aplanado en la fila -- el
+ * resto del catalogo (catalogoMedicamentos.js, la tabla del Catalogo) espera
+ * medicamento.presentacion como string, igual que antes de la 00144.
+ */
+function aplanarPresentacion(fila) {
+  if (!fila) return fila;
+  return { ...fila, presentacion: fila.presentacion?.nombre ?? null };
+}
+
+/**
+ * Traduce una fila de medicamentos en snake_case a las claves camelCase de
+ * COLUMNAS_DEL_MEDICAMENTO.
+ *
+ * fn_registrar_medicamento retorna el tipo completo de la tabla (RETURNS medicamentos, 00050),
+ * asi que entrega las columnas tal cual se llaman en Postgres, SIN el embed a presentaciones que
+ * si trae un .select(COLUMNAS_DEL_MEDICAMENTO) -- un RPC no hace joins. `presentacion` (el
+ * nombre resuelto) queda null aqui a proposito: quien llama a registrarMedicamento() siempre
+ * recarga la lista completa despues (InventarioPage.jsx), que es donde ese nombre si llega.
+ */
+function aMedicamento(fila) {
+  if (!fila) return null;
+
+  return {
+    id: fila.id,
+    nombre: fila.nombre,
+    tipoArticulo: fila.tipo_articulo,
+    concentracion: fila.concentracion,
+    presentacionId: fila.presentacion_id,
+    presentacion: null,
+    marca: fila.marca,
+    formaFarmaceutica: fila.forma_farmaceutica,
+    esPediatrico: fila.es_pediatrico,
+    activo: fila.activo,
+    createdAt: fila.created_at,
+    updatedAt: fila.updated_at,
+  };
+}
+
+/**
+ * Arma una consulta nueva sobre medicamentos con los filtros directos aplicados.
+ *
+ * Se construye desde cero cada vez que hace falta (nunca se reutiliza un query builder ya
+ * encadenado): los de supabase-js no estan pensados para bifurcarse despues de armados.
+ */
+function consultaDeMedicamentos({ presentacionId, esPediatrico, soloActivos = true } = {}) {
+  let consulta = obtenerSupabase().from("medicamentos").select(COLUMNAS_DEL_MEDICAMENTO);
+
+  if (soloActivos) consulta = consulta.eq("activo", true);
+  if (presentacionId) consulta = consulta.eq("presentacion_id", presentacionId);
+  if (typeof esPediatrico === "boolean") consulta = consulta.eq("es_pediatrico", esPediatrico);
+
+  return consulta;
+}
+
+/**
+ * Ids de los medicamentos cuyo principio activo coincide con el texto, sin distinguir acentos.
+ *
+ * Dos consultas encadenadas (principios_activos -> medicamento_principio) en vez de un JOIN
+ * filtrado: PostgREST no combina limpiamente un OR sobre columnas propias de medicamentos con
+ * un OR sobre una tabla embebida sin forzar un inner join, que excluiria del resultado a los
+ * medicamentos que coinciden por nombre pero no tienen match por principio activo. Mismo
+ * criterio "sin RPC solo para busqueda" que documenta 00046_catalogo_principios_activos.sql,
+ * extendido al caso de dos tablas.
+ */
+async function idsPorPrincipioActivo(texto) {
+  const supabase = obtenerSupabase();
+
+  const { data: principios, error: errorPrincipios } = await supabase
+    .from("principios_activos")
+    .select("id")
+    .ilike("nombre_normalizado", `%${texto}%`);
+  if (errorPrincipios) throw errorPrincipios;
+  if (!principios || principios.length === 0) return [];
+
+  const { data: vinculos, error: errorVinculos } = await supabase
+    .from("medicamento_principio")
+    .select("medicamento_id")
+    .in(
+      "principio_id",
+      principios.map((principio) => principio.id),
+    );
+  if (errorVinculos) throw errorVinculos;
+
+  return [...new Set((vinculos ?? []).map((vinculo) => vinculo.medicamento_id))];
+}
+
+/**
+ * Lista los medicamentos del catalogo, opcionalmente filtrados.
+ *
+ * `busqueda` compara contra nombre, marca y concentracion (mismo alcance que ya promete el
+ * placeholder de FILTROS_MEDICAMENTOS: "Nombre, marca o concentracion") y tambien contra el
+ * principio activo asociado, fusionando ambos resultados sin duplicar. `soloActivos` es true
+ * por defecto: el catalogo no muestra medicamentos desactivados salvo que se pida lo contrario
+ * explicitamente.
+ *
+ * @param {{ busqueda?: string, presentacionId?: string, esPediatrico?: boolean, soloActivos?: boolean }} [filtros]
+ * @returns {Promise<{ medicamentos: object[], error: object|null }>}
+ */
+export async function listarMedicamentos({
+  busqueda,
+  presentacionId,
+  esPediatrico,
+  soloActivos = true,
+} = {}) {
+  try {
+    const filtros = { presentacionId, esPediatrico, soloActivos };
+    const texto = typeof busqueda === "string" ? escaparPatron(quitarAcentos(busqueda)) : "";
+
+    if (texto === "") {
+      const { data, error } = await consultaDeMedicamentos(filtros).order("nombre", {
+        ascending: true,
+      });
+      if (error) return { medicamentos: [], error: normalizarError(error) };
+      return { medicamentos: (data ?? []).map(aplanarPresentacion), error: null };
+    }
+
+    const [porTexto, idsDePrincipio] = await Promise.all([
+      consultaDeMedicamentos(filtros).or(
+        `nombre.ilike.%${texto}%,marca.ilike.%${texto}%,concentracion.ilike.%${texto}%`,
+      ),
+      idsPorPrincipioActivo(texto),
+    ]);
+
+    if (porTexto.error) return { medicamentos: [], error: normalizarError(porTexto.error) };
+
+    let filasPorPrincipio = [];
+    if (idsDePrincipio.length > 0) {
+      const porPrincipio = await consultaDeMedicamentos(filtros).in("id", idsDePrincipio);
+      if (porPrincipio.error) {
+        return { medicamentos: [], error: normalizarError(porPrincipio.error) };
+      }
+      filasPorPrincipio = porPrincipio.data ?? [];
+    }
+
+    const combinados = new Map();
+    for (const fila of [...(porTexto.data ?? []), ...filasPorPrincipio]) {
+      combinados.set(fila.id, fila);
+    }
+
+    return {
+      medicamentos: [...combinados.values()]
+        .map(aplanarPresentacion)
+        .sort((a, b) => a.nombre.localeCompare(b.nombre)),
+      error: null,
+    };
+  } catch (error) {
+    // idsPorPrincipioActivo lanza en vez de devolver { error }; un fallo de red tambien llega
+    // aqui como excepcion del fetch.
+    return { medicamentos: [], error: normalizarError(error) };
+  }
+}
+
+/**
+ * Registra un medicamento con sus principios activos en una sola transaccion
+ * (fn_registrar_medicamento, migracion 00050): si algun principio_id no existe, o si el arreglo
+ * viene vacio, no queda un medicamento huerfano sin principio activo.
+ *
+ * La combinacion nombre+concentracion+presentacion+marca no se repite: lo exige el UNIQUE de
+ * medicamentos (00016), dentro de la misma funcion. La validacion amable de formulario (campos
+ * vacios, largo maximo) queda para el hook que construya la pantalla, con CAMPOS_MEDICAMENTO de
+ * campos.js, igual que el resto de modulos del repo -- salvo principiosActivosIds, que se
+ * comprueba aqui porque un arreglo vacio produciria un error generico de base de datos en vez
+ * de uno claro.
+ *
+ * @param {object} datos Campos en camelCase, los ids de CAMPOS_MEDICAMENTO, mas
+ *   `principiosActivosIds` (arreglo de UUID; al menos uno para un medicamento, ninguno para un
+ *   insumo, 00164).
+ * @returns {Promise<{ medicamento: object|null, error: object|null }>}
+ */
+export async function registrarMedicamento(datos = {}) {
+  const principiosActivosIds = Array.isArray(datos.principiosActivosIds)
+    ? datos.principiosActivosIds
+    : [];
+
+  // Solo un medicamento pide principio activo: un insumo no lo tiene (00164).
+  const esMedicamento = pideDatosFarmacologicos(datos.tipoArticulo);
+  if (esMedicamento && principiosActivosIds.length === 0) {
+    return {
+      medicamento: null,
+      error: construirError(CODIGOS_DE_ERROR_DE_SUPABASE.CAMPO_REQUERIDO),
+    };
+  }
+
+  try {
+    const { data, error } = await obtenerSupabase()
+      .rpc("fn_registrar_medicamento", {
+        p_nombre: datos.nombre,
+        p_concentracion: esMedicamento ? datos.concentracion : null,
+        p_presentacion_id: datos.presentacionId,
+        p_marca: datos.marca,
+        p_principios_ids: esMedicamento ? principiosActivosIds : [],
+        p_forma_farmaceutica: datos.formaFarmaceutica ?? null,
+        p_es_pediatrico: datos.esPediatrico ?? false,
+        p_tipo_articulo: datos.tipoArticulo ?? "medicamento",
+      })
+      .single();
+
+    if (error) return { medicamento: null, error: normalizarError(error) };
+    return { medicamento: aMedicamento(data), error: null };
+  } catch (error) {
+    return { medicamento: null, error: normalizarError(error) };
+  }
+}
+
+/**
+ * Principios activos asociados a un medicamento (medicamento_principio, 00016).
+ *
+ * listarMedicamentos() no los trae -- COLUMNAS_DEL_MEDICAMENTO son solo columnas propias de
+ * medicamentos, y la relacion es aparte -- asi que sin esto la pantalla de edicion no tenia
+ * forma de mostrar cual quedo asociado al registrar. registrarMedicamento() siempre manda un
+ * arreglo de un solo id (el formulario de alta es de seleccion unica), asi que en la practica
+ * cada medicamento tiene exactamente un principio activo, aunque el esquema permita varios.
+ *
+ * @param {string} medicamentoId UUID del medicamento.
+ * @returns {Promise<{ principiosActivos: object[], error: object|null }>}
+ */
+export async function listarPrincipiosDeMedicamento(medicamentoId) {
+  if (!medicamentoId) return { principiosActivos: [], error: null };
+
+  try {
+    const { data, error } = await obtenerSupabase()
+      .from("medicamento_principio")
+      .select("principioActivo:principios_activos(id, nombre)")
+      .eq("medicamento_id", medicamentoId);
+
+    if (error) return { principiosActivos: [], error: normalizarError(error) };
+
+    const principiosActivos = (data ?? []).map((fila) => fila.principioActivo).filter(Boolean);
+    return { principiosActivos, error: null };
+  } catch (error) {
+    return { principiosActivos: [], error: normalizarError(error) };
+  }
+}
+
+/**
+ * Deja al medicamento con este principio activo y ningun otro, en una transaccion
+ * (fn_cambiar_principio_de_medicamento, 00166). A un insumo le quita los que tenga: con
+ * `principioId` nulo es lo que corresponde a un articulo que paso a ser insumo.
+ *
+ * @param {string} medicamentoId UUID del medicamento.
+ * @param {string|null} principioId UUID del principio activo; `null` para un insumo.
+ * @returns {Promise<{ error: object|null }>}
+ */
+export async function cambiarPrincipioDeMedicamento(medicamentoId, principioId) {
+  try {
+    const { error } = await obtenerSupabase().rpc("fn_cambiar_principio_de_medicamento", {
+      p_medicamento_id: medicamentoId,
+      p_principio_id: principioId || null,
+    });
+    return { error: error ? normalizarError(error) : null };
+  } catch (error) {
+    return { error: normalizarError(error) };
+  }
+}
+
+/**
+ * Actualiza los datos de un medicamento. No toca sus principios activos: eso lo hace
+ * cambiarPrincipioDeMedicamento().
+ *
+ * @param {string} id UUID del medicamento.
+ * @param {object} datos Campos en camelCase, los ids de CAMPOS_MEDICAMENTO.
+ * @returns {Promise<{ medicamento: object|null, error: object|null }>}
+ */
+export async function actualizarMedicamento(id, datos) {
+  const fila = aColumnasDeTabla(datos);
+  if (Object.keys(fila).length === 0) return { medicamento: null, error: null };
+
+  try {
+    const { data, error } = await obtenerSupabase()
+      .from("medicamentos")
+      .update(fila)
+      .eq("id", id)
+      .select(COLUMNAS_DEL_MEDICAMENTO)
+      .maybeSingle();
+
+    if (error) return { medicamento: null, error: normalizarError(error) };
+    return { medicamento: aplanarPresentacion(data), error: null };
+  } catch (error) {
+    return { medicamento: null, error: normalizarError(error) };
+  }
+}
+
+/**
+ * Desactiva un medicamento, o rechaza la operacion con un error explicativo si todavia tiene
+ * existencias disponibles (fn_medicamento_tiene_existencias, migracion 00050).
+ *
+ * Mismo patron que cambiarEstadoProyecto (packages/shared/proyectos/api.js) y el
+ * guard de personal_registro_atenciones (packages/shared/jornadas/api.js): se reusa la
+ * clasificacion LLAVE_FORANEA (el medicamento esta relacionado con existencias) con un mensaje
+ * propio.
+ *
+ * @param {string} id UUID del medicamento.
+ * @returns {Promise<{ medicamento: object|null, error: object|null }>}
+ */
+export async function desactivarMedicamento(id) {
+  if (!id) return { medicamento: null, error: null };
+
+  try {
+    const supabase = obtenerSupabase();
+
+    const { data: tieneExistencias, error: errorDeChequeo } = await supabase.rpc(
+      "fn_medicamento_tiene_existencias",
+      { p_medicamento_id: id },
+    );
+    if (errorDeChequeo) return { medicamento: null, error: normalizarError(errorDeChequeo) };
+
+    if (tieneExistencias) {
+      return {
+        medicamento: null,
+        error: {
+          ...construirError(CODIGOS_DE_ERROR_DE_SUPABASE.LLAVE_FORANEA),
+          mensaje:
+            "No se puede desactivar un medicamento con existencias disponibles en inventario.",
+        },
+      };
+    }
+
+    const { data, error } = await supabase
+      .from("medicamentos")
+      .update({ activo: false })
+      .eq("id", id)
+      .select(COLUMNAS_DEL_MEDICAMENTO)
+      .maybeSingle();
+
+    if (error) return { medicamento: null, error: normalizarError(error) };
+    return { medicamento: aplanarPresentacion(data), error: null };
+  } catch (error) {
+    return { medicamento: null, error: normalizarError(error) };
+  }
+}
+
+/**
+ * Reactiva un medicamento previamente desactivado (issue #756: no existia contraparte de
+ * desactivarMedicamento(), asi que un medicamento dado de baja no tenia forma de volver).
+ * Sin comprobacion de existencias: a diferencia de desactivar (que se niega si el medicamento
+ * todavia tiene existencias), reactivar nunca puede dejar el inventario en un estado invalido.
+ *
+ * @param {string} id UUID del medicamento.
+ * @returns {Promise<{ medicamento: object|null, error: object|null }>}
+ */
+export async function reactivarMedicamento(id) {
+  if (!id) return { medicamento: null, error: null };
+
+  try {
+    const { data, error } = await obtenerSupabase()
+      .from("medicamentos")
+      .update({ activo: true })
+      .eq("id", id)
+      .select(COLUMNAS_DEL_MEDICAMENTO)
+      .maybeSingle();
+
+    if (error) return { medicamento: null, error: normalizarError(error) };
+    return { medicamento: aplanarPresentacion(data), error: null };
+  } catch (error) {
+    return { medicamento: null, error: normalizarError(error) };
+  }
+}

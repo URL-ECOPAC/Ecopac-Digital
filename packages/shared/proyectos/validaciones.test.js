@@ -1,0 +1,243 @@
+// Pruebas de las reglas de negocio de los proyectos sociales.
+//
+// Se importan los modulos directamente y no el barril packages/shared/index.js: el barril
+// arrastra @supabase/supabase-js y el modulo de entorno, y estas pruebas tienen que correr sin
+// .env y sin conexion.
+//
+// Ningun dato real: los proyectos y las personas son inventados.
+
+import { describe, expect, it } from "vitest";
+
+import {
+  esTransicionDeProyectoValida,
+  LONGITUD_MAXIMA_NOMBRE_PROYECTO,
+  proyectoAdmiteCambios,
+  proyectosQueAdmitenCambios,
+  TODOS_LOS_ESTADOS_PROYECTO,
+  TRANSICIONES_PROYECTO,
+  transicionesDeProyectoDesde,
+  validarCambioDeEstadoProyecto,
+  validarInsumoDeProyecto,
+  validarProyecto,
+} from "./validaciones.js";
+import { ESTADOS_PROYECTO } from "../enums.js";
+
+/** Proyecto valido minimo, para que cada prueba altere solo el campo que le interesa. */
+function proyectoValido(cambios = {}) {
+  return {
+    nombre: "Jornadas de salud en Solola",
+    descripcion: "Cuatro jornadas medicas en el altiplano",
+    fechaInicio: "2026-01-15",
+    fechaFin: "2026-06-30",
+    estado: ESTADOS_PROYECTO.PLANIFICADO,
+    ...cambios,
+  };
+}
+
+describe("validarProyecto", () => {
+  it("no reporta nada cuando el proyecto esta completo", () => {
+    expect(validarProyecto(proyectoValido())).toEqual({});
+  });
+
+  it("exige el nombre", () => {
+    expect(validarProyecto(proyectoValido({ nombre: "" }))).toHaveProperty("nombre");
+    expect(validarProyecto(proyectoValido({ nombre: "   " }))).toHaveProperty("nombre");
+  });
+
+  it("aplica el limite del VARCHAR(150) de la tabla", () => {
+    const justo = "a".repeat(LONGITUD_MAXIMA_NOMBRE_PROYECTO);
+    const unoDeMas = "a".repeat(LONGITUD_MAXIMA_NOMBRE_PROYECTO + 1);
+
+    expect(validarProyecto(proyectoValido({ nombre: justo }))).toEqual({});
+    expect(validarProyecto(proyectoValido({ nombre: unoDeMas }))).toHaveProperty("nombre");
+  });
+
+  it("rechaza una fecha de fin anterior a la de inicio", () => {
+    const errores = validarProyecto(
+      proyectoValido({ fechaInicio: "2026-06-30", fechaFin: "2026-01-15" }),
+    );
+
+    expect(errores).toHaveProperty("fechaFin");
+  });
+
+  it("acepta que un proyecto empiece y termine el mismo dia", () => {
+    // Con new Date() en vez de aFechaLocal() esto podria fallar por el desfase de zona horaria.
+    expect(
+      validarProyecto(proyectoValido({ fechaInicio: "2026-03-10", fechaFin: "2026-03-10" })),
+    ).toEqual({});
+  });
+
+  it("las dos fechas son opcionales", () => {
+    expect(validarProyecto(proyectoValido({ fechaInicio: null, fechaFin: null }))).toEqual({});
+  });
+
+  it("rechaza un estado que el enum estado_proyecto no tiene", () => {
+    expect(validarProyecto(proyectoValido({ estado: "pausado" }))).toHaveProperty("estado");
+  });
+
+  it("acepta todos los estados del enum", () => {
+    for (const estado of TODOS_LOS_ESTADOS_PROYECTO) {
+      expect(validarProyecto(proyectoValido({ estado }))).toEqual({});
+    }
+  });
+
+  it("espeja el CHECK del porcentaje de avance", () => {
+    expect(validarProyecto(proyectoValido({ porcentajeAvance: 0 }))).toEqual({});
+    expect(validarProyecto(proyectoValido({ porcentajeAvance: 100 }))).toEqual({});
+    expect(validarProyecto(proyectoValido({ porcentajeAvance: -1 }))).toHaveProperty(
+      "porcentajeAvance",
+    );
+    expect(validarProyecto(proyectoValido({ porcentajeAvance: 101 }))).toHaveProperty(
+      "porcentajeAvance",
+    );
+    expect(validarProyecto(proyectoValido({ porcentajeAvance: 12.5 }))).toHaveProperty(
+      "porcentajeAvance",
+    );
+  });
+});
+
+describe("transiciones de estado", () => {
+  // Espejo del trigger tr_validar_transicion_estado_proyecto (migracion 00029). Si esta prueba
+  // se cae, o cambio el trigger o cambio la tabla en JS: las dos tienen que decir lo mismo.
+
+  it("permite exactamente las cuatro transiciones del trigger", () => {
+    expect(esTransicionDeProyectoValida("planificado", "en curso")).toBe(true);
+    expect(esTransicionDeProyectoValida("en curso", "finalizado")).toBe(true);
+    expect(esTransicionDeProyectoValida("planificado", "cancelado")).toBe(true);
+    expect(esTransicionDeProyectoValida("en curso", "cancelado")).toBe(true);
+  });
+
+  it("no deja saltarse en curso ni retroceder", () => {
+    expect(esTransicionDeProyectoValida("planificado", "finalizado")).toBe(false);
+    expect(esTransicionDeProyectoValida("en curso", "planificado")).toBe(false);
+  });
+
+  it("finalizado y cancelado son terminales", () => {
+    expect(transicionesDeProyectoDesde("finalizado")).toEqual([]);
+    expect(transicionesDeProyectoDesde("cancelado")).toEqual([]);
+  });
+
+  it("un estado desconocido no ofrece ninguna transicion", () => {
+    expect(transicionesDeProyectoDesde("pausado")).toEqual([]);
+  });
+
+  // Espejo de los triggers de la 00154 y la 00172.
+  it("un proyecto cancelado o finalizado deja de admitir cambios", () => {
+    expect(proyectoAdmiteCambios(ESTADOS_PROYECTO.CANCELADO)).toBe(false);
+    expect(proyectoAdmiteCambios(ESTADOS_PROYECTO.FINALIZADO)).toBe(false);
+    for (const estado of [ESTADOS_PROYECTO.PLANIFICADO, ESTADOS_PROYECTO.EN_CURSO]) {
+      expect(proyectoAdmiteCambios(estado)).toBe(true);
+    }
+  });
+
+  it("los cerrados no se ofrecen para asociar, salvo el que ya estaba elegido", () => {
+    const proyectos = [
+      { id: "a", estado: ESTADOS_PROYECTO.EN_CURSO },
+      { id: "b", estado: ESTADOS_PROYECTO.CANCELADO },
+      { id: "c", estado: ESTADOS_PROYECTO.FINALIZADO },
+    ];
+    expect(proyectosQueAdmitenCambios(proyectos).map((p) => p.id)).toEqual(["a"]);
+    expect(proyectosQueAdmitenCambios(proyectos, "b").map((p) => p.id)).toEqual(["a", "b"]);
+    expect(proyectosQueAdmitenCambios(null)).toEqual([]);
+  });
+
+  it("el mapa declara los cuatro estados del enum, sin sobrar ninguno", () => {
+    // No se puede comprobar desde transicionesDeProyectoDesde(): devuelve [] igual para un
+    // estado terminal que para uno que se olvidaron de declarar. Los dos casos de arriba
+    // -"finalizado y cancelado son terminales" y "un estado desconocido"- pasarian identicos si
+    // el mapa se quedara vacio.
+    expect(Object.keys(TRANSICIONES_PROYECTO).sort()).toEqual(
+      [...TODOS_LOS_ESTADOS_PROYECTO].sort(),
+    );
+  });
+
+  it("ningun destino declarado cae fuera del enum", () => {
+    for (const destinos of Object.values(TRANSICIONES_PROYECTO)) {
+      for (const destino of destinos) {
+        expect(TODOS_LOS_ESTADOS_PROYECTO).toContain(destino);
+      }
+    }
+  });
+});
+
+describe("validarCambioDeEstadoProyecto", () => {
+  it("acepta una transicion legal", () => {
+    expect(validarCambioDeEstadoProyecto("planificado", "en curso")).toEqual({});
+  });
+
+  it("dice a que estados si se puede pasar", () => {
+    const { estado } = validarCambioDeEstadoProyecto("planificado", "finalizado");
+
+    expect(estado).toContain("en curso");
+    expect(estado).toContain("cancelado");
+  });
+
+  it("explica que un proyecto terminal ya no cambia", () => {
+    expect(validarCambioDeEstadoProyecto("finalizado", "en curso").estado).toContain(
+      "ya no cambia",
+    );
+  });
+
+  it("avisa si el proyecto ya esta en ese estado", () => {
+    expect(validarCambioDeEstadoProyecto("en curso", "en curso")).toHaveProperty("estado");
+  });
+
+  it("rechaza un estado que no es del enum", () => {
+    expect(validarCambioDeEstadoProyecto("planificado", "pausado")).toHaveProperty("estado");
+  });
+});
+
+describe("validarInsumoDeProyecto", () => {
+  const VALIDO = {
+    medicamentoId: "m-1",
+    cantidad: 10,
+    unidad: "cajas",
+    costoUnitarioEstimado: "12.50",
+    nota: "",
+  };
+
+  it("un insumo completo y uno sin costo ni nota son validos", () => {
+    expect(validarInsumoDeProyecto(VALIDO, { esAlta: true })).toEqual({});
+    expect(
+      validarInsumoDeProyecto(
+        { medicamentoId: "m-1", cantidad: "3", unidad: "u", costoUnitarioEstimado: "" },
+        { esAlta: true },
+      ),
+    ).toEqual({});
+  });
+
+  it("al agregar exige el insumo; al editar no, porque el articulo no cambia", () => {
+    const sinArticulo = { ...VALIDO, medicamentoId: "" };
+
+    expect(validarInsumoDeProyecto(sinArticulo, { esAlta: true })).toHaveProperty("medicamentoId");
+    expect(validarInsumoDeProyecto(sinArticulo)).toEqual({});
+  });
+
+  it("la cantidad es un entero mayor que cero", () => {
+    for (const cantidad of [0, -1, 1.5, "abc", ""]) {
+      expect(validarInsumoDeProyecto({ ...VALIDO, cantidad })).toHaveProperty("cantidad");
+    }
+  });
+
+  it("la unidad es obligatoria y tiene tope de largo", () => {
+    expect(validarInsumoDeProyecto({ ...VALIDO, unidad: "   " })).toHaveProperty("unidad");
+    expect(validarInsumoDeProyecto({ ...VALIDO, unidad: "x".repeat(31) })).toHaveProperty("unidad");
+  });
+
+  it("el costo es opcional, no negativo y con hasta dos decimales; cero es valido", () => {
+    expect(validarInsumoDeProyecto({ ...VALIDO, costoUnitarioEstimado: "0" })).toEqual({});
+    expect(validarInsumoDeProyecto({ ...VALIDO, costoUnitarioEstimado: -1 })).toHaveProperty(
+      "costoUnitarioEstimado",
+    );
+    expect(validarInsumoDeProyecto({ ...VALIDO, costoUnitarioEstimado: "abc" })).toHaveProperty(
+      "costoUnitarioEstimado",
+    );
+    expect(validarInsumoDeProyecto({ ...VALIDO, costoUnitarioEstimado: "1.234" })).toHaveProperty(
+      "costoUnitarioEstimado",
+    );
+  });
+
+  it("la nota tiene tope de largo", () => {
+    expect(validarInsumoDeProyecto({ ...VALIDO, nota: "x".repeat(501) })).toHaveProperty("nota");
+  });
+});

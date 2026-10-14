@@ -1,0 +1,289 @@
+import { obtenerSupabase } from "../api/cliente.js";
+import { normalizarError } from "../api/errores-de-supabase.js";
+import { puedeRegistrarDonaciones, puedeVerDonaciones } from "./permisos.js";
+import { ESTADOS_DE_DONACION, TIPOS_DE_DONACION, TIPOS_DE_DONANTE } from "../enums.js";
+
+/** Totales en cero, mismo shape que historial.api.js -> calcularTotalesPorTipo(). */
+const TOTALES_POR_TIPO_VACIOS = Object.freeze({
+  dinero: 0,
+  medicamentos: 0,
+  insumos: 0,
+  servicios: 0,
+});
+
+// Este archivo tenia su propia lista, `["administrador", "junta_directiva", "socio_fundador"]`,
+// con guiones bajos. El enum rol_usuario de la 00001 los escribe con espacio -'junta directiva',
+// 'socio fundador'-, asi que los dos roles consultivos no coincidian nunca y la API les negaba
+// la lectura del catalogo de donantes aunque la politica RLS de la 00083 si se la concede. Era
+// la misma clase de error que la #598 encontro en los hooks, en otra variante de escritura.
+// Ahora los dos guardas salen de permisos.js, que es el espejo de esa politica.
+
+function validarRolEscritura(rolUsuario) {
+  if (!puedeRegistrarDonaciones(rolUsuario)) {
+    return {
+      datos: null,
+      error: { mensaje: "Operación exclusiva para el rol Administrador." },
+    };
+  }
+  return null;
+}
+
+function validarRolLectura(rolUsuario) {
+  if (!puedeVerDonaciones(rolUsuario)) {
+    return {
+      datos: null,
+      error: { mensaje: "No tienes permisos de lectura para el catálogo de donantes." },
+    };
+  }
+  return null;
+}
+
+/**
+ * Columnas escribibles de `donantes` (00022_donantes_donaciones.sql). Se enumeran para que un
+ * campo que el formulario invente no viaje hasta PostgREST: la issue #509 entro por
+ * `documento_identidad`, que nunca existio en el esquema y hacia fallar el alta entera con
+ * 42703.
+ */
+const COLUMNAS_DE_DONANTE = [
+  "nombre",
+  "tipo",
+  "contacto",
+  "telefono",
+  "email",
+  "direccion",
+  "activo",
+];
+
+/**
+ * Deja de un objeto solo las claves que son columnas de `donantes`.
+ *
+ * @param {object} datos
+ * @returns {object}
+ */
+function soloColumnasDeDonante(datos = {}) {
+  return Object.fromEntries(
+    Object.entries(datos).filter(([clave]) => COLUMNAS_DE_DONANTE.includes(clave)),
+  );
+}
+
+/**
+ * Registra un nuevo donante (persona u organización).
+ *
+ * @param {object} datosDonante
+ * @param {object} opciones
+ * @param {string} opciones.rolUsuario
+ * @returns {Promise<{ datos: object|null, error: object|null }>}
+ */
+export async function registrarDonante(datosDonante, { rolUsuario }) {
+  const errorRol = validarRolEscritura(rolUsuario);
+  if (errorRol) return errorRol;
+
+  try {
+    const { tipo, nombre, contacto, telefono, email, direccion } = datosDonante;
+
+    if (!Object.values(TIPOS_DE_DONANTE).includes(tipo)) {
+      return {
+        datos: null,
+        error: { mensaje: "El tipo de donante debe ser 'persona' o 'organización'." },
+      };
+    }
+
+    if (!nombre || !nombre.trim()) {
+      return {
+        datos: null,
+        error: { mensaje: "El nombre del donante es obligatorio." },
+      };
+    }
+
+    const supabase = obtenerSupabase();
+    const { data, error } = await supabase
+      .from("donantes")
+      .insert({
+        tipo,
+        nombre,
+        contacto,
+        telefono,
+        email,
+        direccion,
+        activo: true,
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return { datos: data, error: null };
+  } catch (error) {
+    return { datos: null, error: normalizarError(error) };
+  }
+}
+
+/**
+ * Consulta la lista de donantes con opción de filtro por nombre.
+ *
+ * @param {object} [opciones]
+ * @param {string} [opciones.busqueda]
+ * @param {boolean} [opciones.soloActivos]
+ * @param {object} contexto
+ * @param {string} contexto.rolUsuario
+ * @returns {Promise<{ datos: object[], error: object|null }>}
+ */
+export async function listarDonantes({ busqueda, soloActivos = true } = {}, { rolUsuario }) {
+  const errorRol = validarRolLectura(rolUsuario);
+  if (errorRol) return errorRol;
+
+  try {
+    const supabase = obtenerSupabase();
+    let query = supabase.from("donantes").select("*");
+
+    if (soloActivos) {
+      query = query.eq("activo", true);
+    }
+
+    if (busqueda && busqueda.trim()) {
+      query = query.ilike("nombre", `%${busqueda.trim()}%`);
+    }
+
+    const { data, error } = await query.order("nombre", { ascending: true });
+    if (error) throw error;
+
+    return { datos: data || [], error: null };
+  } catch (error) {
+    // Lista vacia y no null, por lo mismo que listarMovimientos(): quien la consume la recorre.
+    return { datos: [], error: normalizarError(error) };
+  }
+}
+
+/**
+ * Actualiza la información de un donante existente.
+ *
+ * @param {string} idDonante
+ * @param {object} datosNuevos
+ * @param {object} opciones
+ * @param {string} opciones.rolUsuario
+ * @returns {Promise<{ datos: object|null, error: object|null }>}
+ */
+export async function actualizarDonante(idDonante, datosNuevos, { rolUsuario }) {
+  const errorRol = validarRolEscritura(rolUsuario);
+  if (errorRol) return errorRol;
+
+  try {
+    const supabase = obtenerSupabase();
+
+    if (datosNuevos.tipo && !Object.values(TIPOS_DE_DONANTE).includes(datosNuevos.tipo)) {
+      return {
+        datos: null,
+        error: { mensaje: "El tipo de donante debe ser 'persona' o 'organización'." },
+      };
+    }
+
+    const { data, error } = await supabase
+      .from("donantes")
+      .update(soloColumnasDeDonante(datosNuevos))
+      .eq("id", idDonante)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return { datos: data, error: null };
+  } catch (error) {
+    return { datos: null, error: normalizarError(error) };
+  }
+}
+
+/**
+ * Dar de baja a un donante (borrado lógico, seteando activo = false).
+ *
+ * @param {string} idDonante
+ * @param {object} opciones
+ * @param {string} opciones.rolUsuario
+ * @returns {Promise<{ datos: object|null, error: object|null }>}
+ */
+export async function darDeBajaDonante(idDonante, { rolUsuario }) {
+  return actualizarDonante(idDonante, { activo: false }, { rolUsuario });
+}
+
+/**
+ * Vuelve a activar a un donante dado de baja (activo = true). Contraparte de darDeBajaDonante():
+ * sin ella, una baja por error no tenia vuelta atras desde la pantalla.
+ *
+ * @param {string} idDonante
+ * @param {object} opciones
+ * @param {string} opciones.rolUsuario
+ * @returns {Promise<{ datos: object|null, error: object|null }>}
+ */
+export async function reactivarDonante(idDonante, { rolUsuario }) {
+  return actualizarDonante(idDonante, { activo: true }, { rolUsuario });
+}
+
+/**
+ * Agrega `donaciones` (con su `donacion_detalle` embebido) por tipo, mismo criterio que
+ * historial.api.js -> calcularTotalesPorTipo(): dinero suma `monto`, medicamentos/insumos suman
+ * `cantidad`, servicios cuenta donaciones (no tiene unidades propias).
+ */
+function totalesPorTipoDe(donaciones = []) {
+  const totales = { ...TOTALES_POR_TIPO_VACIOS };
+
+  for (const donacion of donaciones) {
+    const renglones = donacion.detalle ?? [];
+    if (donacion.tipo === TIPOS_DE_DONACION.DINERO) {
+      totales.dinero += renglones.reduce((suma, r) => suma + Number(r.monto ?? 0), 0);
+    } else if (donacion.tipo === TIPOS_DE_DONACION.SERVICIOS) {
+      totales.servicios += 1;
+    } else if (
+      donacion.tipo === TIPOS_DE_DONACION.MEDICAMENTOS ||
+      donacion.tipo === TIPOS_DE_DONACION.INSUMOS
+    ) {
+      totales[donacion.tipo] += renglones.reduce((suma, r) => suma + Number(r.cantidad ?? 0), 0);
+    }
+  }
+
+  return totales;
+}
+
+/**
+ * Consulta el total acumulado (por tipo) y el historial de donaciones realizadas por un
+ * donante.
+ *
+ * `donaciones` no tiene columna de importe ni de cantidad -el dato vive por renglon en
+ * `donacion_detalle.monto`/`.cantidad` (00022)-, asi que el total no se lee de una columna de
+ * `donaciones`: se agrega aqui sobre `donacion_detalle`, igual que
+ * historial.api.js -> calcularTotalesPorTipo(). Antes esta funcion sumaba `d.monto_total`, una
+ * columna que nunca existio en `donaciones`, asi que `totalAcumulado` daba siempre 0 (issue
+ * #636).
+ *
+ * @param {string} idDonante
+ * @param {object} opciones
+ * @param {string} opciones.rolUsuario
+ * @returns {Promise<{ datos: object|null, error: object|null }>}
+ */
+export async function obtenerHistoricoDonante(idDonante, { rolUsuario }) {
+  const errorRol = validarRolLectura(rolUsuario);
+  if (errorRol) return errorRol;
+
+  try {
+    const supabase = obtenerSupabase();
+
+    const { data: donaciones, error } = await supabase
+      .from("donaciones")
+      .select("*, detalle:donacion_detalle(cantidad, monto)")
+      .eq("donante_id", idDonante)
+      .neq("estado", ESTADOS_DE_DONACION.ANULADA)
+      .order("created_at", { ascending: false });
+
+    if (error) throw error;
+
+    const totalesPorTipo = totalesPorTipoDe(donaciones || []);
+
+    return {
+      datos: {
+        // Alias de totalesPorTipo.dinero por compatibilidad con quien ya use totalAcumulado.
+        totalAcumulado: totalesPorTipo.dinero,
+        totalesPorTipo,
+        donaciones: donaciones || [],
+      },
+      error: null,
+    };
+  } catch (error) {
+    return { datos: null, error: normalizarError(error) };
+  }
+}

@@ -31,6 +31,17 @@ La llave anon/public es publica por diseno (puede viajar en el bundle del client
 2 valores (URL + llave anon/public) con el resto del equipo. Si aun no hay Supabase
 configurado, el esqueleto corre igualmente con valores vacios.
 
+El archivo va en la **raiz del monorepo** y de ahi lo leen las dos apps, tanto en local como en
+Docker: `apps/web/vite.config.js` apunta `envDir` a la raiz y `apps/mobile/metro.config.js` carga
+de ahi las variables `EXPO_PUBLIC_`. No hace falta duplicarlo dentro de `apps/`.
+
+Estas cuatro variables las lee y valida `packages/shared/entorno`. Cuando algo esta mal la
+aplicacion falla al arrancar, no a media consulta, y el mensaje nombra la variable exacta y el
+archivo donde definirla. El modulo tambien rechaza en codigo una llave `service_role` (o
+`sb_secret_...`) puesta por error en el `.env`: no basta con la regla escrita, porque esa llave
+salta todas las politicas RLS. Solo se acepta `http://` contra la instancia local de Supabase;
+para cualquier otro host se exige `https://`.
+
 ## Secrets de GitHub Actions (CI/CD)
 
 Los workflows de CI/CD leen los secrets desde **Settings > Secrets and variables > Actions**
@@ -53,9 +64,11 @@ verde, sin errores.
 
 - Para usar la app (web/mobile): basta con tener la URL + la llave anon/public en el `.env`;
   no se necesita acceso al dashboard.
-- Para tareas de base de datos (migraciones, ver/crear tablas, `supabase db push`,
-  `supabase start`) si se necesita ser miembro del proyecto: desde el dashboard,
+- Para tareas contra la base de datos remota (`supabase link`, `supabase db push`, ver o crear
+  tablas desde el dashboard) si se necesita ser miembro del proyecto: desde el dashboard,
   **Settings > Organization > Team** y agrega a la persona (o usa "Invite team members").
+- `supabase start`, `supabase db reset` y `supabase db lint --local` **no** necesitan cuenta ni
+  membresia: levantan un stack local en Docker y no hablan con la nube.
 - El password de la base y el access token solo los necesita quien administra el esquema/CI,
   no el equipo que solo desarrolla la app.
 
@@ -68,11 +81,11 @@ npm run docker:dev
 
 La web queda en http://localhost:5173 con hot reload.
 
-Postgres local opcional para probar el esquema sin internet:
-
-```bash
-docker compose --profile db-local up
-```
+Para el esquema completo (RLS, roles `anon`/`authenticated`/`service_role`, esquema `auth`), no
+un Postgres pelado: `supabase start` (ver arriba, "Acceso del equipo a Supabase"). El perfil
+`db-local` que este archivo describia antes se retiro en la issue #515: montaba
+`supabase/migrations` sobre `postgres:16-alpine` liso, que no tiene nada de lo que la primera
+migracion ya asume, asi que nunca llegaba a aplicar ni una.
 
 ## Ejecutar sin Docker
 
@@ -113,6 +126,7 @@ correr al mismo tiempo sin reemplazar sus contenedores.
 
 ```bash
 npm run lint              # linter de todos los workspaces
+npm test                  # pruebas de todos los workspaces
 npm run build             # build de todos los workspaces
 npm run dev:web           # web con hot reload
 npm run dev:mobile        # expo (mobile)
@@ -167,6 +181,119 @@ Detalles en [CONTRIBUTING.md](./CONTRIBUTING.md).
 - Expo no abre -> reiniciar con `npm run dev:mobile` y luego `npm run dev:mobile -- --clear`.
 - Las variables de entorno no cargan -> reiniciar el servidor despues de editar
   `.env.development`.
+
+## Configurar el proyecto Supabase remoto (lo que no viaja en el repositorio)
+
+`supabase/config.toml` gobierna **el stack local y el CI, no los proyectos remotos**: el
+despliegue solo corre `supabase db push`, nunca `supabase config push`. En `ecopac-dev` y
+`ecopac-prod` manda el Dashboard, y esto hay que ponerlo a mano una vez por proyecto.
+
+**La lista completa esta en [CONFIGURACION-SUPABASE.md](./CONFIGURACION-SUPABASE.md)**: una fila
+por ajuste, con la ruta exacta en el Dashboard, el valor, como se comprueba, y una columna por
+ambiente. Se recorre entera al aprovisionar un proyecto; aqui no se repite para que no haya dos
+listas que puedan contradecirse.
+
+Lo unico que conviene saber antes de abrirla, porque es lo que se rompe mas caro:
+
+- **El registro se cierra a mano.** `enable_signup = false` en `config.toml` **no protege a los
+  proyectos remotos**. La defensa que si viaja con las migraciones es la `00074`, que cierra el
+  alta publica en la base; apagarlo en el Dashboard es la segunda capa, no la unica.
+- **No confundir "Allow new users to sign up" con "Enable email provider".** Lo segundo apaga el
+  login de todo el mundo.
+- **La llave de servicio que hay que usar es la `sb_secret_`, no la legacy `service_role`.** Las
+  dos funcionan contra la REST API, asi que equivocarse no se nota hasta que una Edge Function
+  responde 401.
+
+### El correo: por que hace falta SMTP propio
+
+Supabase trae un servicio de correo integrado, pero **solo envia a miembros de la organizacion del
+proyecto** y va limitado a unos pocos mensajes por hora. Sirve para que el equipo pruebe entre si;
+no sirve para el personal de la organizacion.
+
+El sistema manda muy poco correo -invitacion al crear una cuenta y recuperacion de contrasena, un
+punado al mes-, asi que cualquier capa gratuita alcanza de sobra.
+
+**Ojo: son dos canales de correo distintos, y se configuran en dos sitios distintos.**
+
+| Canal | Quien lo manda | Donde se configura | Puerto |
+| --- | --- | --- | --- |
+| Recuperacion de contrasena | Auth (GoTrue) | Authentication > SMTP Settings | 465 o 587 |
+| Invitacion y notificaciones | las Edge Functions | Edge Functions > Secrets (`SMTP_*`) | **465 y solo 465** |
+
+El segundo no admite 587: las Edge Functions de Supabase tienen bloqueados los puertos 25 y 587, y
+465 es el unico de envio que dejan abrir (`supabase/functions/_shared/correo.ts`, `crearTransporte`).
+Configurar el de Auth **no** configura el de las funciones.
+
+Sin SMTP configurado, `invitar-usuario` **crea igual la cuenta**: lo que no llega es el correo para
+establecer la contrasena, y esa se puede fijar desde el Dashboard mientras tanto.
+
+## Configurar el proyecto de Vercel (lo que no viaja en el repositorio)
+
+Igual que con Supabase, la mayor parte de esto vive en el Dashboard de Vercel y hay que ponerlo
+a mano una vez. Lo unico que si viaja versionado es `apps/web/vercel.json`, que resuelve el
+punto mas facil de olvidar: **el rewrite de SPA**.
+
+Sin ese rewrite, cualquier ruta que no sea `/` da 404 al recargar la pagina, al abrir un
+marcador o al pegar un enlace. `apps/web/dist/` solo contiene `index.html`, `favicon.svg` y
+`assets/`, asi que no existe ningun archivo en la ruta `/donantes` ni en `/pacientes/cronicos`:
+tiene que servirse `index.html` y dejar que React Router resuelva del lado del cliente.
+Navegando con clics desde `/` nunca falla -- React Router usa `pushState` y no le pide nada al
+servidor --, por eso es un fallo que se escapa facil en las pruebas. Es el mismo
+`try_files $uri $uri/ /index.html` que ya hace `apps/web/nginx.conf` para el Docker de
+produccion.
+
+`vercel.json` se lee **dentro del Root Directory** que se configure en el proyecto, y ese ajuste
+vive en el Dashboard: desde el repositorio no se puede saber cual se va a elegir. Por eso hay
+**dos**, y funciona con cualquiera de las dos opciones razonables:
+
+| Root Directory                | Archivo que aplica    | Que trae                                          |
+| ----------------------------- | --------------------- | ------------------------------------------------- |
+| La raiz del monorepo (por defecto) | `vercel.json`    | El rewrite, mas `buildCommand` y `outputDirectory` |
+| `apps/web`                    | `apps/web/vercel.json` | Solo el rewrite; del build se encarga el preset de Vite |
+
+Con un solo archivo, elegir la otra opcion dejaba el rewrite sin aplicarse **en silencio**: no
+hay error de build ni aviso, simplemente vuelven los 404. La duplicacion la vigila el paso
+"Comprobar el rewrite de SPA de Vercel" del CI (`npm run verificar:rewrite-vercel`), que falla
+si los dos archivos dejan de coincidir o si falta alguno.
+
+| Donde en el Dashboard             | Que poner                                            | Que se rompe si falta                          |
+| --------------------------------- | ---------------------------------------------------- | ---------------------------------------------- |
+| Settings > General > Root Directory | `apps/web`                                          | El build no encuentra la app                    |
+| Settings > Environment Variables > Preview | `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` de `ecopac-dev` | El preview de `develop` apunta a la base equivocada |
+| Settings > Environment Variables > Production | Las mismas dos, de `ecopac-prod`             | Produccion apunta a la base equivocada          |
+| Settings > Git > Production Branch | `main`                                              | `develop` se publicaria como produccion         |
+
+Las variables `VITE_*` se embeben en el bundle en tiempo de build, asi que un cambio de valor
+exige volver a desplegar: no basta con guardarlo en el Dashboard.
+
+Cuando el proyecto exista, anotar aqui la URL de cada ambiente.
+
+## Aprovisionamiento del primer administrador
+
+Con Row Level Security activo, casi todas las tablas exigen un usuario autenticado con rol
+`administrador` para escribir. En una base vacia no hay ninguno, asi que nadie puede crear el
+primero desde la aplicacion. Lo resuelve la migracion
+`supabase/migrations/00188_aprovisionar_admin_produccion_ecopac.sql`, que corre sola con el resto del
+esquema.
+
+La migracion es idempotente: si el correo `ecopac.digital@gmail.com` ya existe, reutiliza ese usuario en
+vez de crear otro, y se limita a asegurar que su perfil tenga rol `administrador`. Se puede
+aplicar tantas veces como haga falta.
+
+**La migracion no fija ninguna contrasena.** Crea el usuario con `encrypted_password` en NULL a
+proposito: una contrasena versionada en un repositorio publico es una credencial publicada. La
+contrasena se establece despues, por uno de estos dos caminos:
+
+- Desde la aplicacion, con "olvide mi contrasena" sobre `ecopac.digital@gmail.com`. Es el camino normal
+  en `ecopac-dev` y en produccion.
+- Desde el panel de Supabase (Authentication > Users > el usuario > Reset password), o con el CLI
+  desde una maquina de confianza. Nunca desde el CI, que no debe manejar credenciales de personas.
+
+En local, tras `npx supabase db reset` el usuario existe igual y el correo de recuperacion se lee
+en Mailpit, en http://localhost:54424.
+
+Ninguno de los dos caminos expone la llave `service_role` fuera del entorno seguro, que es el
+criterio que pedia la issue #111.
 
 ## Documentacion adicional
 

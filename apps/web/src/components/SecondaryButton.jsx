@@ -1,0 +1,79 @@
+import { Button, Spinner } from "react-bootstrap";
+import { TIPOS_DE_ACCION, tipoDeAccion } from "@ecopac/shared";
+import { iconoDeAccion, rotuloSinSigno } from "./iconosDeAccion";
+
+/**
+ * Boton de accion secundaria (ej. "Cancelar", "Volver", "Editar").
+ *
+ * Espejo de apps/mobile/src/components/SecondaryButton.js: mismo estilo outline y las mismas
+ * props, salvo el nombre del evento (`onClick` aqui, `onPress` en movil).
+ *
+ * Ahora si acepta `loading`, al contrario de lo que decia el comentario anterior: "Restablecer"
+ * en el modal de permisos y "Cargar mas pacientes" en el listado son acciones secundarias que
+ * SI disparan una espera, y sin esta prop cada pantalla lo resolvia cambiando el texto a mano
+ * ("Cargando...").
+ *
+ * `variant` distingue las dos jerarquias de accion secundaria que ya existian escritas a mano:
+ *   - "outline" (por defecto): la accion alternativa de una cabecera o de un pie de modal.
+ *   - "neutra": la que no tiene intencion propia -"Cancelar", "Cerrar"-, en gris en vez de en
+ *     verde, para que un pie de modal no ofrezca dos botones que compiten por la vista.
+ *   - "peligro": borrar, anular, rechazar.
+ *
+ * "Cancelar" sin `variant` explicito sale "neutra" y con la X: es el par gris del boton verde que
+ * confirma, en todos los formularios por igual.
+ *
+ * @param {"outline"|"neutra"|"peligro"} [props.variant]
+ * @param {"sm"|"md"|"lg"} [props.size]
+ * @param {import("react").ReactNode} [props.icon] Sin pasarlo, una alta lleva el "+" y un borrado
+ *   el basurero (iconosDeAccion.jsx); `null` lo quita.
+ */
+const VARIANTES = {
+  outline: "outline-primary",
+  neutra: "outline-secondary",
+  peligro: "outline-danger",
+};
+
+export default function SecondaryButton({
+  title,
+  onClick,
+  disabled = false,
+  loading = false,
+  variant,
+  size = "md",
+  icon,
+  block = false,
+  className = "",
+  style,
+  ...rest
+}) {
+  const inactivo = disabled || loading;
+  const variante =
+    variant ?? (tipoDeAccion(title) === TIPOS_DE_ACCION.CANCELAR ? "neutra" : "outline");
+  const tamano = size === "md" ? undefined : size;
+
+  const clases = ["btn-icono", block ? "w-100" : null, className].filter(Boolean).join(" ");
+
+  return (
+    <Button
+      variant={VARIANTES[variante] ?? VARIANTES.outline}
+      size={tamano}
+      onClick={onClick}
+      disabled={inactivo}
+      aria-busy={loading}
+      className={clases}
+      style={style}
+      {...rest}
+    >
+      {loading ? (
+        <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" />
+      ) : (
+        <>
+          {/* Sin `enFormulario`: un "Crear un principio activo" secundario dentro de un modal abre
+              un alta en linea, no confirma el formulario; conserva el "+". */}
+          {iconoDeAccion(title, icon)}
+          {rotuloSinSigno(title)}
+        </>
+      )}
+    </Button>
+  );
+}

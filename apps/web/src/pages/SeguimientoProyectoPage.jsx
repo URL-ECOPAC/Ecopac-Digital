@@ -1,0 +1,494 @@
+import { useState } from "react";
+import {
+  COLUMNAS_HISTORIAL_PROYECTO,
+  ESTADOS_PROYECTO,
+  ETIQUETAS_ESTADO_PROYECTO,
+  formatearFechaConHora,
+  MENSAJE_PROYECTO_CANCELADO,
+  puedeVerSeguimientoProyecto,
+  transicionesDeProyectoDesde,
+  useSeguimientoProyecto,
+} from "@ecopac/shared";
+import {
+  Container,
+  Row,
+  Col,
+  Card,
+  Form,
+  Button,
+  Badge,
+  Alert,
+  ProgressBar,
+  Spinner,
+} from "react-bootstrap";
+
+import AccesoDenegadoPage from "./AccesoDenegadoPage";
+import DataList from "../components/DataList";
+import PageHeader from "../components/PageHeader";
+import ScreenContainer from "../components/ScreenContainer";
+import StatusChip from "../components/StatusChip";
+import ModalHito from "./ModalHito";
+import SecondaryButton from "../components/SecondaryButton";
+
+/** Convierte cadenas de texto a formato con Mayúscula Inicial (Title Case). */
+function capitalizar(texto) {
+  if (!texto) return "—";
+  return texto
+    .toString()
+    .split(" ")
+    .map((palabra) => palabra.charAt(0).toUpperCase() + palabra.slice(1).toLowerCase())
+    .join(" ");
+}
+
+// Un estado sin salidas (TRANSICIONES_PROYECTO, espejo del trigger) no tiene vuelta atras: se
+// confirma antes de aplicarlo.
+const esEstadoTerminal = (estado) => transicionesDeProyectoDesde(estado).length === 0;
+
+/** Nombre completo de un perfil embebido ({ nombres, apellidos }), o `null` si no llegó. */
+function nombreDePerfil(perfil) {
+  const nombre = [perfil?.nombres, perfil?.apellidos].filter(Boolean).join(" ").trim();
+  return nombre || null;
+}
+
+export default function SeguimientoProyectoPage({ proyectoId, proyectoInicial, rol, onVolver }) {
+  const {
+    proyecto,
+    proyectoCancelado,
+    puedeRegistrarSeguimiento,
+    hitos,
+    bitacora,
+    historial,
+    puedeVerHistorial,
+    indicadoresJornadas,
+    campos,
+    cargando,
+    errorCarga,
+    nuevoPorcentaje,
+    setNuevoPorcentaje,
+    nuevaNota,
+    setNuevaNota,
+    errorAccion,
+    cargandoAccion,
+    guardarSeguimiento,
+    cambiarEstadoHito,
+    guardarHito,
+    estadosSiguientes,
+    cambiarEstado,
+  } = useSeguimientoProyecto({ proyectoId, proyectoInicial, rol });
+
+  const [hitoEnEdicion, setHitoEnEdicion] = useState(null);
+  const [formularioHitoAbierto, setFormularioHitoAbierto] = useState(false);
+  const [estadoPorConfirmar, setEstadoPorConfirmar] = useState(null);
+
+  // 00148: el personal de campo ve el proyecto en consulta, sin su seguimiento. La lista ya no le
+  // ofrece el enlace; esto cubre a quien escriba la direccion a mano.
+  if (!puedeVerSeguimientoProyecto(rol)) {
+    return <AccesoDenegadoPage rol={rol} />;
+  }
+
+  const proyectoDatos = proyecto || proyectoInicial;
+
+  const filasHistorial = historial.map((fila) => ({
+    id: fila.id,
+    estadoAnterior: capitalizar(fila.estadoAnterior),
+    estadoNuevo: capitalizar(fila.estadoNuevo),
+    cambiadoPor: nombreDePerfil(fila.cambiadoPor) ?? "Sistema",
+    cuando: formatearFechaConHora(fila.createdAt),
+  }));
+
+  if (cargando && !proyectoDatos) {
+    return (
+      <Container className="my-5 text-center">
+        <Spinner animation="border" />
+      </Container>
+    );
+  }
+
+  if (!proyectoDatos) {
+    return (
+      <Container className="my-5 text-center">
+        <p className="text-muted">
+          {errorCarga?.mensaje || "No se seleccionó ningún proyecto para el seguimiento."}
+        </p>
+        {onVolver && (
+          <Button variant="secondary" size="sm" onClick={onVolver} className="mt-2">
+            Volver
+          </Button>
+        )}
+      </Container>
+    );
+  }
+
+  const abrirAltaHito = () => {
+    setHitoEnEdicion(null);
+    setFormularioHitoAbierto(true);
+  };
+
+  const abrirEdicionHito = (hito) => {
+    setHitoEnEdicion(hito);
+    setFormularioHitoAbierto(true);
+  };
+
+  return (
+    <ScreenContainer>
+      {/* Encabezado. "Volver al listado" era un enlace suelto encima del titulo y el estado un
+          Badge azul de Bootstrap con la clave cruda del enum: ahora es una accion neutra de la
+          cabecera y el mismo StatusChip, con su etiqueta, que usa el listado. */}
+      <PageHeader
+        title={proyectoDatos.nombre || "Proyecto sin título"}
+        subtitle={proyectoDatos.descripcion || "Sin descripción disponible."}
+        actions={
+          onVolver ? [{ label: "Volver al listado", onClick: onVolver, variant: "neutra" }] : []
+        }
+      >
+        {proyectoDatos.estado && (
+          <div className="mt-2">
+            <StatusChip
+              status={proyectoDatos.estado}
+              label={ETIQUETAS_ESTADO_PROYECTO[proyectoDatos.estado] ?? proyectoDatos.estado}
+            />
+          </div>
+        )}
+      </PageHeader>
+
+      {/* 00154 y 00172: un proyecto cancelado o finalizado se consulta, no se edita. */}
+      {proyectoCancelado && (
+        <Alert variant="secondary" className="mb-4">
+          {MENSAJE_PROYECTO_CANCELADO}
+        </Alert>
+      )}
+
+      {/* Estado del proyecto. Hasta aqui la web no tenia donde cambiarlo (solo el kanban movil).
+          Finalizar y cancelar no tienen vuelta atras (el trigger de la 00029 los deja
+          terminales), por eso piden confirmacion. */}
+      {estadosSiguientes.length > 0 && (
+        <Card className="border shadow-sm mb-4">
+          <Card.Body className="p-4">
+            <Card.Title as="h5" className="mb-2 text-dark fw-bold">
+              Estado del proyecto
+            </Card.Title>
+            {estadoPorConfirmar ? (
+              <div className="d-flex flex-wrap align-items-center gap-2">
+                <span className="small">
+                  ¿Pasar el proyecto a{" "}
+                  <strong>{ETIQUETAS_ESTADO_PROYECTO[estadoPorConfirmar]}</strong>? No se podrá
+                  volver a abrir.
+                </span>
+                <Button
+                  variant={estadoPorConfirmar === ESTADOS_PROYECTO.CANCELADO ? "danger" : "primary"}
+                  size="sm"
+                  disabled={cargandoAccion}
+                  onClick={async () => {
+                    await cambiarEstado(estadoPorConfirmar);
+                    setEstadoPorConfirmar(null);
+                  }}
+                >
+                  Confirmar
+                </Button>
+                <SecondaryButton
+                  title="Cancelar"
+                  size="sm"
+                  onClick={() => setEstadoPorConfirmar(null)}
+                />
+              </div>
+            ) : (
+              <div className="d-flex flex-wrap gap-2">
+                {estadosSiguientes.map((estado) => (
+                  <Button
+                    key={estado}
+                    variant={
+                      estado === ESTADOS_PROYECTO.CANCELADO ? "outline-danger" : "outline-primary"
+                    }
+                    size="sm"
+                    disabled={cargandoAccion}
+                    onClick={() =>
+                      esEstadoTerminal(estado)
+                        ? setEstadoPorConfirmar(estado)
+                        : cambiarEstado(estado)
+                    }
+                  >
+                    Pasar a {ETIQUETAS_ESTADO_PROYECTO[estado] ?? estado}
+                  </Button>
+                ))}
+              </div>
+            )}
+          </Card.Body>
+        </Card>
+      )}
+
+      {/* Indicadores Agregados */}
+      <Row className="g-3 mb-4">
+        <Col sm={6} lg={4}>
+          <Card className="border shadow-sm h-100">
+            <Card.Body>
+              <Card.Subtitle className="text-uppercase text-muted extra-small fw-bold mb-1">
+                Total Jornadas
+              </Card.Subtitle>
+              <Card.Title className="fs-2 fw-bold text-dark mb-0">
+                {indicadoresJornadas.totalJornadas}
+              </Card.Title>
+            </Card.Body>
+          </Card>
+        </Col>
+
+        <Col sm={6} lg={4}>
+          <Card className="border shadow-sm h-100">
+            <Card.Body>
+              <Card.Subtitle className="text-uppercase text-muted extra-small fw-bold mb-1">
+                Jornadas Completadas
+              </Card.Subtitle>
+              <Card.Title className="fs-2 fw-bold text-success mb-0">
+                {indicadoresJornadas.completadas}
+              </Card.Title>
+            </Card.Body>
+          </Card>
+        </Col>
+
+        <Col sm={6} lg={4}>
+          <Card className="border shadow-sm h-100">
+            <Card.Body>
+              <Card.Subtitle className="text-uppercase text-muted extra-small fw-bold mb-1">
+                Presupuesto Asignado
+              </Card.Subtitle>
+              <Card.Title className="fs-2 fw-bold text-dark mb-0">
+                Q{indicadoresJornadas.presupuestoTotal.toLocaleString()}
+              </Card.Title>
+            </Card.Body>
+          </Card>
+        </Col>
+      </Row>
+
+      <Row className="g-4">
+        {/* Columna Izquierda: Avance y Bitácora */}
+        <Col lg={8}>
+          {/* Sin permiso para registrar (proyecto cancelado, o un rol que solo consulta), el
+              avance se muestra y no se mueve. */}
+          {!puedeRegistrarSeguimiento && (
+            <Card className="border shadow-sm mb-4">
+              <Card.Body className="p-4">
+                <div className="d-flex justify-content-between align-items-center mb-2">
+                  <Card.Title as="h5" className="mb-0 text-dark fw-bold">
+                    Avance
+                  </Card.Title>
+                  <span className="fw-bold text-primary">
+                    {proyectoDatos.porcentajeAvance ?? 0}%
+                  </span>
+                </div>
+                <ProgressBar now={proyectoDatos.porcentajeAvance ?? 0} style={{ height: "8px" }} />
+              </Card.Body>
+            </Card>
+          )}
+
+          {puedeRegistrarSeguimiento && (
+            <Card className="border shadow-sm mb-4">
+              <Card.Body className="p-4">
+                <Card.Title as="h5" className="mb-3 text-dark fw-bold">
+                  Actualizar Avance y Bitácora
+                </Card.Title>
+
+                {errorAccion && (
+                  <Alert variant="danger" className="py-2 px-3 small mb-3">
+                    {errorAccion}
+                  </Alert>
+                )}
+
+                <Form className="d-flex flex-column gap-3">
+                  <div>
+                    <div className="d-flex justify-content-between align-items-center mb-1">
+                      <Form.Label className="small fw-medium mb-0">
+                        Porcentaje de avance (%)
+                      </Form.Label>
+                      <span className="fw-bold text-primary">{nuevoPorcentaje}%</span>
+                    </div>
+                    <Form.Range
+                      min={0}
+                      max={100}
+                      value={nuevoPorcentaje}
+                      onChange={(e) => setNuevoPorcentaje(Number(e.target.value))}
+                    />
+                  </div>
+
+                  <Form.Group>
+                    <Form.Label className="small fw-medium mb-1">Nota de seguimiento</Form.Label>
+                    <Form.Control
+                      as="textarea"
+                      rows={3}
+                      value={nuevaNota}
+                      onChange={(e) => setNuevaNota(e.target.value)}
+                      placeholder="Escribe los detalles o avances alcanzados..."
+                    />
+                  </Form.Group>
+
+                  <div className="d-flex justify-content-end">
+                    <Button
+                      variant="primary"
+                      onClick={guardarSeguimiento}
+                      disabled={cargandoAccion}
+                    >
+                      {cargandoAccion ? "Guardando..." : "Guardar Actualización"}
+                    </Button>
+                  </div>
+                </Form>
+              </Card.Body>
+            </Card>
+          )}
+
+          <Card className="border shadow-sm">
+            <Card.Body className="p-4">
+              <Card.Title as="h5" className="mb-3 text-dark fw-bold">
+                Bitácora de Notas
+              </Card.Title>
+
+              {bitacora.length === 0 ? (
+                <p className="text-muted fst-italic text-center py-3 mb-0 small">
+                  No hay notas de seguimiento registradas.
+                </p>
+              ) : (
+                <div className="d-flex flex-column gap-3">
+                  {bitacora.map((item) => (
+                    <Card key={item.id} className="bg-light border-0">
+                      <Card.Body className="p-3">
+                        {item.nota ? (
+                          <p className="small mb-2 text-dark">{item.nota}</p>
+                        ) : (
+                          <p className="small mb-2 text-muted fst-italic">
+                            Avance actualizado a {item.porcentajeNuevo}%
+                            {item.porcentajeAnterior != null
+                              ? ` (antes ${item.porcentajeAnterior}%)`
+                              : ""}
+                            .
+                          </p>
+                        )}
+                        <div className="d-flex justify-content-between text-muted extra-small pt-2 border-top">
+                          <span>
+                            Registrado por: <strong>{item.registradoPorNombre}</strong>
+                          </span>
+                          <span>
+                            {item.createdAt
+                              ? new Date(item.createdAt).toLocaleString()
+                              : "Recientemente"}
+                          </span>
+                        </div>
+                      </Card.Body>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </Card.Body>
+          </Card>
+        </Col>
+
+        {/* Columna Derecha: Hitos */}
+        <Col lg={4}>
+          <Card className="border shadow-sm">
+            <Card.Body className="p-4">
+              <div className="d-flex justify-content-between align-items-center mb-3">
+                <h2 className="ec-seccion-titulo mb-0">Hitos del proyecto</h2>
+                {puedeRegistrarSeguimiento && (
+                  <SecondaryButton title="Agregar hito" size="sm" onClick={abrirAltaHito} />
+                )}
+              </div>
+
+              {hitos.length === 0 ? (
+                <p className="text-muted fst-italic text-center py-3 mb-0 small">
+                  No hay hitos asignados a este proyecto.
+                </p>
+              ) : (
+                <div className="d-flex flex-column gap-2">
+                  {hitos.map((hito) => {
+                    let cardVariant = "bg-white border";
+                    if (hito.esVencido) cardVariant = "bg-danger-subtle border-danger";
+                    else if (hito.esCumplido)
+                      cardVariant = "bg-success-subtle border-success-subtle";
+
+                    return (
+                      <div key={hito.id} className={`p-3 rounded ${cardVariant}`}>
+                        <div className="d-flex align-items-start gap-2">
+                          <Form.Check
+                            type="checkbox"
+                            checked={hito.esCumplido}
+                            disabled={!puedeRegistrarSeguimiento}
+                            aria-label={`Hito cumplido: ${hito.nombre}`}
+                            onChange={(e) => cambiarEstadoHito(hito.id, e.target.checked)}
+                            className="mt-1"
+                          />
+                          <div className="flex-grow-1">
+                            <p
+                              className={`small fw-medium mb-1 ${
+                                hito.esCumplido
+                                  ? "text-decoration-line-through text-muted"
+                                  : "text-dark"
+                              }`}
+                            >
+                              {hito.nombre}
+                            </p>
+                            <p className="extra-small text-muted mb-0">
+                              Previsto: {hito.fechaPrevista || "Sin fecha"}
+                            </p>
+                            {hito.esVencido && (
+                              <Badge bg="danger" className="mt-1">
+                                ¡Vencido!
+                              </Badge>
+                            )}
+                            {hito.esCumplido && hito.fechaReal && (
+                              <p className="extra-small text-success mt-1 mb-0">
+                                Cumplido el: {hito.fechaReal}
+                              </p>
+                            )}
+                          </div>
+                          {puedeRegistrarSeguimiento && (
+                            <Button
+                              variant="link"
+                              size="sm"
+                              className="p-0 text-decoration-none"
+                              onClick={() => abrirEdicionHito(hito)}
+                            >
+                              Corregir
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </Card.Body>
+          </Card>
+        </Col>
+      </Row>
+
+      {/* Historial de cambios de estado (proyecto_estado_historial, 00029): solo administrador
+          la lee (00039), mismo criterio que el historial de jornadas en DetalleJornadaPage.jsx. */}
+      {puedeVerHistorial && (
+        <Row className="g-4 mt-1">
+          <Col>
+            <Card className="border shadow-sm">
+              <Card.Body className="p-4">
+                <Card.Title as="h5" className="mb-3 text-dark fw-bold">
+                  Historial de estado
+                </Card.Title>
+                <DataList
+                  columnas={COLUMNAS_HISTORIAL_PROYECTO}
+                  datos={filasHistorial}
+                  vacio="Este proyecto todavía no tiene cambios de estado registrados."
+                />
+              </Card.Body>
+            </Card>
+          </Col>
+        </Row>
+      )}
+
+      {/* Montado solo mientras esta abierto, para que cada "Nuevo hito" empiece en blanco (ver
+          ModalProyecto en ProyectosSocialesPage.jsx). */}
+      {formularioHitoAbierto && (
+        <ModalHito
+          visible
+          hito={hitoEnEdicion}
+          campos={campos}
+          onClose={() => setFormularioHitoAbierto(false)}
+          onGuardar={guardarHito}
+        />
+      )}
+    </ScreenContainer>
+  );
+}

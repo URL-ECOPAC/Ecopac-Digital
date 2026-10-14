@@ -1,0 +1,252 @@
+import {
+  ETIQUETAS_TIPO_ARTICULO,
+  TIPOS_DE_ARTICULO,
+  pideDatosFarmacologicos,
+} from "@ecopac/shared";
+import { Form } from "react-bootstrap";
+import { Plus, Save, X } from "lucide-react";
+
+import ErrorState from "../components/ErrorState";
+import Modal from "../components/Modal";
+import PrimaryButton from "../components/PrimaryButton";
+import SecondaryButton from "../components/SecondaryButton";
+import Selector from "../components/Selector";
+import TextField from "../components/TextField";
+
+// Alta y edicion de un medicamento del catalogo.
+//
+// Era un <div> de posicion fija dibujado a mano: etiquetas en negrita de otro gris, campos con
+// radio de 12px, botones en pastilla y un verde (#059669) que no es el de la marca, y no se cerraba
+// al tocar fuera. Ahora es el Modal del catalogo con los campos y botones de todos los demas
+// formularios; el contrato de props no cambia.
+const OPCIONES_TIPO_ARTICULO = Object.values(TIPOS_DE_ARTICULO).map((valor) => ({
+  value: valor,
+  label: ETIQUETAS_TIPO_ARTICULO[valor],
+}));
+
+export default function ModalMedicamento({
+  isOpen,
+  onClose,
+  modoEdicion,
+  formData,
+  setFormData,
+  onSubmit,
+  principiosActivos = [],
+  onCrearPrincipioActivo,
+  presentaciones = [],
+  onCrearPresentacion,
+  onAlternarActivo,
+  advertenciaDuplicado,
+  // Fallo al guardar, ya como texto apto para pantalla (normalizarError()).
+  error,
+  // Errores por campo (validarMedicamentoDelCatalogo, issue #911): cada uno debajo del suyo.
+  errores = {},
+  cargando,
+}) {
+  const setCampo = (nombre, valor) => setFormData((prev) => ({ ...prev, [nombre]: valor }));
+
+  // Un insumo (guantes, jeringas, agujas) no tiene principio activo, concentracion, forma
+  // farmaceutica ni uso pediatrico (00164): esos campos solo aparecen para un medicamento.
+  const esMedicamento = pideDatosFarmacologicos(formData.tipoArticulo);
+  const articulo = esMedicamento ? "medicamento" : "insumo";
+
+  const enviar = (evento) => {
+    evento.preventDefault();
+    onSubmit();
+  };
+
+  const opcionesPrincipio = (Array.isArray(principiosActivos) ? principiosActivos : []).map(
+    (principio) => ({ value: String(principio.id), label: principio.nombre }),
+  );
+
+  const opcionesPresentacion = (Array.isArray(presentaciones) ? presentaciones : []).map(
+    (presentacion) => ({ value: String(presentacion.id), label: presentacion.nombre }),
+  );
+
+  return (
+    <Modal
+      visible={Boolean(isOpen)}
+      onClose={onClose}
+      title={modoEdicion ? `Editar ${articulo}` : `Nuevo ${articulo}`}
+      size="lg"
+    >
+      {advertenciaDuplicado && (
+        <div className="alert alert-warning" role="alert">
+          <strong>Medicamento duplicado:</strong> ya existe un registro con el mismo nombre,
+          concentracion, presentacion y marca.
+        </div>
+      )}
+
+      {error && <ErrorState message={error} />}
+
+      <form onSubmit={enviar} noValidate>
+        <section className="ec-form-seccion" style={{ "--ec-acento": "var(--accent-inventario)" }}>
+          <div className="ec-form-seccion-cabecera">
+            <h3 className="ec-form-seccion-titulo">Datos generales</h3>
+            <p className="ec-form-seccion-descripcion">
+              Como se identifica el {articulo} en el catalogo.
+            </p>
+          </div>
+
+          <div className="ec-form-grid">
+            <TextField
+              label="Nombre comercial"
+              requerido
+              placeholder="Ej. Dolo Neurobion, Amoxicilina"
+              value={formData.nombre || ""}
+              onChange={(e) => setCampo("nombre", e.target.value)}
+              error={errores.nombre}
+              disabled={cargando}
+            />
+
+            <Selector
+              label="Tipo de artículo"
+              requerido
+              value={formData.tipoArticulo || null}
+              options={OPCIONES_TIPO_ARTICULO}
+              onSelect={(valor) => setCampo("tipoArticulo", valor ?? "")}
+              placeholder="Selecciona un tipo"
+              error={errores.tipoArticulo}
+              disabled={cargando}
+            />
+
+            {esMedicamento && (
+              <div>
+                <Selector
+                  label="Principio activo"
+                  requerido
+                  value={formData.principio_activo_id ? String(formData.principio_activo_id) : null}
+                  options={opcionesPrincipio}
+                  onSelect={(valor) => setCampo("principio_activo_id", valor ?? "")}
+                  placeholder="Selecciona un principio activo"
+                  error={errores.principio_activo_id}
+                  disabled={cargando}
+                  style={{ marginBottom: "var(--spacing-xs)" }}
+                />
+                {/* Desde la 00166 tambien se cambia al editar. */}
+                {onCrearPrincipioActivo && (
+                  <div className="mb-3">
+                    <SecondaryButton
+                      title="Crear un principio activo"
+                      size="sm"
+                      icon={<Plus size={14} aria-hidden="true" />}
+                      onClick={onCrearPrincipioActivo}
+                      disabled={cargando}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </section>
+
+        <section className="ec-form-seccion" style={{ "--ec-acento": "var(--accent-inventario)" }}>
+          <div className="ec-form-seccion-cabecera">
+            <h3 className="ec-form-seccion-titulo">Especificaciones</h3>
+            <p className="ec-form-seccion-descripcion">
+              {esMedicamento
+                ? "Concentracion, presentacion y fabricante, que juntos no se pueden repetir."
+                : "Presentacion y fabricante."}
+            </p>
+          </div>
+
+          <div className="ec-form-grid">
+            {esMedicamento && (
+              <TextField
+                label="Concentración"
+                requerido
+                placeholder="Ej. 500 mg"
+                value={formData.concentracion || ""}
+                onChange={(e) => setCampo("concentracion", e.target.value)}
+                error={errores.concentracion}
+                disabled={cargando}
+              />
+            )}
+            <div>
+              <Selector
+                label="Presentación"
+                requerido
+                value={formData.presentacionId ? String(formData.presentacionId) : null}
+                options={opcionesPresentacion}
+                onSelect={(valor) => setCampo("presentacionId", valor ?? "")}
+                placeholder="Selecciona una presentación"
+                error={errores.presentacionId}
+                disabled={cargando}
+                style={{ marginBottom: onCrearPresentacion ? "var(--spacing-xs)" : undefined }}
+              />
+              {onCrearPresentacion && (
+                <div className="mb-3">
+                  <SecondaryButton
+                    title="Crear una presentación"
+                    size="sm"
+                    icon={<Plus size={14} aria-hidden="true" />}
+                    onClick={onCrearPresentacion}
+                    disabled={cargando}
+                  />
+                </div>
+              )}
+            </div>
+            <TextField
+              label="Marca / laboratorio"
+              requerido
+              placeholder="Ej. Bayer"
+              value={formData.marca || ""}
+              onChange={(e) => setCampo("marca", e.target.value)}
+              error={errores.marca}
+              disabled={cargando}
+            />
+            {esMedicamento && (
+              <TextField
+                label="Forma farmacéutica"
+                requerido={false}
+                placeholder="Ej. Solido oral"
+                value={formData.formaFarmaceutica || ""}
+                onChange={(e) => setCampo("formaFarmaceutica", e.target.value)}
+                disabled={cargando}
+              />
+            )}
+            {esMedicamento && (
+              <Form.Check
+                className="ec-form-grid--ancho mb-3"
+                id="medicamento-es-pediatrico"
+                type="switch"
+                label="Es de uso pediatrico"
+                checked={Boolean(formData.esPediatrico)}
+                onChange={(e) => setCampo("esPediatrico", e.target.checked)}
+                disabled={cargando}
+              />
+            )}
+          </div>
+        </section>
+
+        <div className="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-3">
+          <div>
+            {modoEdicion && onAlternarActivo && (
+              <SecondaryButton
+                title={formData.activo ? "Desactivar" : "Reactivar"}
+                variant={formData.activo ? "peligro" : "outline"}
+                onClick={onAlternarActivo}
+                disabled={cargando}
+              />
+            )}
+          </div>
+          <div className="ec-acciones">
+            <SecondaryButton
+              title="Cancelar"
+              variant="neutra"
+              onClick={onClose}
+              disabled={cargando}
+              icon={<X size={16} aria-hidden="true" />}
+            />
+            <PrimaryButton
+              type="submit"
+              title="Guardar"
+              loading={cargando}
+              icon={<Save size={16} aria-hidden="true" />}
+            />
+          </div>
+        </div>
+      </form>
+    </Modal>
+  );
+}

@@ -1,0 +1,116 @@
+// Columnas de tabla y campos de tarjeta del modulo de inventario. Mismo patron que
+// packages/shared/pacientes/columnas.js: una sola definicion, DataList la vuelve
+// <Table> en web y tarjetas en movil.
+
+import { TIPOS_DE_PRESENTACION } from "../descriptores.js";
+
+export const COLUMNAS_PRINCIPIO_ACTIVO = [
+  { id: "nombre", label: "Nombre", tipo: TIPOS_DE_PRESENTACION.TEXTO, principal: true },
+];
+
+/** Mismo patron que COLUMNAS_PRINCIPIO_ACTIVO (presentaciones, 00144). */
+export const COLUMNAS_PRESENTACION = [
+  { id: "nombre", label: "Nombre", tipo: TIPOS_DE_PRESENTACION.TEXTO, principal: true },
+];
+
+export const COLUMNAS_MEDICAMENTO = [
+  { id: "nombre", label: "Nombre", tipo: TIPOS_DE_PRESENTACION.TEXTO, principal: true },
+  {
+    id: "tipoArticulo",
+    label: "Tipo",
+    tipo: TIPOS_DE_PRESENTACION.TEXTO,
+    etiquetasDesde: "tiposArticulo",
+  },
+  { id: "concentracion", label: "Concentración", tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  { id: "presentacion", label: "Presentación", tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  { id: "marca", label: "Marca", tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  { id: "esPediatrico", label: "Pediatrico", tipo: TIPOS_DE_PRESENTACION.BOOLEANO },
+  { id: "activo", label: "Activo", tipo: TIPOS_DE_PRESENTACION.CHIP },
+];
+
+export const COLUMNAS_LOTE = [
+  { id: "numeroLote", label: "Lote", tipo: TIPOS_DE_PRESENTACION.TEXTO, principal: true },
+  { id: "medicamento", label: "Medicamento", tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  { id: "proveedor", label: "Proveedor", tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  { id: "origen", label: "Origen", tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  { id: "fechaVencimiento", label: "Vence", tipo: TIPOS_DE_PRESENTACION.FECHA },
+  { id: "cantidadIngresada", label: "Cantidad", tipo: TIPOS_DE_PRESENTACION.NUMERO },
+];
+
+// Mismas columnas para el listado general de movimientos y para la bandeja de
+// validacion (que ademas expone las acciones de aprobar/rechazar sobre estas filas).
+export const COLUMNAS_MOVIMIENTO = [
+  { id: "tipo", label: "Tipo", tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  { id: "medicamento", label: "Medicamento", tipo: TIPOS_DE_PRESENTACION.TEXTO, principal: true },
+  { id: "cantidad", label: "Cantidad", tipo: TIPOS_DE_PRESENTACION.NUMERO },
+  { id: "estado", label: "Estado", tipo: TIPOS_DE_PRESENTACION.CHIP },
+  { id: "registradoPor", label: "Registrado por", tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  { id: "createdAt", label: "Fecha", tipo: TIPOS_DE_PRESENTACION.FECHA },
+];
+
+/**
+ * Columnas de "Mis movimientos" (issue #756): con el filtro "alcance" en "mios" son solo los
+ * movimientos de la persona (cualquier estado); en "todos" -solo disponible para quien puede
+ * aprobar- son los de todo el mundo. `tipo` traduce el enum via el catalogo `tiposMovimiento`
+ * (OPCIONES_TIPO_MOVIMIENTO); `medicamentoNombre`/`numeroLote`/`bodegaNombre`/`registradoPorNombre`
+ * los resuelve useMisMovimientos.js desde los embeds de listarMovimientos(). Solo se puede tocar
+ * (para corregir cantidad/motivo) una fila con `estado: 'pendiente'` que ademas sea propia -lo
+ * calcula `puedeEditar` en cada fila-, igual que exige editarMovimiento() en el servidor.
+ */
+export const COLUMNAS_MIS_MOVIMIENTOS = [
+  {
+    id: "tipo",
+    label: "Tipo",
+    tipo: TIPOS_DE_PRESENTACION.TEXTO,
+    etiquetasDesde: "tiposMovimiento",
+  },
+  {
+    id: "medicamentoNombre",
+    label: "Medicamento",
+    tipo: TIPOS_DE_PRESENTACION.TEXTO,
+    principal: true,
+  },
+  { id: "numeroLote", label: "Lote", tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  { id: "bodegaNombre", label: "Bodega", tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  { id: "cantidad", label: "Cantidad", tipo: TIPOS_DE_PRESENTACION.NUMERO },
+  // ESTADO y no CHIP: el valor crudo ya es la clave de color correcta (statusColors lo indexa
+  // directo), pero CHIP no traduce con etiquetasDesde -- solo lo hace ESTADO (mismo patron que
+  // COLUMNAS_USUARIO.estado en usuarios/columnas.js). Sin esto, la celda mostraba el valor crudo
+  // del enum ("pendiente") en vez de su etiqueta Title Case.
+  {
+    id: "estado",
+    label: "Estado",
+    tipo: TIPOS_DE_PRESENTACION.ESTADO,
+    etiquetasDesde: "estadosMovimiento",
+  },
+  { id: "registradoPorNombre", label: "Registrado por", tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  { id: "createdAt", label: "Fecha", tipo: TIPOS_DE_PRESENTACION.FECHA },
+];
+
+/**
+ * Columnas de la existencia disponible, que es la fila que arma `aExistencia()` en
+ * existencias.api.js: una por medicamento, no una por lote.
+ *
+ * Nombraba `numeroLote` y `bodega`, y ninguna de las dos existe en esa fila: `consultarExistencias()`
+ * llama a fn_existencias_disponibles (00065), que **agrega**, asi que del lote solo quedan el conteo
+ * (`lotesDisponibles`) y el vencimiento mas proximo, y de la bodega no queda nada. Las dos columnas
+ * habrian salido vacias (issue #821); el detalle por lote y bodega esta en COLUMNAS_LOTE.
+ */
+export const COLUMNAS_EXISTENCIA = [
+  { id: "medicamento", label: "Medicamento", tipo: TIPOS_DE_PRESENTACION.TEXTO, principal: true },
+  { id: "concentracion", label: "Concentracion", tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  { id: "presentacion", label: "Presentacion", tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  { id: "cantidadDisponible", label: "Disponible", tipo: TIPOS_DE_PRESENTACION.NUMERO },
+  { id: "lotesDisponibles", label: "Lotes", tipo: TIPOS_DE_PRESENTACION.NUMERO },
+  { id: "fechaVencimientoProxima", label: "Vence", tipo: TIPOS_DE_PRESENTACION.FECHA },
+];
+
+export const COLUMNAS_ALERTA = [
+  { id: "medicamento", label: "Medicamento", tipo: TIPOS_DE_PRESENTACION.TEXTO, principal: true },
+  { id: "numeroLote", label: "Lote", tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  { id: "fechaVencimiento", label: "Vence", tipo: TIPOS_DE_PRESENTACION.FECHA },
+  // cantidadDisponible, no cantidadAfectada: esta ultima queda congelada al generar la alerta y
+  // no baja si despues se registra una salida del lote por fuera de "Atender" (issue #859).
+  { id: "cantidadDisponible", label: "Cantidad disponible", tipo: TIPOS_DE_PRESENTACION.NUMERO },
+  { id: "estado", label: "Estado", tipo: TIPOS_DE_PRESENTACION.CHIP },
+];

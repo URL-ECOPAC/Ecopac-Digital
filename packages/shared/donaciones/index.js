@@ -1,0 +1,43 @@
+// Modulo de donaciones de la logica compartida.
+//
+// Estructura estandar de un modulo (ver docs/ARQUITECTURA-FRONTEND.md):
+//   api.js           llamadas a Supabase y normalizacion de errores
+//   validaciones.js  reglas de negocio
+//   campos.js        esquema declarativo de los formularios
+//   columnas.js      columnas de tabla y campos de tarjeta
+//   filtros.js       filtros de las pantallas de listado
+//   permisos.js      que puede hacer cada rol en el modulo
+//   use<Pantalla>.js view model de una pantalla: datos, estado y handlers
+//
+// Carpeta creada por el issue #278 para dejar montada la estructura del modulo. El
+// contenido lo construyen sus issues (ver packages/shared/pacientes/ como ejemplar de
+// referencia de filtros.js y columnas.js).
+//
+// Proyectos sociales (issue #194) vivio aqui como proyectos.api.js, proyectos.validaciones.js,
+// proyectos.permisos.js y avance.api.js. La issue #400 lo movio a su propio modulo,
+// packages/shared/proyectos/, para que esta carpeta quede solo para donantes y donaciones.
+
+// Donantes y donaciones (issue #189). Los valores de tipo_donante, tipo_donacion y
+// estado_donacion (enum de la migracion 00022) nacen en campos.js (issue #287), no en el
+// types/donaciones.ts que validaciones.js reemplazo.
+export * from "./validaciones.js";
+export * from "./donantes.api.js";
+export * from "./ingreso.api.js";
+export * from "./historial.api.js";
+// registrarDonacion (issue #635): escritura de donaciones y donacion_detalle, la unica pieza que
+// la #191 dejo sin entregar. Los helpers internos del archivo (guarda de rol, mapeo de detalle a
+// JSONB) no llevan `export` y por tanto no salen por este barril. La anulacion se quito en la
+// 00173 (issue #911).
+export * from "./registro.api.js";
+export * from "./campos.js";
+export * from "./columnas.js";
+export * from "./filtros.js";
+export * from "./permisos.js";
+export * from "./useRegistroDonacion.js";
+export * from "./useHistorialDonaciones.js";
+export * from "./useConstanciaDonacion.js";
+// useDonantesPage faltaba en el barril desde la issue #196. La #598 descubrio que exportarlo a
+// secas rompia la compilacion de la web: el hook llamaba a un objeto `donantesApi` que
+// donantes.api.js nunca exporto. Reescrito contra la API real -listarDonantes() y compania, que
+// resuelven el cliente con obtenerSupabase()-, ya se puede exportar.
+export * from "./useDonantesPage.js";

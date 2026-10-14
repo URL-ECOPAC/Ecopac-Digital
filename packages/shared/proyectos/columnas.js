@@ -1,0 +1,105 @@
+// Esquema declarativo de las columnas/ficha de proyectos, hitos y seguimiento (issue #287).
+
+import { TIPOS_DE_PRESENTACION } from "../descriptores.js";
+import { COLUMNAS_GASTO } from "../presupuestos/columnas.js";
+
+export const COLUMNAS_PROYECTO = [
+  { id: "nombre", label: "Nombre", tipo: TIPOS_DE_PRESENTACION.TEXTO, principal: true },
+  // No es columna de `proyectos`: sale del join con responsable_id (perfiles).
+  {
+    id: "responsable",
+    label: "Responsable",
+    tipo: TIPOS_DE_PRESENTACION.TEXTO,
+    desde: "responsableNombre",
+  },
+  { id: "fechaInicio", label: "Inicio", tipo: TIPOS_DE_PRESENTACION.FECHA },
+  { id: "fechaFin", label: "Fin", tipo: TIPOS_DE_PRESENTACION.FECHA },
+  // proyectos.estado guarda el valor del enum tal cual (00007): CHIP, no ESTADO.
+  { id: "estado", label: "Estado", tipo: TIPOS_DE_PRESENTACION.CHIP },
+  { id: "porcentajeAvance", label: "Avance", tipo: TIPOS_DE_PRESENTACION.NUMERO, sufijo: "%" },
+];
+
+export const CAMPOS_FICHA_PROYECTO = [
+  { id: "nombre", label: "Nombre", tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  { id: "descripcion", label: "Descripción", tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  {
+    id: "responsable",
+    label: "Responsable",
+    tipo: TIPOS_DE_PRESENTACION.TEXTO,
+    desde: "responsableNombre",
+  },
+  { id: "fechaInicio", label: "Inicio", tipo: TIPOS_DE_PRESENTACION.FECHA },
+  { id: "fechaFin", label: "Fin", tipo: TIPOS_DE_PRESENTACION.FECHA },
+  { id: "estado", label: "Estado", tipo: TIPOS_DE_PRESENTACION.CHIP },
+  { id: "porcentajeAvance", label: "Avance", tipo: TIPOS_DE_PRESENTACION.NUMERO, sufijo: "%" },
+];
+
+/**
+ * Gastos dentro de la ficha de un proyecto: las de COLUMNAS_GASTO menos "Proyecto", que ahi es
+ * siempre el mismo y solo ocuparia una columna.
+ */
+export const COLUMNAS_GASTO_DE_PROYECTO = COLUMNAS_GASTO.filter(
+  (columna) => columna.id !== "proyecto_id",
+);
+
+/** Hitos de un proyecto (proyecto_hitos, 00053); campos ya en camelCase por avance.api.js. */
+export const COLUMNAS_HITO = [
+  { id: "nombre", label: "Hito", tipo: TIPOS_DE_PRESENTACION.TEXTO, principal: true },
+  { id: "fechaPrevista", label: "Fecha prevista", tipo: TIPOS_DE_PRESENTACION.FECHA },
+  { id: "fechaReal", label: "Cumplido", tipo: TIPOS_DE_PRESENTACION.FECHA },
+];
+
+/**
+ * Bitacora de avance de un proyecto (proyecto_seguimiento, 00053): solo lectura, sin politica de
+ * UPDATE/DELETE (append-only).
+ */
+export const COLUMNAS_SEGUIMIENTO = [
+  { id: "createdAt", label: "Fecha", tipo: TIPOS_DE_PRESENTACION.FECHA },
+  { id: "nota", label: "Nota", tipo: TIPOS_DE_PRESENTACION.TEXTO, principal: true },
+  { id: "porcentajeAnterior", label: "Antes", tipo: TIPOS_DE_PRESENTACION.NUMERO, sufijo: "%" },
+  { id: "porcentajeNuevo", label: "Después", tipo: TIPOS_DE_PRESENTACION.NUMERO, sufijo: "%" },
+];
+
+/**
+ * Historial de cambios de estado de un proyecto (proyecto_estado_historial, 00029), issue #856.
+ * Espejo exacto de COLUMNAS_HISTORIAL_JORNADA (jornadas/columnas.js): mismas cuatro columnas,
+ * mismo orden.
+ */
+export const COLUMNAS_HISTORIAL_PROYECTO = [
+  { id: "estadoAnterior", label: "Estado anterior", tipo: TIPOS_DE_PRESENTACION.CHIP },
+  { id: "estadoNuevo", label: "Estado nuevo", tipo: TIPOS_DE_PRESENTACION.CHIP, principal: true },
+  { id: "cambiadoPor", label: "Quien", tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  { id: "cuando", label: "Cuando", tipo: TIPOS_DE_PRESENTACION.TEXTO },
+];
+
+/**
+ * Insumos previstos de un proyecto (proyecto_insumos, 00147); campos ya en camelCase por
+ * insumos.api.js. El total no es una columna de la tabla: lo calcula esa API.
+ */
+/**
+ * Lo entregado en las jornadas del proyecto que usan la bodega principal (00181), lote por lote. Las
+ * filas salen de aConsumoDeLote() (jornadas/bodega.api.js) con el nombre de su jornada.
+ */
+export const COLUMNAS_ENTREGADO_DESDE_LA_PRINCIPAL = [
+  { id: "articulo", label: "Artículo", tipo: TIPOS_DE_PRESENTACION.TEXTO, principal: true },
+  { id: "numeroLote", label: "Lote", tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  { id: "jornada", label: "Jornada", tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  { id: "entregado", label: "Entregado", tipo: TIPOS_DE_PRESENTACION.NUMERO },
+  { id: "costoUnitario", label: "Costo unitario", tipo: TIPOS_DE_PRESENTACION.MONEDA },
+  { id: "valorEntregado", label: "Valor entregado", tipo: TIPOS_DE_PRESENTACION.MONEDA },
+];
+
+export const COLUMNAS_INSUMO_PROYECTO = [
+  {
+    id: "articuloNombre",
+    label: "Producto / Insumo",
+    tipo: TIPOS_DE_PRESENTACION.TEXTO,
+    principal: true,
+  },
+  { id: "cantidad", label: "Cantidad", tipo: TIPOS_DE_PRESENTACION.NUMERO },
+  { id: "unidad", label: "Unidad", tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  { id: "costoUnitarioEstimado", label: "Costo unitario", tipo: TIPOS_DE_PRESENTACION.MONEDA },
+  { id: "costoTotalEstimado", label: "Costo total", tipo: TIPOS_DE_PRESENTACION.MONEDA },
+  // Se escribia al agregar el insumo y no se veia en ningun lado.
+  { id: "nota", label: "Nota", tipo: TIPOS_DE_PRESENTACION.TEXTO },
+];

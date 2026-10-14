@@ -1,0 +1,13 @@
+-- Ecopac Digital - Unificar donaciones.registrada_por a registrado_por (issue #412)
+--
+-- Cambia solo el genero gramatical: movimientos_inventario, gastos y las dos tablas de
+-- seguimiento de avance (00053) ya usan registrado_por. donaciones era la unica que usaba
+-- registrada_por, y no por una razon de dominio -no hay nada especificamente femenino en una
+-- donacion que no aplique a un movimiento o un gasto-, asi que se unifica a la forma que ya usa
+-- el resto del esquema.
+--
+-- RENAME COLUMN es un cambio de metadato: Postgres actualiza solo las referencias internas de
+-- las politicas RLS y de cualquier vista que dependa de la columna (por attnum, no por nombre);
+-- no hay ninguna aqui que la nombre en su USING/WITH CHECK (00022, 00083, 00086), asi que no
+-- hace falta tocar ninguna politica. Los datos no se mueven.
+ALTER TABLE donaciones RENAME COLUMN registrada_por TO registrado_por;

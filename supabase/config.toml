@@ -2,31 +2,40 @@
 # https://supabase.com/docs/guides/cli/config#config.toml
 # Este archivo lo genera supabase init y se versiona en el repo.
 # Se usa tanto para el desarrollo local (supabase start / db reset) como
-# para el CI de backend (backend-ci.yml).
+# para el workflow de Supabase (supabase.yml), que absorbio al antiguo backend-ci.yml.
 
 # Project ID: nombre unico del proyecto local. No es el project-ref remoto.
 project_id = "ecopac-digital"
 
 [api]
 enabled = true
-port = 54321
+port = 54421
 schemas = ["public", "graphql_public"]
 extra_search_path = ["public", "extensions"]
 max_rows = 1000
 
 [db]
-port = 54322
-shadow_port = 54320
+port = 54422
+shadow_port = 54420
 major_version = 15
+
+[db.seed]
+enabled = true
+# seed.sql: sin sentencias desde la issue #704. El catalogo geografico que cargaba ahora lo
+# siembra la migracion 00125, justamente porque "supabase db push" -lo que llega a ecopac-dev y
+# ecopac-prod- nunca ejecuta seeds. Se mantiene en la lista porque documenta ese cambio.
+# seed-demo.sql: datos ficticios de demostracion (issue #94), solo para desarrollo. Los dos
+# corren con "supabase db reset" (local y el job "validar" del CI). Ver docs/DATOS-DEMO.md.
+sql_paths = ["seed.sql", "seed-demo.sql"]
 
 [studio]
 enabled = true
-port = 54323
+port = 54423
 api_url = "http://127.0.0.1"
 
 [inbucket]
 enabled = true
-port = 54324
+port = 54424
 
 [storage]
 enabled = true
@@ -34,20 +43,110 @@ file_size_limit = "50MiB"
 
 [auth]
 enabled = true
-site_url = "http://127.0.0.1:3000"
-additional_redirect_urls = ["*"]
+# El puerto es el 5173, que es donde corre la web: lo fija apps/web/vite.config.js y es el que
+# publica docker-compose.yml. Decia 3000 -el default de la CLI- y ahi no hay nada escuchando, asi
+# que el enlace de "olvide mi contrasena" apuntaba a una pagina inexistente. En local se disimulaba
+# porque Inbucket (http://localhost:54424) muestra el correo y se puede copiar el token a mano.
+#
+# site_url es el destino por defecto cuando quien pide el enlace no manda `redirectTo`, que es
+# justo el caso de invitar-usuario/index.ts: corre en Deno y no tiene un window.location.origin
+# del que sacar la URL, asi que deja ganar a este valor.
+#
+# ESTE ARCHIVO NO GOBIERNA ecopac-dev NI ecopac-prod. El despliegue solo corre `supabase db push`,
+# nunca `supabase config push`: en los proyectos remotos manda el Dashboard, y ahi hay que poner
+# la URL real de la web en Authentication > URL Configuration. Mismo caso que enable_signup, mas
+# abajo.
+site_url = "http://localhost:5173"
+# El comodin vale para el stack local y solo para el: hay que aceptar tanto las rutas de la web
+# (/nueva-contrasena) como los deep links de Expo, que cambian de puerto y de esquema segun como
+# se levante la app movil. En los proyectos remotos NO se pone "*": ahi se listan los destinos
+# reales, que es parte de la revision de configuracion de la issue #241.
+additional_redirect_urls = ["*", "ecopac://*", "exp://*"]
+# jwt_expiry: cuanto dura una sesion sin que el cliente la refresque (issue #230, criterio 3).
+# El numero de segundos que corresponde esta pendiente de confirmar con la organizacion (ver
+# docs/SEGURIDAD.md); 3600 es el default de la CLI, no un acuerdo. enable_refresh_token_rotation
+# y refresh_token_reuse_interval tambien son el default de la CLI: se dejan explicitos aqui
+# porque, junto con jwt_expiry, son el control real de expiracion de sesion del lado servidor
+# (el temporizador de inactividad del cliente, en packages/shared/hooks/useExpiracionPorInactividad.js,
+# es una comodidad de interfaz, no una garantia).
 jwt_expiry = 3600
-enable_signup = true
+# enable_signup = false: en este sistema nadie se da de alta a si mismo (issue #508). Las cuentas
+# las crea la administradora, y el rol por defecto de perfiles es 'voluntario general', que
+# registra pacientes, expedientes, atenciones y triajes por las politicas de 00032 y 00033. Con
+# el registro abierto, cualquiera con la llave anonima -que viaja en el bundle del navegador-
+# obtenia acceso de escritura a datos clinicos.
+#
+# ESTA LINEA NO PROTEGE A ecopac-dev NI A ecopac-prod. El workflow de despliegue solo corre
+# `supabase db push`, nunca `supabase config push`, asi que este archivo gobierna el stack local
+# y el CI, y en los proyectos remotos manda el Dashboard. La defensa que si viaja con las
+# migraciones es la 00074. Ver docs/SEGURIDAD.md, "Alta de cuentas".
+#
+# Es la unica clave que hace falta tocar: ver el comentario de [auth.email] mas abajo antes de
+# anadir la de alli, que apaga el login.
+enable_signup = false
+enable_refresh_token_rotation = true
+refresh_token_reuse_interval = 10
+
+# Limites de inicio de sesion/registro por IP en una ventana de 5 minutos. Son el default de la
+# CLI, dejados explicitos por la misma razon de arriba. IMPORTANTE: esto NO es el bloqueo por
+# cuenta del criterio 2 de la issue #230 (ese salio del alcance de #230, ver docs/SEGURIDAD.md):
+# es un limite por IP compartida, no por cuenta, y no deja un registro consultable de intentos.
+[auth.rate_limit]
+sign_in_sign_ups = 30
+token_verifications = 30
+token_refresh = 150
 
 [auth.email]
+# OJO: esta clave se queda en true a proposito, y no es un olvido de la issue #508.
+#
+# Basta con enable_signup = false en [auth] para que POST /auth/v1/signup devuelva
+# 422 signup_disabled. Poner ADEMAS esta en false apaga el proveedor de correo entero: el login
+# pasa a responder 422 email_provider_disabled y **nadie puede iniciar sesion**. Comprobado
+# cambiando una linea cada vez y reiniciando el stack.
 enable_signup = true
 double_confirm_changes = true
 enable_confirmations = false
+
+# Plantillas de correo de Auth (issue #864). Hoy solo la de recuperacion: la invitacion dejo de
+# usar el correo de GoTrue y manda el suyo desde la Edge Function invitar-usuario, precisamente
+# para poder distinguirse de esta.
+#
+# COMO EN TODO ESTE ARCHIVO: gobierna el stack local y el CI, no ecopac-dev ni ecopac-prod. El
+# despliegue solo corre `supabase db push`, nunca `supabase config push`, asi que en los proyectos
+# remotos hay que pegar el mismo contenido en Authentication > Emails > Reset Password.
+[auth.email.template.recovery]
+subject = "Restablece tu contraseña de Ecopac Digital"
+content_path = "./supabase/templates/recovery.html"
 
 [edge_runtime]
 enabled = true
 policy = "oneshot"
 
+# Mapa de imports de cada Edge Function.
+#
+# Las funciones importan "@supabase/supabase-js" por nombre, y ese nombre solo existe en
+# supabase/functions/deno.json. `supabase functions deploy` NO lee ese archivo por estar en la
+# raiz de functions/: busca un deno.json dentro de la carpeta de cada funcion o el import_map que
+# se declare aqui. Sin estas lineas el despliegue del 13 de septiembre (PR #808) fallo con
+# "Failed to bundle the function (reason: Relative import path "@supabase/supabase-js" not
+# prefixed with / or ./ or ../)", y como el paso lleva continue-on-error la corrida salio verde.
+#
+# El lint del CI no lo detectaba porque a deno lint/check se le pasa --config con ese mismo
+# archivo. Una funcion nueva tiene que agregar aqui su propia seccion.
+#
+# A diferencia del resto de este archivo, esto SI llega a los proyectos remotos: el despliegue
+# lee config.toml para empaquetar cada funcion.
+[functions.invitar-usuario]
+import_map = "./functions/deno.json"
+
+[functions.alertas-vencimiento]
+import_map = "./functions/deno.json"
+
+# Issue #755: manda por correo las notificaciones al administrador. La llama el webhook de pg_net
+# (00138) con la llave de servicio; verify_jwt queda en su valor por defecto, igual que las otras.
+[functions.enviar-notificaciones]
+import_map = "./functions/deno.json"
+
 [analytics]
 enabled = true
-port = 54327
+port = 54427

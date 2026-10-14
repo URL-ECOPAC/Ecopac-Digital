@@ -1,0 +1,69 @@
+// Que puede hacer cada rol con el catalogo de medicamentos.
+//
+// ESTO DECIDE QUE MUESTRA LA INTERFAZ, NO QUE PROTEGE EL SERVIDOR.
+//
+// Quien de verdad impide escribir es Row Level Security en la base de datos (politicas de
+// INSERT/UPDATE de medicamentos en 00034_politicas_rls_inventario.sql; el GRANT EXECUTE de las
+// funciones de registro y desactivacion en 00050_catalogo_medicamentos.sql). Por la misma
+// razon, ninguna funcion de medicamentos.api.js consulta este archivo antes de llamar: el
+// cliente pregunta para dibujar; el servidor decide.
+
+import { esAdministrador, ROLES, ROLES_DE_CAMPO } from "../usuarios/roles.js";
+
+/**
+ * Puede crear o editar medicamentos del catalogo.
+ *
+ * Espejo de las politicas de INSERT y UPDATE de la 00148: administrador y personal de campo.
+ * Desactivar no: es puedeDesactivarMedicamentos().
+ *
+ * @param {string} rol
+ * @returns {boolean}
+ */
+export function puedeAdministrarMedicamentos(rol) {
+  return esAdministrador(rol) || ROLES_DE_CAMPO.includes(rol);
+}
+
+/**
+ * Puede desactivar un medicamento del catalogo: sacarlo de uso, lo mas parecido a eliminarlo.
+ * Solo la administradora (trigger impedir_desactivar_sin_ser_administrador, 00148).
+ *
+ * @param {string} rol
+ * @returns {boolean}
+ */
+export function puedeDesactivarMedicamentos(rol) {
+  return esAdministrador(rol);
+}
+
+/**
+ * Puede ver el catalogo.
+ *
+ * La politica de SELECT de medicamentos es de lectura abierta para cualquier autenticado
+ * (USING (true)): cualquier rol conocido puede ver el listado completo.
+ *
+ * @param {string} rol
+ * @returns {boolean}
+ */
+export function puedeVerMedicamentos(rol) {
+  return Object.values(ROLES).includes(rol);
+}
+
+/**
+ * Permisos de un rol, en la forma que consume una pantalla.
+ *
+ * Se devuelven juntos para que un hook no tenga que llamar a las funciones sueltas ni acordarse
+ * de cuales existen. `puedeEliminar` gatea la accion de desactivar: medicamentos no tiene
+ * DELETE fisico ni politica de DELETE (00034), a diferencia de principios_activos.
+ *
+ * @param {string} rol
+ * @returns {{ puedeVer: boolean, puedeCrear: boolean, puedeEditar: boolean, puedeEliminar: boolean }}
+ */
+export function permisosDeMedicamentos(rol) {
+  const puedeAdministrar = puedeAdministrarMedicamentos(rol);
+
+  return {
+    puedeVer: puedeVerMedicamentos(rol),
+    puedeCrear: puedeAdministrar,
+    puedeEditar: puedeAdministrar,
+    puedeEliminar: puedeDesactivarMedicamentos(rol),
+  };
+}

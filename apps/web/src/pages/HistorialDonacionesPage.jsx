@@ -1,0 +1,323 @@
+import { Link } from "react-router-dom";
+import {
+  ESTADOS_DE_DONACION,
+  ETIQUETAS_TIPO_DONACION,
+  formatearFechaConHora,
+  formatearFechaCorta,
+  formatearMoneda,
+  TIPOS_DE_DONACION,
+  useHistorialDonaciones,
+} from "@ecopac/shared";
+import { Container, Card, Button, Table, Badge, Alert, Modal, Spinner } from "react-bootstrap";
+
+import DateField from "../components/DateField";
+import PageHeader from "../components/PageHeader";
+import BotonLimpiarFiltros from "../components/BotonLimpiarFiltros";
+import Selector from "../components/Selector";
+import StatCard from "../components/StatCard";
+import StatusChip from "../components/StatusChip";
+import TextField from "../components/TextField";
+import { ACCION_VOLVER_A_DONACIONES } from "./donacionesNavegacion";
+import ScreenContainer from "../components/ScreenContainer";
+
+export default function HistorialDonacionesPage({ usuarioRol }) {
+  const { tieneAccesoLectura, cargando, error, donaciones, totalesPorTipo, filtros, modalDetalle } =
+    useHistorialDonaciones({ usuarioRol });
+
+  if (!tieneAccesoLectura) {
+    return (
+      <Container className="my-4">
+        <Alert variant="danger">
+          Acceso denegado: No tiene permisos para consultar este módulo.
+        </Alert>
+      </Container>
+    );
+  }
+
+  return (
+    <ScreenContainer>
+      <PageHeader
+        title="Historial de donaciones recibidas"
+        subtitle="Consulta y detalle de las donaciones registradas"
+        actions={[ACCION_VOLVER_A_DONACIONES]}
+      />
+
+      {error && (
+        <Alert variant="danger">
+          No se pudo cargar el historial: {error.mensaje || "error inesperado."}
+        </Alert>
+      )}
+
+      {/* Totales por tipo con StatCard, como el resumen de donaciones, inventario y presupuestos.
+          Una tarjeta por cada tipo de donacion (issue #911): faltaba servicios, que se cuenta en
+          donaciones porque no tiene unidades. */}
+      <div className="ec-kpis">
+        <StatCard
+          label={ETIQUETAS_TIPO_DONACION[TIPOS_DE_DONACION.DINERO]}
+          value={formatearMoneda(totalesPorTipo?.dinero || 0)}
+          accent="var(--accent-donaciones)"
+          esTexto
+        />
+        <StatCard
+          label={ETIQUETAS_TIPO_DONACION[TIPOS_DE_DONACION.MEDICAMENTOS]}
+          value={totalesPorTipo?.medicamentos || 0}
+          caption="unidades"
+          accent="var(--color-primary)"
+        />
+        <StatCard
+          label={ETIQUETAS_TIPO_DONACION[TIPOS_DE_DONACION.INSUMOS]}
+          value={totalesPorTipo?.insumos || 0}
+          caption="unidades"
+          accent="var(--color-warning)"
+        />
+        <StatCard
+          label={ETIQUETAS_TIPO_DONACION[TIPOS_DE_DONACION.SERVICIOS]}
+          value={totalesPorTipo?.servicios || 0}
+          caption={totalesPorTipo?.servicios === 1 ? "donación" : "donaciones"}
+          accent="var(--color-info)"
+        />
+      </div>
+
+      {/* Filtros con la barra comun: mismas etiquetas, mismo "Limpiar filtros" al final. */}
+      <div className="ec-filtros">
+        <div className="ec-filtro ec-filtro--busqueda">
+          <TextField
+            label="Buscar donante"
+            placeholder="Nombre del donante"
+            value={filtros.filtroDonante}
+            onChange={(e) => filtros.setFiltroDonante(e.target.value)}
+            style={{ marginBottom: 0 }}
+          />
+        </div>
+        <div className="ec-filtro">
+          <Selector
+            label="Tipo"
+            value={filtros.filtroTipo || null}
+            options={Object.values(TIPOS_DE_DONACION).map((tipo) => ({
+              value: tipo,
+              label: ETIQUETAS_TIPO_DONACION[tipo],
+            }))}
+            onSelect={(valor) => filtros.setFiltroTipo(valor ?? "")}
+            placeholder="Todos los tipos"
+            style={{ marginBottom: 0 }}
+          />
+        </div>
+        <div className="ec-filtro">
+          <Selector
+            label="Proyecto"
+            value={filtros.filtroProyecto || null}
+            options={filtros.proyectosOptions ?? []}
+            onSelect={(valor) => filtros.setFiltroProyecto(valor ?? "")}
+            placeholder="Todos los proyectos"
+            disabled={(filtros.proyectosOptions ?? []).length === 0}
+            style={{ marginBottom: 0 }}
+          />
+        </div>
+        <fieldset className="ec-filtro ec-filtro--rango">
+          <legend className="form-label">Fecha</legend>
+          <div className="ec-rango-doble">
+            <DateField
+              aria-label="Fecha: desde"
+              value={filtros.fechaInicio || null}
+              onChange={(valor) => filtros.setFechaInicio(valor ?? "")}
+              style={{ marginBottom: 0 }}
+            />
+            <span className="ec-rango-separador" aria-hidden="true">
+              -
+            </span>
+            <DateField
+              aria-label="Fecha: hasta"
+              value={filtros.fechaFin || null}
+              onChange={(valor) => filtros.setFechaFin(valor ?? "")}
+              style={{ marginBottom: 0 }}
+            />
+          </div>
+        </fieldset>
+        <BotonLimpiarFiltros onClick={filtros.limpiarFiltros} hayFiltros={filtros.hayFiltros} />
+      </div>
+
+      {/* Tabla de Historial */}
+      <Card>
+        <Card.Header className="bg-transparent">
+          <h2 className="ec-seccion-titulo mb-0">Listado de donaciones</h2>
+        </Card.Header>
+        <Card.Body className="p-0">
+          <Table responsive hover striped className="mb-0 align-middle">
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Donante</th>
+                <th>Tipo</th>
+                <th>Resumen Detalle</th>
+                <th>Estado</th>
+                <th className="text-end">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {cargando ? (
+                <tr>
+                  <td colSpan="6" className="text-center text-muted py-4">
+                    <Spinner animation="border" size="sm" className="me-2" />
+                    Cargando donaciones...
+                  </td>
+                </tr>
+              ) : (donaciones || []).length === 0 ? (
+                <tr>
+                  <td colSpan="6" className="text-center text-muted py-4">
+                    No se encontraron registros de donaciones con los filtros seleccionados.
+                  </td>
+                </tr>
+              ) : (
+                donaciones.map((d) => {
+                  const esAnulada = d.estado === ESTADOS_DE_DONACION.ANULADA;
+                  return (
+                    <tr key={d.id} className={esAnulada ? "table-danger text-muted" : ""}>
+                      <td>{d.fecha}</td>
+                      <td className="fw-semibold">{d.donanteNombre || "-"}</td>
+                      <td>{ETIQUETAS_TIPO_DONACION[d.tipo] ?? d.tipo}</td>
+                      <td>{esAnulada ? <del>{d.resumen || "-"}</del> : d.resumen || "-"}</td>
+                      <td>
+                        {esAnulada ? (
+                          <Badge bg="danger">Anulada</Badge>
+                        ) : (
+                          <Badge bg="success">Activa</Badge>
+                        )}
+                      </td>
+                      <td>
+                        {/* Con gap y no con margen: cuando la columna es angosta los botones se
+                            apilan, y el margen lateral los dejaba pegados uno sobre otro. */}
+                        <div className="d-flex flex-wrap justify-content-end gap-2">
+                          <Button
+                            variant="outline-primary"
+                            size="sm"
+                            onClick={() => modalDetalle.abrirDetalle(d)}
+                          >
+                            Ver Detalle
+                          </Button>
+                          {/* La fila viaja en el state para que la constancia se dibuje sin una
+                            segunda consulta; si se entra por URL la resuelve obtenerDonacion(). */}
+                          <Button
+                            as={Link}
+                            to={`/donaciones/${d.id}/constancia`}
+                            state={{ donacion: d }}
+                            variant="outline-secondary"
+                            size="sm"
+                          >
+                            Constancia
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </Table>
+        </Card.Body>
+      </Card>
+
+      {/* Modal de Detalle Completo */}
+      {modalDetalle.modalDetalleAbierto && modalDetalle.donacionSeleccionada && (
+        <Modal show={modalDetalle.modalDetalleAbierto} onHide={modalDetalle.cerrarDetalle} centered>
+          <Modal.Header closeButton>
+            <Modal.Title as="h5">Detalle de la donación</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            {/* Ficha en dos columnas (rotulo arriba, dato abajo) en vez de una lista de
+                "Etiqueta: valor" corrida: se lee de un vistazo y el estado va con su chip. */}
+            <div className="row g-3 mb-3">
+              {[
+                ["Donante", modalDetalle.donacionSeleccionada.donanteNombre],
+                [
+                  "Tipo",
+                  ETIQUETAS_TIPO_DONACION[modalDetalle.donacionSeleccionada.tipo] ??
+                    modalDetalle.donacionSeleccionada.tipo,
+                ],
+                ["Fecha", formatearFechaCorta(modalDetalle.donacionSeleccionada.fecha)],
+                ["Jornada", modalDetalle.donacionSeleccionada.jornadaNombre],
+                ["Proyecto", modalDetalle.donacionSeleccionada.proyectoNombre],
+                ["Registrada por", modalDetalle.donacionSeleccionada.registradoPorNombre],
+              ].map(([rotulo, valor]) => (
+                <div className="col-6" key={rotulo}>
+                  <div className="pac-rotulo">{rotulo}</div>
+                  <div>{valor || "—"}</div>
+                </div>
+              ))}
+              <div className="col-6">
+                <div className="pac-rotulo">Estado</div>
+                <StatusChip status={modalDetalle.donacionSeleccionada.estado} />
+              </div>
+              {modalDetalle.donacionSeleccionada.observaciones && (
+                <div className="col-12">
+                  <div className="pac-rotulo">Observaciones</div>
+                  <div>{modalDetalle.donacionSeleccionada.observaciones}</div>
+                </div>
+              )}
+            </div>
+
+            {modalDetalle.donacionSeleccionada.estado === ESTADOS_DE_DONACION.ANULADA && (
+              <Alert variant="danger" className="mb-3">
+                <p className="mb-1">
+                  <strong>Motivo de Anulación:</strong>{" "}
+                  {modalDetalle.donacionSeleccionada.motivoAnulacion || "No informado"}
+                </p>
+                <p className="mb-1">
+                  <strong>Anulada por:</strong>{" "}
+                  {modalDetalle.donacionSeleccionada.anuladaPorNombre || "-"}
+                </p>
+                <p className="mb-0">
+                  <strong>Fecha de Anulación:</strong>{" "}
+                  {formatearFechaConHora(modalDetalle.donacionSeleccionada.anuladaEn) || "-"}
+                </p>
+              </Alert>
+            )}
+
+            <div className="pac-rotulo mb-2">Qué se donó</div>
+            {(modalDetalle.donacionSeleccionada.detalles || []).length === 0 ? (
+              <p className="text-body-secondary mb-0">Sin detalles registrados.</p>
+            ) : (
+              <div className="ec-tabla">
+                <Table size="sm" className="mb-0">
+                  <thead>
+                    <tr>
+                      <th>Descripción</th>
+                      <th className="text-end">Cantidad</th>
+                      {/* El monto solo dice algo en una donacion en dinero: en una de
+                          medicamentos era siempre "Q 0.00". */}
+                      {modalDetalle.donacionSeleccionada.tipo === TIPOS_DE_DONACION.DINERO && (
+                        <th className="text-end">Monto</th>
+                      )}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {modalDetalle.donacionSeleccionada.detalles.map((item) => (
+                      <tr key={item.id}>
+                        <td>{item.descripcion}</td>
+                        <td className="text-end">
+                          {item.cantidad !== null && item.cantidad !== undefined
+                            ? `${item.cantidad} ${item.unidad || "unidades"}`
+                            : "—"}
+                        </td>
+                        {modalDetalle.donacionSeleccionada.tipo === TIPOS_DE_DONACION.DINERO && (
+                          <td className="text-end">{formatearMoneda(item.monto) ?? "—"}</td>
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </Table>
+              </div>
+            )}
+
+            {/* Aqui estaba "Anular donación" (issue #756). Se quito en la issue #911: no hay
+                proceso para devolver lo donado, y la base ya no deja anular (00173). */}
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="secondary" onClick={modalDetalle.cerrarDetalle}>
+              Cerrar
+            </Button>
+          </Modal.Footer>
+        </Modal>
+      )}
+    </ScreenContainer>
+  );
+}

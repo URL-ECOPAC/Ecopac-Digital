@@ -1,0 +1,150 @@
+/* Notificaciones del buzon (issue #755): la ventana dedicada y la emergente de la campana.
+
+   Cada item es un boton: abrirlo lo marca como leido y lleva
+   a la pantalla donde se resuelve la incidencia. El color de la categoria llega como --ec-acento
+   (var(--color-<tono>), ver ItemNotificacion.jsx) y pinta el filete izquierdo y el chip, igual
+   que .ec-subseccion pinta su punto. Sin leer: fondo tenue de info y el punto; leida: superficie
+   normal y el titulo sin negrita, para que lo pendiente se distinga de un vistazo. */
+
+.notificacion-lista {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.notificacion-item {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-left: 4px solid var(--ec-acento, var(--color-primary));
+  border-radius: var(--radio-md);
+  color: var(--color-text);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-sm) var(--spacing-md);
+  text-align: left;
+  width: 100%;
+}
+
+.notificacion-item:hover,
+.notificacion-item:focus-visible {
+  border-color: var(--ec-acento, var(--color-primary));
+}
+
+.notificacion-item--sin-leer {
+  background-color: color-mix(in srgb, var(--color-info) 6%, var(--color-surface));
+}
+
+.notificacion-item-cabecera {
+  align-items: center;
+  display: flex;
+  gap: var(--spacing-sm);
+  justify-content: space-between;
+}
+
+.notificacion-item-fecha {
+  color: var(--color-text-muted);
+  font-size: var(--texto-xs);
+}
+
+.notificacion-item-titulo {
+  align-items: center;
+  display: flex;
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-regular);
+  gap: var(--spacing-xs);
+}
+
+.notificacion-item--sin-leer .notificacion-item-titulo {
+  font-weight: var(--peso-semibold);
+}
+
+.notificacion-item-cuerpo {
+  color: var(--color-text-muted);
+  font-size: var(--texto-sm);
+}
+
+.notificacion-punto {
+  background-color: var(--color-info);
+  border-radius: 50%;
+  flex: 0 0 auto;
+  height: 8px;
+  width: 8px;
+}
+
+/* La version de la ventana emergente: el cuerpo en dos lineas como mucho, para que quepan varias
+   notificaciones sin desplazar. */
+.notificacion-item--compacto {
+  padding: var(--spacing-xs) var(--spacing-sm);
+}
+
+.notificacion-item--compacto .notificacion-item-cuerpo {
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  display: -webkit-box;
+  font-size: var(--texto-xs);
+  overflow: hidden;
+}
+
+/* Ventana emergente de la campana. */
+.notificaciones-emergente {
+  max-width: calc(100vw - 2 * var(--spacing-md));
+  padding: 0;
+  width: 380px;
+}
+
+.notificaciones-emergente-cabecera {
+  align-items: center;
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  gap: var(--spacing-sm);
+  justify-content: space-between;
+  padding: var(--spacing-sm) var(--spacing-md);
+}
+
+.notificaciones-emergente-titulo {
+  color: var(--color-text);
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-semibold);
+  margin: 0;
+  white-space: nowrap;
+}
+
+.notificaciones-emergente-cabecera .notificaciones-emergente-accion {
+  font-size: var(--texto-xs);
+  white-space: nowrap;
+}
+
+.notificaciones-emergente-lista {
+  max-height: 360px;
+  overflow-y: auto;
+  padding: var(--spacing-sm);
+}
+
+.notificaciones-emergente-vacio {
+  color: var(--color-text-muted);
+  font-size: var(--texto-sm);
+  margin: 0;
+  padding: var(--spacing-md);
+  text-align: center;
+}
+
+.notificaciones-emergente-pie {
+  border-top: 1px solid var(--color-border);
+  padding: var(--spacing-sm) var(--spacing-md);
+  text-align: center;
+}
+
+.notificaciones-emergente-pie a,
+.notificaciones-emergente-accion {
+  background: none;
+  border: 0;
+  color: var(--color-primary);
+  font-size: var(--texto-sm);
+  font-weight: var(--peso-semibold);
+  padding: 0;
+  text-decoration: none;
+}

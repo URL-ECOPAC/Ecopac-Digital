@@ -1,0 +1,52 @@
+// Nombres de ruta del navegador, en su propio archivo para que una pantalla pueda
+// importarlos sin depender de AppNavigator, que a su vez importa las pantallas.
+export const ROUTES = {
+  AUTH: "Auth",
+  LOGIN: "Login",
+  RESTABLECER_CONTRASENA: "RestablecerContrasena",
+  TABS: "Tabs",
+
+  // Tabs
+  TAB_INICIO: "Inicio",
+  TAB_PACIENTES: "Pacientes",
+  TAB_JORNADAS: "Jornadas",
+  TAB_INVENTARIO: "Inventario",
+  TAB_AJUSTES: "Ajustes",
+
+  // Pantallas dentro de cada stack
+  INICIO: "InicioPanel",
+  ACCESO_DENEGADO: "AccesoDenegado",
+
+  BUSQUEDA_PACIENTE: "BusquedaPaciente",
+  FICHA_PACIENTE: "FichaPaciente",
+  HISTORIAL_PACIENTE: "HistorialPaciente",
+  REGISTRO_PACIENTE: "RegistroPaciente",
+  CONSULTA: "Consulta",
+  RECETA: "Receta",
+  ENTREGA_MEDICAMENTOS: "EntregaMedicamentos",
+  PACIENTES_CRONICOS: "PacientesCronicos",
+  CATALOGO_CONDICIONES: "CatalogoCondiciones",
+  CATALOGO_DIAGNOSTICOS: "CatalogoDiagnosticos",
+  AGENDA_CITAS: "AgendaCitas",
+
+  SELECCION_JORNADA: "SeleccionJornada",
+  JORNADA_EN_CURSO: "JornadaEnCurso",
+  JORNADAS_ASIGNADAS: "JornadasAsignadas",
+  KANBAN_JORNADAS: "KanbanJornadas", //  NUEVA RUTA AGREGADA
+  DETALLE_JORNADA: "DetalleJornada",
+  PROYECTOS: "Proyectos",
+
+  STOCK: "Stock",
+  REGISTRO_INGRESO: "RegistroIngreso",
+  EXISTENCIAS_INVENTARIO: "ExistenciasInventario",
+  RESUMEN_ALERTAS_INVENTARIO: "ResumenAlertasInventario",
+  MIS_MOVIMIENTOS: "MisMovimientos",
+  DETALLE_LOTE: "DetalleLote",
+  PRINCIPIOS_ACTIVOS: "PrincipiosActivos",
+  REGISTRO_SALIDA: "RegistroSalida",
+  VALIDACION_MOVIMIENTOS: "ValidacionMovimientos",
+
+  // Pantalla del Root, encima de las pestanas: se abre desde la campana de cualquier cabecera y
+  // desde Ajustes (issue #755).
+  NOTIFICACIONES: "Notificaciones",
+};

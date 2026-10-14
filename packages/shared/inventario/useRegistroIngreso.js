@@ -1,0 +1,413 @@
+import { useState } from "react";
+
+import { ORIGENES_DE_LOTE } from "../enums.js";
+import { exigeFechaDeVencimiento } from "./campos.js";
+import { registrarIngreso } from "./movimientos.api.js";
+import { registrarMedicamento } from "./medicamentos.api.js";
+import { puedeAdministrarMedicamentos } from "./medicamentos.permisos.js";
+import { recargarAlertasMontadas } from "./useAlertasVencimiento.js";
+
+const ITEM_VACIO = {
+  medicamento_id: "",
+  numero_lote: "",
+  fecha_vencimiento: "",
+  cantidad: "",
+  bodega_id: "",
+  // Opcional (issue #752): un ingreso de donacion, o una compra cuyo precio todavia no se
+  // conoce, se registra igual sin costo.
+  costo_unitario: "",
+};
+
+/**
+ * Si el lote del articulo elegido tiene que llevar fecha de vencimiento: si es un medicamento, o
+ * si no se sabe que es (no esta en el catalogo que se paso). Solo un insumo puede ir sin ella
+ * (00171). Pura y exportada para probarla sin montar el hook.
+ *
+ * @param {string} medicamentoId Id del articulo elegido.
+ * @param {{ id: string, tipoArticulo?: string }[]} [articulos] Catalogo (listarMedicamentos()).
+ * @returns {boolean}
+ */
+export function vencimientoObligatorioDe(medicamentoId, articulos = []) {
+  const articulo = (articulos ?? []).find((fila) => fila.id === medicamentoId);
+  return exigeFechaDeVencimiento(articulo?.tipoArticulo);
+}
+
+/**
+ * Los renglones de una donacion con su estado en el ingreso: `agregado` (ya esta en la lista),
+ * `en captura` (es el que esta en el formulario) o `pendiente`. Pura y exportada para probarla sin
+ * montar el hook.
+ *
+ * @param {{ donacionDetalleId: string }[]} detallesDonacion
+ * @param {{ donacionDetalleId?: string|null }[]} items Items ya agregados.
+ * @param {{ donacionDetalleId?: string|null }} itemActual
+ * @returns {object[]} Los renglones, cada uno con `estado`.
+ */
+export function estadoDeRenglonesDeDonacion(detallesDonacion, items, itemActual) {
+  return (detallesDonacion ?? []).map((renglon) => {
+    const id = renglon.donacionDetalleId;
+    let estado = "pendiente";
+    if (items.some((item) => item.donacionDetalleId === id)) estado = "agregado";
+    else if (itemActual?.donacionDetalleId === id) estado = "en captura";
+    return { ...renglon, estado };
+  });
+}
+
+/**
+ * Item de arranque para un renglon de donacion pendiente de convertirse en ingreso (issue #756):
+ * la cantidad viene ya capturada en donacion_detalle.cantidad, y medicamentoId si la persona ya
+ * lo habia escrito al registrar la donacion (no es obligatorio ahi). El resto -bodega, lote,
+ * vencimiento- lo completa quien genera el ingreso, igual que cualquier otro item de esta lista.
+ *
+ * `donacionDetalleId` viaja en el item solo para que quien use este hook pueda correlacionar
+ * cada movimiento creado con el renglon que lo origino (por ejemplo, para enlazar el lote de
+ * vuelta con donacion_detalle.lote_id, donaciones/ingreso.api.js): datosIngresoParaRegistrar()
+ * no lo lee, asi que nunca llega al servidor.
+ *
+ * @param {object} renglon
+ * @returns {object} Los campos de la fila de origen, mas: medicamento_id, cantidad, donacionDetalleId, medicamentoFijo.
+ */
+export function itemDesdeRenglonDeDonacion(renglon) {
+  return {
+    ...ITEM_VACIO,
+    medicamento_id: renglon?.medicamentoId || "",
+    cantidad: renglon?.cantidad ?? "",
+    donacionDetalleId: renglon?.donacionDetalleId ?? null,
+    // Desde la #840 el renglon de la donacion guarda el medicamento del catalogo
+    // (donacion_detalle.medicamento_id, 00135). Cambiarlo aqui dejaria el lote con un
+    // medicamento distinto al que se registro como donado: el selector se muestra, pero fijo.
+    medicamentoFijo: Boolean(renglon?.medicamentoId),
+  };
+}
+
+/**
+ * Traduce un item de la lista del formulario mas los datos comunes del ingreso (origen,
+ * proveedor, comprobante, usuario) a los argumentos que declara registrarIngreso()
+ * (movimientos.api.js). Se exporta aparte del hook para poder probar la traduccion sin montar
+ * un componente (issue #709).
+ *
+ * @param {object} item
+ * @param {{ origen: string, proveedorId: string, numeroComprobante: string, usuarioId?: string }} datosComunes
+ * @returns {object} Con: origen, bodega_id, medicamento_id, numero_lote, fecha_vencimiento, proveedor_id, cantidad, motivo, usuarioId, costo_unitario.
+ */
+export function datosIngresoParaRegistrar(
+  item,
+  { origen, proveedorId, numeroComprobante, usuarioId },
+) {
+  return {
+    origen,
+    bodega_id: item.bodega_id,
+    medicamento_id: item.medicamento_id,
+    numero_lote: item.numero_lote,
+    fecha_vencimiento: item.fecha_vencimiento,
+    proveedor_id: proveedorId,
+    cantidad: item.cantidad,
+    // movimientos_inventario.motivo es NOT NULL (00023) y el comprobante es opcional: sin el, el
+    // ingreso se rechazaba con "Falta un dato obligatorio" sin decir cual. Se dice de donde vino.
+    motivo:
+      numeroComprobante.trim() ||
+      (origen === ORIGENES_DE_LOTE.DONACION ? "Ingreso por donación" : "Ingreso por compra"),
+    usuarioId,
+    // costo_unitario es opcional (issue #752): sin el, o con el campo vacio del formulario, se
+    // traduce a undefined, no a NaN ni a 0 -- registrarIngreso() (movimientos.api.js) omite la
+    // columna del todo cuando no llega, en vez de forzar un costo que nadie capturo.
+    costo_unitario:
+      item.costo_unitario === "" || item.costo_unitario === undefined
+        ? undefined
+        : Number(item.costo_unitario),
+  };
+}
+
+/**
+ * Hook del formulario de registro de ingreso de medicamentos (issue #709).
+ *
+ * QUE ESTABA MAL. guardarMovimiento() armaba un objeto de mentira -id "ING-<timestamp>" (no un
+ * UUID), estado "PENDIENTE" (el enum estado_movimiento es 'pendiente', en minuscula, y ademas
+ * el estado lo decide el trigger de la base, no el cliente)- y lo pasaba tal cual a
+ * onGuardarExitoso(): no habia ningun await a una API en todo el archivo. registrarIngreso()
+ * (movimientos.api.js) existia, estaba probada, y no la llamaba nadie desde aqui. Ademas
+ * guardarMovimiento() no devolvia nada, asi que ModalRegistroIngreso.jsx comprobaba
+ * `const exito = await guardarMovimiento(...); if (exito ...)` contra un `undefined` que nunca
+ * iba a ser verdadero.
+ *
+ * QUE HACE AHORA. Cada medicamento agregado a la lista es su propio lote (numero_lote y
+ * fecha_vencimiento propios), asi que se registra con una llamada a registrarIngreso() por
+ * item -la misma primitiva ya usada por el resto del modulo-, deteniendose en el primer error en
+ * vez de seguir intentando a ciegas. `origen` (compra/donacion) y `proveedorId` viajan igual
+ * para los dos: un donante registrado como proveedor de tipo 'donante' (proveedores.tipo,
+ * 00017) es tan valido como uno comercial para registrarIngreso(), que exige proveedor_id sin
+ * distinguir el origen. `registrarIngreso()` no sabe nada de `donacion_detalle` -crea el
+ * movimiento y el lote, nada mas-; enlazar el lote de vuelta al renglon que lo origino
+ * (issue #756) es cosa de `detallesDonacion` mas abajo, no de este bloque.
+ *
+ * `rol` (issue #165, criterio 1) habilita `puedeCrearMedicamento` y `crearMedicamentoNuevo()`.
+ * Es opcional y no cambia nada de lo que ya usa #156: sin `rol`, `puedeCrearMedicamento` da
+ * `false` (mismo resultado que `puedeAdministrarMedicamentos(undefined)`) y las dos funciones
+ * nuevas simplemente quedan sin usar.
+ *
+ * `detallesDonacion` (issue #756) precarga un renglon de donacion a la vez en `itemActual`
+ * -cantidad, y medicamento si ya se habia escrito- cada vez que `agregarItem()` guarda el
+ * anterior, en vez de dejarlo en blanco: la persona sigue completando bodega/lote/vencimiento y
+ * pulsando "+ Añadir" como con cualquier otro item, sin volver a escribir la cantidad. `origen`
+ * arranca en 'donacion' cuando hay renglones que precargar. Cada item guarda su
+ * `donacionDetalleId` para que quien llame a este hook pueda enlazar el lote creado de vuelta al
+ * renglon (`enlazarLoteConDonacion()`, donaciones/ingreso.api.js) usando los `movimientos` y los
+ * `items` que entrega `onGuardarExitoso` en el mismo orden -esa llamada vive fuera de este
+ * archivo a proposito: packages/shared/inventario/ no conoce donacion_detalle.
+ *
+ * `proveedorIdInicial` (issue #756) precarga el proveedor -tipico cuando ya se sabe cual es,
+ * como el sugerido por `sugerirProveedorId()` a partir del donante de la donacion- sin quitarle
+ * a la persona la posibilidad de cambiarlo antes de guardar.
+ *
+ * `articulos` (00171) es el catalogo que la pantalla ya tiene cargado: con el se sabe si el
+ * articulo elegido es un insumo, el unico cuyo lote puede ir sin fecha de vencimiento. Sin el,
+ * todo se trata como medicamento y la fecha se pide siempre, como antes.
+ *
+ * `bodegaIdInicial` (issue #911) deja elegida la bodega del primer item -tipico: la del botiquin
+ * de la jornada para la que se recibio la donacion-. Es solo el valor de arranque: la persona la
+ * cambia si el ingreso va a otra bodega, y los items siguientes conservan la ultima elegida.
+ *
+ * @param {{ usuarioId?: string, rol?: string,
+ *   onGuardarExitoso?: (movimientos: object[], items: object[]) => void,
+ *   detallesDonacion?: { donacionDetalleId: string, cantidad: number, medicamentoId?: string,
+ *     descripcion?: string }[], proveedorIdInicial?: string, bodegaIdInicial?: string,
+ *   articulos?: { id: string, tipoArticulo?: string }[] }} [opciones]
+ *
+ * @returns {object} Con: origen, setOrigen, proveedorId, setProveedorId, numeroComprobante, setNumeroComprobante, items, itemActual, setItemActual, renglonesDonacion, agregarItem, eliminarItem, guardarMovimiento, resumenGuardado, resetFormulario, error, guardando, vencimientoObligatorio, puedeCrearMedicamento, crearMedicamentoNuevo, creandoMedicamento, errorMedicamento.
+ */
+export function useRegistroIngreso({
+  usuarioId,
+  rol,
+  onGuardarExitoso,
+  detallesDonacion = [],
+  proveedorIdInicial = "",
+  bodegaIdInicial = "",
+  articulos = [],
+} = {}) {
+  const [origen, setOrigenState] = useState(detallesDonacion.length > 0 ? "donacion" : "compra");
+  const [proveedorId, setProveedorId] = useState(proveedorIdInicial);
+  const [numeroComprobante, setNumeroComprobante] = useState("");
+
+  const itemInicial = () => ({
+    ...(detallesDonacion.length > 0 ? itemDesdeRenglonDeDonacion(detallesDonacion[0]) : ITEM_VACIO),
+    bodega_id: bodegaIdInicial || "",
+  });
+
+  const [items, setItems] = useState([]);
+  const [itemActual, setItemActual] = useState(itemInicial);
+
+  const [resumenGuardado, setResumenGuardado] = useState(null);
+  const [error, setError] = useState(null);
+  const [guardando, setGuardando] = useState(false);
+
+  const [creandoMedicamento, setCreandoMedicamento] = useState(false);
+  const [errorMedicamento, setErrorMedicamento] = useState(null);
+
+  // Si el articulo del formulario necesita fecha de vencimiento: la pantalla lo marca obligatorio
+  // u opcional, y agregarItem() lo exige.
+  const vencimientoObligatorio = vencimientoObligatorioDe(itemActual.medicamento_id, articulos);
+
+  const setOrigen = (nuevoOrigen) => {
+    setOrigenState(nuevoOrigen);
+    setError(null);
+  };
+
+  const agregarItem = () => {
+    if (
+      !itemActual.medicamento_id ||
+      !itemActual.numero_lote ||
+      !itemActual.cantidad ||
+      !itemActual.bodega_id
+    ) {
+      setError(
+        "Completa los campos obligatorios del artículo (Producto o insumo, Lote, Cantidad y Bodega).",
+      );
+      return;
+    }
+
+    if (Number(itemActual.cantidad) <= 0) {
+      setError("La cantidad ingresada debe ser mayor a 0.");
+      return;
+    }
+
+    // Solo un insumo puede ir sin fecha de vencimiento (00171); a un medicamento se la exige la base.
+    if (!itemActual.fecha_vencimiento && vencimientoObligatorio) {
+      setError("La fecha de vencimiento es obligatoria para un medicamento.");
+      return;
+    }
+
+    const agregado = { ...itemActual, cantidad: Number(itemActual.cantidad), id: Date.now() };
+    const siguientesItems = [...items, agregado];
+    setItems(siguientesItems);
+
+    // Con renglones de donacion pendientes, el siguiente reemplaza al vacio de siempre: es lo
+    // que deja a la persona seguir sin volver a escribir la cantidad de cada renglon. La bodega se
+    // conserva: una donacion casi siempre entra entera a la misma.
+    const siguiente = detallesDonacion.find(
+      (renglon) =>
+        !siguientesItems.some((item) => item.donacionDetalleId === renglon.donacionDetalleId),
+    );
+    setItemActual(
+      siguiente
+        ? { ...itemDesdeRenglonDeDonacion(siguiente), bodega_id: itemActual.bodega_id }
+        : { ...ITEM_VACIO, bodega_id: itemActual.bodega_id },
+    );
+    setError(null);
+  };
+
+  const eliminarItem = (id) => {
+    const quitado = items.find((item) => item.id === id);
+    setItems((prev) => prev.filter((item) => item.id !== id));
+    // Un renglon de la donacion que se quita vuelve a quedar por capturar: si el formulario esta
+    // libre, se carga ahi mismo para no perderlo.
+    const formularioLibre = !itemActual.donacionDetalleId && !itemActual.medicamento_id;
+    if (quitado?.donacionDetalleId && formularioLibre) {
+      const renglon = detallesDonacion.find(
+        (d) => d.donacionDetalleId === quitado.donacionDetalleId,
+      );
+      if (renglon) {
+        setItemActual({ ...itemDesdeRenglonDeDonacion(renglon), bodega_id: itemActual.bodega_id });
+      }
+    }
+  };
+
+  const renglonesDonacion = estadoDeRenglonesDeDonacion(detallesDonacion, items, itemActual);
+
+  /** @returns {Promise<boolean>} Si el ingreso completo (todos sus items) se registro sin error. */
+  const guardarMovimiento = async () => {
+    if (items.length === 0) {
+      setError("Debes agregar al menos un artículo al ingreso.");
+      return false;
+    }
+
+    if (!proveedorId) {
+      setError("Debes seleccionar el proveedor o donante de procedencia.");
+      return false;
+    }
+
+    // Cada renglon de la donacion tiene que entrar: un ingreso a medias dejaba los demas fuera del
+    // inventario sin que nadie lo notara.
+    const faltan = renglonesDonacion.filter((renglon) => renglon.estado !== "agregado");
+    if (faltan.length > 0) {
+      setError(
+        faltan.length === 1
+          ? "Falta 1 renglon de la donacion: completa su lote y bodega y pulsa Añadir."
+          : `Faltan ${faltan.length} renglones de la donacion: completa su lote y bodega y pulsa Añadir.`,
+      );
+      return false;
+    }
+
+    setGuardando(true);
+    setError(null);
+
+    const movimientos = [];
+    let fallo = null;
+
+    for (const item of items) {
+      const resultado = await registrarIngreso(
+        datosIngresoParaRegistrar(item, { origen, proveedorId, numeroComprobante, usuarioId }),
+      );
+
+      if (resultado.error) {
+        fallo = resultado.error;
+        break;
+      }
+      movimientos.push(resultado.datos);
+    }
+
+    setGuardando(false);
+
+    if (fallo) {
+      setError(fallo.mensaje);
+      return false;
+    }
+
+    setResumenGuardado({ origen, proveedorId, numeroComprobante, movimientos });
+
+    // No se espera: es un refresco de cortesia para quien tenga el panel de alertas abierto en
+    // otra pestana, no algo de lo que dependa el resto de este flujo (mismo criterio que
+    // useRegistroSalida.js).
+    recargarAlertasMontadas();
+
+    // `items` va en el mismo orden que `movimientos` -el for de arriba empuja uno por otro sin
+    // reordenar-, asi que quien reciba los dos puede correlacionar movimientos[i] con
+    // items[i].donacionDetalleId sin adivinar.
+    if (onGuardarExitoso) onGuardarExitoso(movimientos, items);
+    return true;
+  };
+
+  const resetFormulario = () => {
+    setOrigenState(detallesDonacion.length > 0 ? "donacion" : "compra");
+    setProveedorId(proveedorIdInicial);
+    setNumeroComprobante("");
+    setItems([]);
+    setItemActual(itemInicial());
+    setResumenGuardado(null);
+    setError(null);
+  };
+
+  /**
+   * Puede registrar un medicamento nuevo en el catalogo (issue #165, criterio 1).
+   *
+   * Espejo de `puedeAdministrarMedicamentos(rol)` (medicamentos.permisos.js): la politica de
+   * INSERT de `medicamentos` (00034) exige `es_administrador()`, y `fn_registrar_medicamento`
+   * (00050) NO es SECURITY DEFINER, asi que corre con esos mismos privilegios. Este valor solo
+   * decide que dibuja la pantalla -un medico o voluntario en campo elige entre los medicamentos
+   * existentes, o da de alta un lote nuevo de uno ya catalogado (00107)-, nunca reemplaza esa
+   * politica: un intento igual sin permiso vuelve como 42501 desde registrarMedicamento().
+   */
+  const puedeCrearMedicamento = puedeAdministrarMedicamentos(rol);
+
+  /**
+   * Registra un medicamento nuevo en el catalogo y lo deja elegido en `itemActual.medicamento_id`
+   * (issue #165, criterio 1). Delega en `registrarMedicamento()` (medicamentos.api.js), que ya
+   * valida `principiosActivosIds` y traduce cualquier error del servidor -incluido el 42501 de
+   * quien no es administrador- a un mensaje apto para pantalla.
+   *
+   * No toca `items` ni `guardarMovimiento()`: solo prepara el medicamento que el resto del
+   * formulario ya sabe usar.
+   *
+   * @param {object} datos Mismos campos que `registrarMedicamento()` (medicamentos.api.js).
+   * @returns {Promise<{ medicamento: object|null, error: object|null }>}
+   */
+  const crearMedicamentoNuevo = async (datos) => {
+    setCreandoMedicamento(true);
+    setErrorMedicamento(null);
+
+    const resultado = await registrarMedicamento(datos);
+
+    setCreandoMedicamento(false);
+
+    if (resultado.error) {
+      setErrorMedicamento(resultado.error.mensaje);
+      return resultado;
+    }
+
+    setItemActual((prev) => ({ ...prev, medicamento_id: resultado.medicamento.id }));
+    return resultado;
+  };
+
+  return {
+    origen,
+    setOrigen,
+    proveedorId,
+    setProveedorId,
+    numeroComprobante,
+    setNumeroComprobante,
+    items,
+    itemActual,
+    setItemActual,
+    renglonesDonacion,
+    agregarItem,
+    eliminarItem,
+    guardarMovimiento,
+    resumenGuardado,
+    resetFormulario,
+    error,
+    guardando,
+    vencimientoObligatorio,
+    puedeCrearMedicamento,
+    crearMedicamentoNuevo,
+    creandoMedicamento,
+    errorMedicamento,
+  };
+}

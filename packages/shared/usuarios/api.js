@@ -1,0 +1,796 @@
+// Consultas de Supabase del modulo de usuarios.
+//
+// packages/shared/api es la infraestructura del cliente; las consultas de cada modulo van en
+// el api.js de su carpeta, tal como lo indica el encabezado de api/index.js. Este archivo es
+// el unico lugar del monorepo que lee la tabla perfiles.
+
+import { obtenerSupabase } from "../api/cliente.js";
+import {
+  CODIGOS_DE_ERROR_DE_SUPABASE,
+  construirError,
+  normalizarError,
+} from "../api/errores-de-supabase.js";
+import { ESTADOS_USUARIO } from "./campos.js";
+import { esAdministrador, ROLES } from "./roles.js";
+import { validarPerfil } from "./validaciones.js";
+
+// Las columnas se enumeran en lugar de pedir "*" para que una columna nueva en perfiles no
+// empiece a viajar sola hasta el cliente. Aqui no va perfil_especialidad: la comparten
+// obtenerPerfil(), cambiarActivo() y actualizarUsuario(), y ninguna de las tres necesita las
+// especialidades. listarUsuarios() si las necesita (issue #175, criterio 3): las pide en su
+// propio select(), aparte de esta constante, para no cambiarles el retorno a las otras tres.
+//
+// fecha_ingreso se pide con alias en camelCase porque asi la declaran los descriptores que
+// consumen las pantallas (COLUMNAS_USUARIO y CAMPOS_USUARIO). DataList busca el valor por el
+// id de la columna, asi que devolverla en snake_case dejaba esa columna vacia sin avisar de
+// nada. Es la misma convencion que sigue proyectos/api.js.
+const COLUMNAS_DEL_PERFIL =
+  "id, nombres, apellidos, email, telefono, direccion, notas, rol, activo, fechaIngreso:fecha_ingreso";
+
+// perfiles_directorio (00038/00080) no tiene direccion ni notas -son datos de contacto propios
+// del perfil, no del directorio-, y enmascara telefono/email a NULL salvo para administrador o
+// la propia fila. Se enumera aparte de COLUMNAS_DEL_PERFIL, no como un subconjunto en tiempo de
+// ejecucion, para que pedir una columna que la vista no tiene falle en desarrollo (columna
+// inexistente) en vez de silenciarse.
+const COLUMNAS_DEL_DIRECTORIO =
+  "id, nombres, apellidos, email, telefono, rol, activo, fechaIngreso:fecha_ingreso";
+
+// Especialidades embebidas para listarUsuarios() (issue #175, criterio 3): perfil_especialidad
+// no tiene columna id, solo la pareja (perfil_id, nombre_especialidad), asi que no hay mas que
+// pedir. Requiere la politica RLS de la migracion 00058; sin ella, cada perfil llega con
+// especialidades: [] para cualquiera, incluida la administradora.
+const ESPECIALIDADES_DEL_PERFIL = "especialidades:perfil_especialidad(nombre_especialidad)";
+
+/**
+ * Lee el perfil de un usuario autenticado.
+ *
+ * Devuelve `{ perfil, error }` en vez de lanzar, igual que supabase-js: quien lo consume es
+ * un hook que tiene que reflejar el fallo en pantalla, no reventar el render.
+ *
+ * `perfil` llega en `null` sin error cuando la fila no existe o cuando RLS no deja verla.
+ * Son casos distintos para la base de datos pero el mismo para el cliente: no hay perfil con
+ * el que trabajar. Quien llama decide que hacer con eso.
+ *
+ * @param {string} idUsuario UUID de auth.users, que es tambien la llave de perfiles.
+ * @returns {Promise<{ perfil: object|null, error: object|null }>}
+ */
+export async function obtenerPerfil(idUsuario) {
+  if (!idUsuario) {
+    return { perfil: null, error: null };
+  }
+
+  try {
+    const { data, error } = await obtenerSupabase()
+      .from("perfiles")
+      .select(COLUMNAS_DEL_PERFIL)
+      .eq("id", idUsuario)
+      .maybeSingle();
+
+    if (error) {
+      return { perfil: null, error: normalizarError(error) };
+    }
+
+    return { perfil: data ?? null, error: null };
+  } catch (error) {
+    // Un fallo de red no llega por el campo error sino como excepcion del fetch.
+    return { perfil: null, error: normalizarError(error) };
+  }
+}
+
+export const FUNCION_DE_INVITACION = "invitar-usuario";
+
+const CAMPOS_EDITABLES = {
+  nombres: "nombres",
+  apellidos: "apellidos",
+  telefono: "telefono",
+  rol: "rol",
+  fechaIngreso: "fecha_ingreso",
+  direccion: "direccion",
+  notas: "notas",
+};
+
+function aFiltroDeActivo(estado) {
+  if (typeof estado === "boolean") return estado;
+  const opcion = ESTADOS_USUARIO.find(({ clave }) => clave === estado);
+  return opcion ? opcion.value : null;
+}
+
+function aColumnasEditables(datos = {}) {
+  const fila = {};
+  for (const [campo, columna] of Object.entries(CAMPOS_EDITABLES)) {
+    if (Object.prototype.hasOwnProperty.call(datos, campo)) fila[columna] = datos[campo];
+  }
+  return fila;
+}
+
+function escaparPatron(texto) {
+  return texto.replace(/[%_,()]/g, " ").trim();
+}
+
+async function cambiarActivo(idUsuario, activo) {
+  if (!idUsuario) return { perfil: null, error: null };
+
+  try {
+    const { data, error } = await obtenerSupabase()
+      .from("perfiles")
+      .update({ activo })
+      .eq("id", idUsuario)
+      .select(COLUMNAS_DEL_PERFIL)
+      .maybeSingle();
+
+    if (error) return { perfil: null, error: normalizarError(error) };
+    return { perfil: data ?? null, error: null };
+  } catch (error) {
+    return { perfil: null, error: normalizarError(error) };
+  }
+}
+
+/**
+ * Ids de perfil con una especialidad dada.
+ *
+ * Dos consultas encadenadas (perfil_especialidad -> perfiles) en vez de un embed filtrado, mismo
+ * patron y mismo motivo que idsPorPrincipioActivo() en inventario/medicamentos.api.js: un embed
+ * con `!inner` para filtrar tambien recorta que filas del embed se devuelven, y listarUsuarios()
+ * necesita el arreglo COMPLETO de especialidades de cada perfil (criterio 3) al mismo tiempo que
+ * filtra por una sola (criterio 1). Lanza en vez de devolver `{ error }`, igual que su modelo:
+ * el try/catch de listarUsuarios() la atrapa y normaliza el error ahi.
+ */
+async function idsDePerfilPorEspecialidad(especialidad) {
+  const { data, error } = await obtenerSupabase()
+    .from("perfil_especialidad")
+    .select("perfil_id")
+    .eq("nombre_especialidad", especialidad);
+
+  if (error) throw error;
+  return (data ?? []).map((fila) => fila.perfil_id);
+}
+
+/**
+ * Especialidades de una lista de perfiles, agrupadas por id.
+ *
+ * Aparte del embed de ESPECIALIDADES_DEL_PERFIL porque ese embed depende de la relacion FK que
+ * PostgREST resuelve sobre la tabla base `perfiles`; `perfiles_directorio` es una vista y no se
+ * puede asumir que el mismo embed funcione sobre ella. Mismo patron de "consulta aparte y unir
+ * en JS" que contarJornadasPorPerfil() (jornadas/api.js) e idsDePerfilPorEspecialidad() arriba.
+ *
+ * @param {string[]} perfilIds
+ * @returns {Promise<{ especialidades: Record<string, string[]>, error: object|null }>}
+ */
+async function especialidadesPorPerfiles(perfilIds = []) {
+  if (perfilIds.length === 0) return { especialidades: {}, error: null };
+
+  const { data, error } = await obtenerSupabase()
+    .from("perfil_especialidad")
+    .select("perfil_id, nombre_especialidad")
+    .in("perfil_id", perfilIds);
+
+  if (error) return { especialidades: {}, error };
+
+  const especialidades = {};
+  for (const fila of data ?? []) {
+    (especialidades[fila.perfil_id] ??= []).push(fila.nombre_especialidad);
+  }
+  return { especialidades, error: null };
+}
+
+/**
+ * Nombre de cada persona (nombres_de_perfiles, 00161): id, nombres, apellidos y si esta activa.
+ * Lo lee toda persona activa, sin permisos de Colaboradores; sirve para poner nombre a un id que ya
+ * se ve (el encargado de un gasto, quien lo registro). No trae datos de contacto: para eso esta
+ * listarUsuarios().
+ *
+ * @returns {Promise<{ perfiles: { id: string, nombres: string, apellidos: string,
+ *   activo: boolean }[], error: object|null }>}
+ */
+export async function listarNombresDePerfiles() {
+  try {
+    const { data, error } = await obtenerSupabase()
+      .from("nombres_de_perfiles")
+      .select("id, nombres, apellidos, activo")
+      .order("nombres", { ascending: true });
+
+    if (error) return { perfiles: [], error: normalizarError(error) };
+    return { perfiles: data ?? [], error: null };
+  } catch (error) {
+    return { perfiles: [], error: normalizarError(error) };
+  }
+}
+
+/**
+ * Lista el personal, opcionalmente filtrado.
+ *
+ * `rol` acepta cualquiera de los cinco valores de ROLES (roles.js): esta funcion no restringe
+ * cuales, la columna `rol` de perfiles ya los admite todos (issue #175, criterio 5).
+ *
+ * `rolConsultor` es el rol de QUIEN MIRA la pantalla, no un filtro sobre los resultados: decide
+ * de que relacion se lee. La politica de SELECT de la tabla base `perfiles` (00038) solo deja
+ * ver todo el personal a la administradora; cualquier otro perfil autenticado solo se ve a si
+ * mismo. `perfiles_directorio` (00038/00080) existe exactamente para esto -- administrador y
+ * junta directiva ven a todo el personal por ahi, sin telefono/email de nadie mas que si mismos
+ * ni columnas de contacto propias (direccion, notas)-, pero hasta la issue #756 nada la
+ * consultaba: `puedeVerListadoUsuarios()` (permisos.js) ya declaraba que junta directiva podia
+ * ver el listado, y esta funcion seguia leyendo la tabla base sin importar quien preguntara, asi
+ * que junta directiva terminaba viendo unicamente su propia fila -un "directorio" de una sola
+ * persona- en vez del personal completo. Sin `rolConsultor` (valor por defecto) se sigue
+ * leyendo `perfiles`, para no cambiar el comportamiento de quien ya llamaba sin pasarlo
+ * (administrador, y las pantallas que todavia no distinguen quien mira).
+ *
+ * `especialidad` filtra por una sola especialidad a la vez (FILTROS_USUARIO la declara
+ * `TIPOS_DE_FILTRO.SELECT`, no MULTI_SELECT): primero resuelve que perfiles la tienen
+ * (idsDePerfilPorEspecialidad()), despues acota la consulta principal con `.in("id", ids)`. Si
+ * ningun perfil tiene esa especialidad, corta ahi devolviendo lista vacia sin tocar `perfiles`
+ * (mismo guard que medicamentos.api.js con `idsDePrincipioActivo`).
+ *
+ * Cada perfil devuelto trae `especialidades` como arreglo de strings (issue #175, criterio 3),
+ * nunca de objetos: es la forma que espera el render `chips` de DataList (ver
+ * CAMPOS_FICHA_COLABORADOR.especialidades en columnas.js). Requiere la politica RLS de la
+ * migracion 00058: sin ella, el embed llega vacio para cualquiera, incluida la administradora.
+ *
+ * `limite` y `pagina` acotan el resultado con `.range()` y piden el total con `count: "exact"`
+ * (issue #105, criterio 4: la lista pagina y no carga todos los perfiles de una vez). Ambos son
+ * opcionales: sin ellos la funcion se comporta como antes y devuelve todo, para no romper a
+ * quien ya la llamaba. `total` es la cantidad de filas que cumplen los filtros, sin paginar, y
+ * es lo que necesita la pantalla para saber cuantas paginas hay.
+ *
+ * @param {{ busqueda?: string, rol?: string, estado?: string|boolean, especialidad?: string,
+ *   limite?: number, pagina?: number, rolConsultor?: string }} [filtros]
+ * @returns {Promise<{ usuarios: object[], total: number, error: object|null }>}
+ */
+export async function listarUsuarios({
+  busqueda,
+  rol,
+  estado,
+  especialidad,
+  limite,
+  pagina = 1,
+  rolConsultor,
+} = {}) {
+  try {
+    let idsFiltrados = null;
+    if (especialidad) {
+      idsFiltrados = await idsDePerfilPorEspecialidad(especialidad);
+      if (idsFiltrados.length === 0) return { usuarios: [], total: 0, error: null };
+    }
+
+    const pagina_ = Math.max(1, Number(pagina) || 1);
+    const porPagina = limite === undefined || limite === null ? null : Math.max(1, Number(limite));
+
+    const leerDirectorio = rolConsultor !== undefined && !esAdministrador(rolConsultor);
+    const tabla = leerDirectorio ? "perfiles_directorio" : "perfiles";
+    // El embed de especialidades solo se pide sobre la tabla base: PostgREST lo resuelve por la
+    // FK real de perfil_especialidad -> perfiles, y esa relacion no esta garantizada sobre una
+    // vista. Leyendo del directorio, especialidadesPorPerfiles() las trae aparte, mas abajo.
+    const columnas = leerDirectorio
+      ? COLUMNAS_DEL_DIRECTORIO
+      : `${COLUMNAS_DEL_PERFIL}, ${ESPECIALIDADES_DEL_PERFIL}`;
+
+    let consulta = obtenerSupabase()
+      .from(tabla)
+      .select(columnas, porPagina === null ? undefined : { count: "exact" })
+      .order("apellidos", { ascending: true })
+      .order("nombres", { ascending: true });
+
+    if (rol) consulta = consulta.eq("rol", rol);
+
+    const activo = aFiltroDeActivo(estado);
+    if (activo !== null) consulta = consulta.eq("activo", activo);
+
+    const texto = typeof busqueda === "string" ? escaparPatron(busqueda) : "";
+    if (texto !== "") {
+      const patron = `%${texto}%`;
+      consulta = consulta.or(
+        `nombres.ilike.${patron},apellidos.ilike.${patron},email.ilike.${patron}`,
+      );
+    }
+
+    if (idsFiltrados) consulta = consulta.in("id", idsFiltrados);
+
+    if (porPagina !== null) {
+      const desde = (pagina_ - 1) * porPagina;
+      consulta = consulta.range(desde, desde + porPagina - 1);
+    }
+
+    const { data, error, count } = await consulta;
+
+    if (error) return { usuarios: [], total: 0, error: normalizarError(error) };
+
+    let usuarios;
+    if (leerDirectorio) {
+      const { especialidades } = await especialidadesPorPerfiles((data ?? []).map((f) => f.id));
+      usuarios = (data ?? []).map((fila) => ({
+        ...fila,
+        especialidades: especialidades[fila.id] ?? [],
+      }));
+    } else {
+      usuarios = (data ?? []).map((fila) => ({
+        ...fila,
+        especialidades: (fila.especialidades ?? []).map((item) => item.nombre_especialidad),
+      }));
+    }
+
+    return { usuarios, total: count ?? usuarios.length, error: null };
+  } catch (error) {
+    return { usuarios: [], total: 0, error: normalizarError(error) };
+  }
+}
+
+/**
+ * Cuenta en cuantas jornadas participo cada perfil de la lista que se le pase: con turno o como
+ * responsable.
+ *
+ * Dos consultas para todos los perfiles de la pagina (turnos y responsables), y el conteo se
+ * hace aqui. Es a proposito: obtenerJornadasDePersona() de jornadas/api.js resuelve una persona
+ * a la vez, y llamarla por fila seria el N+1 que fn_atenciones_de_persona_por_jornada (00059) se
+ * escribio justamente para evitar.
+ *
+ * Devuelve un objeto plano `{ [perfilId]: numero }`. Un perfil sin jornadas no aparece en el
+ * resultado: quien lo consume le asigna cero, igual que hace obtenerJornadasDePersona() con las
+ * jornadas ausentes.
+ *
+ * @param {string[]} perfilIds UUIDs de los perfiles a contar.
+ * @returns {Promise<{ conteos: object, error: object|null }>}
+ */
+export async function contarJornadasPorPerfil(perfilIds = []) {
+  if (!Array.isArray(perfilIds) || perfilIds.length === 0) {
+    return { conteos: {}, error: null };
+  }
+
+  try {
+    // Mismas dos formas de participar que obtenerJornadasDePersona() (issue #838): estar en el
+    // cuadro de turnos o ser la responsable de la jornada. Solo contaba la primera, y la lista de
+    // colaboradores decia "1 jornada" mientras el historial de la misma persona mostraba dos.
+    // Se cuentan jornadas distintas: ser responsable y tener turno en la misma cuenta una vez.
+    const supabase = obtenerSupabase();
+    const [turnos, responsables] = await Promise.all([
+      supabase.from("jornada_personal").select("perfil_id, jornada_id").in("perfil_id", perfilIds),
+      supabase.from("jornadas").select("id, responsable_id").in("responsable_id", perfilIds),
+    ]);
+
+    if (turnos.error) return { conteos: {}, error: normalizarError(turnos.error) };
+    if (responsables.error) return { conteos: {}, error: normalizarError(responsables.error) };
+
+    const jornadasPorPerfil = new Map();
+    const anotar = (perfilId, jornadaId) => {
+      if (!jornadasPorPerfil.has(perfilId)) jornadasPorPerfil.set(perfilId, new Set());
+      jornadasPorPerfil.get(perfilId).add(jornadaId);
+    };
+    for (const fila of turnos.data ?? []) anotar(fila.perfil_id, fila.jornada_id);
+    for (const fila of responsables.data ?? []) anotar(fila.responsable_id, fila.id);
+
+    const conteos = {};
+    for (const [perfilId, jornadas] of jornadasPorPerfil) conteos[perfilId] = jornadas.size;
+
+    return { conteos, error: null };
+  } catch (error) {
+    return { conteos: {}, error: normalizarError(error) };
+  }
+}
+
+/**
+ * Catalogo de especialidades para poblar el filtro `especialidad` de FILTROS_USUARIO (issue
+ * #175, criterio 2).
+ *
+ * perfil_especialidad no tiene una tabla catalogo aparte (nombre_especialidad es texto libre,
+ * ver migracion 00002): este catalogo es literalmente el conjunto de especialidades ya
+ * asignadas a algun perfil, sin deduplicar en SQL (PostgREST no expone DISTINCT) sino en JS con
+ * un Set. No filtra por perfiles.activo: una especialidad de un perfil desactivado sigue
+ * apareciendo, para no esconder una opcion que podria volver a hacer falta si ese perfil se
+ * reactiva.
+ *
+ * Requiere la politica RLS de la migracion 00058: para cualquiera que no sea administrador, el
+ * catalogo solo refleja sus propias especialidades, no las de todo el personal (mismo limite
+ * que listarUsuarios(), ver su comentario arriba).
+ *
+ * @returns {Promise<{ especialidades: Array<{ label: string, value: string }>, error: object|null }>}
+ */
+export async function listarCatalogoEspecialidades() {
+  try {
+    const { data, error } = await obtenerSupabase()
+      .from("perfil_especialidad")
+      .select("nombre_especialidad");
+
+    if (error) return { especialidades: [], error: normalizarError(error) };
+
+    const nombres = [...new Set((data ?? []).map((fila) => fila.nombre_especialidad))].sort(
+      (a, b) => a.localeCompare(b),
+    );
+
+    return {
+      especialidades: nombres.map((nombre) => ({ value: nombre, label: nombre })),
+      error: null,
+    };
+  } catch (error) {
+    return { especialidades: [], error: normalizarError(error) };
+  }
+}
+
+/**
+ * Normaliza el error que devuelve `functions.invoke()` al llamar a invitar-usuario.
+ *
+ * Cuando la Edge Function responde con un status distinto de 2xx, supabase-js no trae el cuerpo
+ * JSON de la respuesta (con nuestro `{ code, message }`) en el error mismo: lo deja sin leer en
+ * `error.context`, un `Response` (`FunctionsHttpError`). normalizarError() solo mira
+ * `error?.code`, asi que sin este paso todo error real de la funcion caeria en DESCONOCIDO. Se
+ * detecta por duck-typing (`error.context.json` existe) en vez de con `instanceof
+ * FunctionsHttpError` para no depender de esa clase: las pruebas de este archivo pasan un error
+ * plano (`{ code: "..." }`, sin `context`), que sigue el camino de siempre.
+ */
+async function normalizarErrorDeFuncion(error) {
+  if (error && typeof error.context?.json === "function") {
+    try {
+      const cuerpo = await error.context.json();
+      return normalizarError({ ...error, ...cuerpo });
+    } catch {
+      // El cuerpo no era JSON (relay error, function caida, etc.): se normaliza el error tal
+      // cual llego, que es lo mejor que hay.
+    }
+  }
+
+  return normalizarError(error);
+}
+
+/**
+ * Da de alta un usuario invitandolo por correo.
+ *
+ * No escribe en `perfiles` directamente: llama a la Edge Function de invitacion, que es quien
+ * crea la cuenta de Auth y su perfil. El cliente no puede hacerlo porque crear una cuenta exige
+ * la llave de servicio.
+ *
+ * Valida antes de salir a la red: si el formulario esta mal, devuelve `errores` por campo y no
+ * gasta una llamada.
+ *
+ * @param {{ nombres: string, apellidos: string, email: string, telefono?: string, rol: string }} datos
+ * @returns {Promise<{ usuario: object|null, errores: Record<string, string>, error: object|null }>}
+ *   `errores` mapea campo a mensaje cuando la validacion local fallo; `error` es el fallo del
+ *   servidor, ya normalizado.
+ */
+export async function crearUsuario(datos) {
+  const errores = validarPerfil(datos ?? {});
+  if (Object.keys(errores).length > 0) {
+    return {
+      usuario: null,
+      errores,
+      error: {
+        ...construirError(CODIGOS_DE_ERROR_DE_SUPABASE.CHECK),
+        mensaje: "Revisa los datos del formulario antes de invitar al usuario.",
+      },
+    };
+  }
+
+  const { nombres, apellidos, email, telefono, rol } = datos;
+
+  try {
+    const { data, error } = await obtenerSupabase().functions.invoke(FUNCION_DE_INVITACION, {
+      body: { nombres, apellidos, email, telefono, rol },
+    });
+
+    if (error) return { usuario: null, errores: {}, error: await normalizarErrorDeFuncion(error) };
+    return { usuario: data ?? null, errores: {}, error: null };
+  } catch (error) {
+    return { usuario: null, errores: {}, error: await normalizarErrorDeFuncion(error) };
+  }
+}
+
+/**
+ * Actualiza los campos editables de un perfil.
+ *
+ * Solo viajan las columnas de `CAMPOS_EDITABLES`: lo que venga de mas en `datos` se ignora, para
+ * que la pantalla no pueda escribir un campo que no le toca. El correo no se edita aqui -vive en
+ * la cuenta de Auth, no en el perfil- y por eso se excluye de la validacion.
+ *
+ * Sin id, o sin ningun campo editable que cambiar, no hace nada y devuelve `error: null`: no es
+ * un fallo, es que no habia nada que guardar.
+ *
+ * @param {string} idUsuario UUID del perfil.
+ * @param {object} datos Campos a cambiar, en camelCase.
+ * @returns {Promise<{ perfil: object|null, errores: Record<string, string>, error: object|null }>}
+ *   `errores` solo trae los campos que de verdad se intentaron escribir.
+ */
+export async function actualizarUsuario(idUsuario, datos) {
+  if (!idUsuario) return { perfil: null, errores: {}, error: null };
+
+  const fila = aColumnasEditables(datos);
+  if (Object.keys(fila).length === 0) return { perfil: null, errores: {}, error: null };
+
+  const errores = validarPerfil({ ...datos, email: undefined });
+  const relevantes = {};
+  for (const campo of Object.keys(fila)) {
+    const campoEnCamelCase = Object.keys(CAMPOS_EDITABLES).find(
+      (clave) => CAMPOS_EDITABLES[clave] === campo,
+    );
+    if (errores[campoEnCamelCase]) relevantes[campoEnCamelCase] = errores[campoEnCamelCase];
+  }
+
+  if (Object.keys(relevantes).length > 0) {
+    return {
+      perfil: null,
+      errores: relevantes,
+      error: {
+        ...construirError(CODIGOS_DE_ERROR_DE_SUPABASE.CHECK),
+        mensaje: "Revisa los datos del formulario antes de guardar.",
+      },
+    };
+  }
+
+  try {
+    const { data, error } = await obtenerSupabase()
+      .from("perfiles")
+      .update(fila)
+      .eq("id", idUsuario)
+      .select(COLUMNAS_DEL_PERFIL)
+      .maybeSingle();
+
+    if (error) return { perfil: null, errores: {}, error: normalizarError(error) };
+    return { perfil: data ?? null, errores: {}, error: null };
+  } catch (error) {
+    return { perfil: null, errores: {}, error: normalizarError(error) };
+  }
+}
+
+/**
+ * Desactiva un usuario: `perfiles.activo = FALSE`.
+ *
+ * Es borrado logico, no fisico. La cuenta de Auth sigue existiendo, pero `rol_actual()` (00004)
+ * devuelve NULL para un perfil inactivo, asi que todas las politicas RLS que dependen del rol
+ * dejan de concederle nada. El historial clinico que registro no se toca.
+ *
+ * @param {string} idUsuario UUID del perfil.
+ * @returns {Promise<{ perfil: object|null, error: object|null }>}
+ */
+export function desactivarUsuario(idUsuario) {
+  return cambiarActivo(idUsuario, false);
+}
+
+/**
+ * Reactiva un usuario desactivado: `perfiles.activo = TRUE`.
+ *
+ * Le devuelve el rol que ya tenia, no uno nuevo: `activo` es lo unico que cambia.
+ *
+ * @param {string} idUsuario UUID del perfil.
+ * @returns {Promise<{ perfil: object|null, error: object|null }>}
+ */
+export function reactivarUsuario(idUsuario) {
+  return cambiarActivo(idUsuario, true);
+}
+
+/**
+ * Cuenta cuantos administradores activos hay en todo el sistema.
+ *
+ * Es el chequeo de cliente del criterio 5 (issue #107): antes de desactivar o cambiarle el rol
+ * a un administrador activo, la pantalla pregunta esto para poder avisar con un mensaje
+ * especifico en vez de dejar que la unica senal sea el error generico del servidor. Es UX, no
+ * la defensa real -esa la hace el trigger impedir_dejar_sin_administrador_activo() de la
+ * migracion 00072, porque un chequeo que solo viviera aca seria evadible con la misma
+ * anon/authenticated key que usa cualquier cliente legitimo llamando a Supabase directo.
+ *
+ * `count: "exact", head: true` pide solo el numero, sin traer filas: no hace falta el
+ * contenido de ningun perfil para esto, y evita que la lista completa de administradores viaje
+ * al cliente solo para contarla.
+ *
+ * @returns {Promise<{ total: number, error: object|null }>}
+ */
+export async function contarAdministradoresActivos() {
+  try {
+    const { count, error } = await obtenerSupabase()
+      .from("perfiles")
+      .select("id", { count: "exact", head: true })
+      .eq("rol", ROLES.ADMINISTRADOR)
+      .eq("activo", true);
+
+    if (error) return { total: 0, error: normalizarError(error) };
+    return { total: count ?? 0, error: null };
+  } catch (error) {
+    return { total: 0, error: normalizarError(error) };
+  }
+}
+
+// La autenticacion NO vive en este archivo. iniciarSesion() y cerrarSesion() estan en
+// packages/shared/api/sesion.js, que es el unico sitio donde se resuelven.
+//
+// Aqui hubo una segunda copia de las dos, agregada por el PR #424 (issue #100), y divergia en lo
+// que importa: no leia el perfil, asi que **no comprobaba perfil.activo** y una cuenta
+// desactivada obtenia una sesion valida; y su cerrarSesion() hacia signOut() sin scope, o sea
+// global, revocando los refresh tokens del usuario en todos sus dispositivos. El barril tenia que
+// desempatar los dos nombres a mano porque ESM excluye del namespace un nombre que llega por dos
+// estrellas (bug #365).
+//
+// Se borraron con la issue #512. Si hace falta autenticar desde este modulo, se importa de
+// api/sesion.js; no se reimplementa.
+
+/**
+ * Comprueba que una contraseña sea la actual de la sesión, sin cerrarla.
+ *
+ * Supabase no tiene un endpoint dedicado para "verificar la contraseña actual": la unica forma
+ * de confirmar que alguien la conoce es volver a autenticarse con ella. Un
+ * signInWithPassword() que falla no toca la sesion existente (GoTrue no guarda nada ni emite
+ * evento si hay error); uno que tiene exito SI reemplaza los tokens de la sesion activa y
+ * dispara un SIGNED_IN, pero como es el mismo usuario eso solo hace que useSesion() vuelva a
+ * leer su propio perfil (issue #102, verificacion A del plan) - no cierra sesion, no cambia de
+ * usuario, no parpadea la pantalla.
+ *
+ * No se llama a iniciarSesion() de api/sesion.js: esa funcion resuelve el perfil y **cierra la
+ * sesion** si la cuenta esta desactivada, que es justo lo que aqui no se quiere -se esta
+ * confirmando una contrasena, no entrando-. Antes este comentario advertia de no reusar la copia
+ * divergente de este mismo archivo; esa copia se borro con la issue #512.
+ *
+ * @param {string} email Correo del perfil de la sesion actual (perfiles.email es citext).
+ * @param {string} contrasenaActual
+ * @returns {Promise<{ valida: boolean, error: object|null }>}
+ */
+export async function reverificarContrasena(email, contrasenaActual) {
+  if (!email || !contrasenaActual) {
+    return { valida: false, error: null };
+  }
+
+  try {
+    const { error } = await obtenerSupabase().auth.signInWithPassword({
+      email,
+      password: contrasenaActual,
+    });
+
+    if (error) return { valida: false, error: normalizarError(error) };
+    return { valida: true, error: null };
+  } catch (error) {
+    return { valida: false, error: normalizarError(error) };
+  }
+}
+
+/**
+ * Especialidades de un solo perfil.
+ *
+ * obtenerPerfil() las excluye a proposito (ver su comentario, mas arriba en este archivo:
+ * las comparte con cambiarActivo() y actualizarUsuario(), que no las necesitan) y
+ * listarUsuarios() las trae embebidas pero para un listado paginado completo, no para un
+ * perfil suelto. Hace falta esta funcion aparte para la pantalla de perfil propio (issue #102).
+ *
+ * Requiere la politica RLS de la migracion 00058 (administrador o el propio perfil). La
+ * escritura la habilito la 00085 y la implementan sincronizarEspecialidadesDePerfil() y sus dos
+ * auxiliares, mas abajo en este archivo. Una lista vacia no es
+ * un error: puede ser que el perfil no tenga ninguna, o que RLS haya filtrado la fila sin
+ * avisar (RLS filtra filas, no las anuncia, mismo criterio que el resto del modulo) - las dos
+ * cosas se ven igual desde aqui y a quien llama no le hace falta distinguirlas.
+ *
+ * @param {string} idUsuario UUID de perfiles.id.
+ * @returns {Promise<{ especialidades: string[], error: object|null }>}
+ */
+export async function obtenerEspecialidadesDePerfil(idUsuario) {
+  if (!idUsuario) return { especialidades: [], error: null };
+
+  try {
+    const { data, error } = await obtenerSupabase()
+      .from("perfil_especialidad")
+      .select("nombre_especialidad")
+      .eq("perfil_id", idUsuario);
+
+    if (error) return { especialidades: [], error: normalizarError(error) };
+
+    return {
+      especialidades: (data ?? []).map((fila) => fila.nombre_especialidad),
+      error: null,
+    };
+  } catch (error) {
+    return { especialidades: [], error: normalizarError(error) };
+  }
+}
+
+/**
+ * Longitud maxima de una especialidad: perfil_especialidad.nombre_especialidad es VARCHAR(100)
+ * (00002). Se comprueba aqui y no solo en la base para que el aviso llegue antes de gastar la
+ * llamada de red, mismo criterio que validarPerfil().
+ */
+const LARGO_MAXIMO_ESPECIALIDAD = 100;
+
+/**
+ * Normaliza una lista de especialidades escritas a mano.
+ *
+ * Recorta espacios, descarta vacios y quita duplicados SIN distinguir mayusculas -"Pediatria" y
+ * "PEDIATRIA" son la misma especialidad para una persona, y la PK de perfil_especialidad
+ * (perfil_id, nombre_especialidad) si las distingue, asi que sin esto el mismo medico podria
+ * acabar con las dos filas-. Se conserva la primera forma escrita, que es la que la persona vio.
+ *
+ * @param {object[]} [especialidades]
+ * @returns {object[]}
+ */
+export function normalizarEspecialidades(especialidades = []) {
+  const vistas = new Set();
+  const limpias = [];
+
+  for (const cruda of especialidades) {
+    const nombre = String(cruda ?? "").trim();
+    if (!nombre) continue;
+
+    const clave = nombre.toLocaleLowerCase();
+    if (vistas.has(clave)) continue;
+
+    vistas.add(clave);
+    limpias.push(nombre);
+  }
+
+  return limpias;
+}
+
+/**
+ * Valida una lista de especialidades contra el CHECK implicito de la columna.
+ *
+ * @returns {Record<string, string>} Vacio si todas son validas.
+ * @param {object[]} [especialidades]
+ */
+export function validarEspecialidades(especialidades = []) {
+  const larga = especialidades.find((nombre) => String(nombre).length > LARGO_MAXIMO_ESPECIALIDAD);
+
+  if (larga) {
+    return {
+      especialidades: `"${String(larga).slice(0, 20)}..." pasa de ${LARGO_MAXIMO_ESPECIALIDAD} caracteres.`,
+    };
+  }
+
+  return {};
+}
+
+/**
+ * Deja las especialidades de un perfil EXACTAMENTE como dice `especialidades`.
+ *
+ * POR QUE BORRAR E INSERTAR Y NO ACTUALIZAR. perfil_especialidad no tiene columna id: su clave
+ * primaria es la pareja (perfil_id, nombre_especialidad), asi que "cambiar" una especialidad es
+ * borrar la fila vieja e insertar la nueva. La migracion 00085 lo dice explicitamente y por eso
+ * no le dio politica de UPDATE a la tabla: solo INSERT y DELETE.
+ *
+ * Se calcula la diferencia en vez de borrar todo y reinsertar: reescribir filas que no
+ * cambiaron es trabajo de mas, y ademas un fallo a mitad de camino dejaria al perfil con MENOS
+ * especialidades de las que tenia. Asi, en el peor caso, queda un estado intermedio pero nunca
+ * uno vacio.
+ *
+ * Quien de verdad autoriza es la politica de la 00085 ("administrador o el propio perfil"); esta
+ * funcion no pregunta por rol, igual que el resto de api.js.
+ *
+ * @param {string} idUsuario UUID de perfiles.id.
+ * @param {string[]} especialidades Lista completa deseada, no un delta.
+ * @returns {Promise<{ especialidades: string[], errores: Record<string,string>, error: object|null }>}
+ */
+export async function sincronizarEspecialidadesDePerfil(idUsuario, especialidades = []) {
+  if (!idUsuario) {
+    return {
+      especialidades: [],
+      errores: {},
+      error: construirError(CODIGOS_DE_ERROR_DE_SUPABASE.DESCONOCIDO, "Falta el perfil."),
+    };
+  }
+
+  const deseadas = normalizarEspecialidades(especialidades);
+  const errores = validarEspecialidades(deseadas);
+  if (Object.keys(errores).length > 0) return { especialidades: [], errores, error: null };
+
+  const { especialidades: actuales, error: errorDeLectura } =
+    await obtenerEspecialidadesDePerfil(idUsuario);
+
+  if (errorDeLectura) return { especialidades: [], errores: {}, error: errorDeLectura };
+
+  const porQuitar = actuales.filter((nombre) => !deseadas.includes(nombre));
+  const porAgregar = deseadas.filter((nombre) => !actuales.includes(nombre));
+
+  try {
+    if (porQuitar.length > 0) {
+      const { error } = await obtenerSupabase()
+        .from("perfil_especialidad")
+        .delete()
+        .eq("perfil_id", idUsuario)
+        .in("nombre_especialidad", porQuitar);
+
+      if (error) return { especialidades: [], errores: {}, error: normalizarError(error) };
+    }
+
+    if (porAgregar.length > 0) {
+      const { error } = await obtenerSupabase()
+        .from("perfil_especialidad")
+        .insert(
+          porAgregar.map((nombre) => ({ perfil_id: idUsuario, nombre_especialidad: nombre })),
+        );
+
+      if (error) return { especialidades: [], errores: {}, error: normalizarError(error) };
+    }
+
+    return { especialidades: deseadas, errores: {}, error: null };
+  } catch (error) {
+    return { especialidades: [], errores: {}, error: normalizarError(error) };
+  }
+}

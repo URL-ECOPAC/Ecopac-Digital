@@ -1,0 +1,460 @@
+import { beforeEach, describe, expect, it } from "vitest";
+import { vi } from "vitest";
+
+const { dobles } = vi.hoisted(() => ({ dobles: { cliente: null } }));
+
+vi.mock("../api/cliente.js", () => ({
+  obtenerSupabase: () => {
+    if (dobles.cliente === null) {
+      throw new Error("Ninguna prueba debia llegar hasta el cliente de Supabase.");
+    }
+    return dobles.cliente;
+  },
+}));
+
+const {
+  aContenidoDeBodega,
+  valorizarContenidoDeBodega,
+  consultarExistencias,
+  consultarExistenciasDeBodega,
+  consultarLotesDisponibles,
+  listarContenidoDeBodegas,
+  listarExistenciasDisponibles,
+} = await import("./existencias.api.js");
+
+// Issue #911: lo que hay en una bodega, lote por lote.
+describe("aContenidoDeBodega", () => {
+  const fila = {
+    loteId: "l-1",
+    bodegaId: "b-1",
+    cantidadDisponible: "12",
+    bodega: { nombre: "Botiquin 1" },
+    lote: {
+      numeroLote: "L-001",
+      fechaVencimiento: "2026-01-31",
+      medicamentoId: "m-1",
+      articulo: { nombre: "Amoxicilina", concentracion: "500 mg", tipoArticulo: "medicamento" },
+    },
+  };
+
+  it("aplana el lote y el articulo, y marca el lote vencido", () => {
+    expect(aContenidoDeBodega(fila, "2026-02-01")).toEqual({
+      loteId: "l-1",
+      bodegaId: "b-1",
+      bodega: "Botiquin 1",
+      numeroLote: "L-001",
+      fechaVencimiento: "2026-01-31",
+      vencido: true,
+      medicamentoId: "m-1",
+      articulo: "Amoxicilina (500 mg)",
+      tipoArticulo: "medicamento",
+      cantidadDisponible: 12,
+      costoUnitario: null,
+      valor: null,
+    });
+  });
+
+  it("valoriza lo que queda con el costo del lote (00178)", () => {
+    const conCosto = { ...fila, lote: { ...fila.lote, costoUnitario: "0.35" } };
+    expect(aContenidoDeBodega(conCosto, "2026-01-01")).toMatchObject({
+      costoUnitario: 0.35,
+      valor: 4.2,
+    });
+  });
+
+  it("un lote sin fecha (un insumo, 00171) no vence", () => {
+    const sinFecha = { ...fila, lote: { ...fila.lote, fechaVencimiento: null } };
+    expect(aContenidoDeBodega(sinFecha, "2030-01-01").vencido).toBe(false);
+  });
+});
+
+describe("valorizarContenidoDeBodega", () => {
+  it("suma lo que tiene costo y cuenta los lotes sin costo, sin fingir un cero", () => {
+    expect(
+      valorizarContenidoDeBodega([
+        { valor: 10.5, cantidadDisponible: 3 },
+        { valor: null, cantidadDisponible: 4 },
+        { valor: 0.25, cantidadDisponible: 1 },
+      ]),
+    ).toEqual({ valor: 10.75, lotesSinCosto: 1, unidades: 8 });
+    expect(valorizarContenidoDeBodega()).toEqual({ valor: 0, lotesSinCosto: 0, unidades: 0 });
+  });
+});
+
+describe("listarContenidoDeBodegas", () => {
+  it("sin bodegas no consulta nada", async () => {
+    expect(await listarContenidoDeBodegas([])).toEqual({ contenido: [], error: null });
+    expect(await listarContenidoDeBodegas([null, undefined])).toEqual({
+      contenido: [],
+      error: null,
+    });
+  });
+});
+
+/**
+ * Doble de query builder para las funciones que consultan vista_lotes_disponibles con el query
+ * builder normal (no .rpc()): consultarLotesDisponibles() encadena .from().select().eq()(.eq())
+ * .order(); listarExistenciasDisponibles() encadena .from().select().order()(.eq())(.ilike()).
+ * El orden de .eq()/.ilike() no importa para las pruebas: se busca por .paso/.columna en
+ * `llamadas`, no por posicion.
+ */
+function crearClienteDeVista(respuesta) {
+  const llamadas = [];
+  const resolver = async () => (respuesta instanceof Error ? Promise.reject(respuesta) : respuesta);
+
+  const encadenable = {
+    select(columnas) {
+      llamadas.push({ paso: "select", columnas });
+      return encadenable;
+    },
+    eq(columna, valor) {
+      llamadas.push({ paso: "eq", columna, valor });
+      return encadenable;
+    },
+    ilike(columna, valor) {
+      llamadas.push({ paso: "ilike", columna, valor });
+      return encadenable;
+    },
+    order(columna, opciones) {
+      llamadas.push({ paso: "order", columna, opciones });
+      return encadenable;
+    },
+    then(resolve, reject) {
+      return resolver().then(resolve, reject);
+    },
+  };
+
+  return {
+    llamadas,
+    from(tabla) {
+      llamadas.push({ paso: "from", tabla });
+      return encadenable;
+    },
+  };
+}
+
+function crearCliente({ respuesta = { data: [], error: null } } = {}) {
+  const llamadas = [];
+
+  return {
+    llamadas,
+    rpc(nombre, parametros) {
+      llamadas.push({ paso: "rpc", nombre, parametros });
+      return respuesta instanceof Error ? Promise.reject(respuesta) : Promise.resolve(respuesta);
+    },
+  };
+}
+
+const FILA = {
+  medicamento_id: "med-1",
+  medicamento: "Amoxicilina",
+  concentracion: "500 mg",
+  presentacion: "capsula",
+  marca: "Generico",
+  componentes: ["Amoxicilina"],
+  cantidad_disponible: 120,
+  fecha_vencimiento_proxima: "2027-03-01",
+  lotes_disponibles: 3,
+  total_medicamentos: 7,
+};
+
+beforeEach(() => {
+  dobles.cliente = null;
+});
+
+describe("consultarExistencias", () => {
+  it("llama a fn_existencias_disponibles con los valores por defecto", async () => {
+    const cliente = crearCliente();
+    dobles.cliente = cliente;
+
+    await consultarExistencias();
+
+    expect(cliente.llamadas[0]).toEqual({
+      paso: "rpc",
+      nombre: "fn_existencias_disponibles",
+      parametros: {
+        p_bodega_id: null,
+        p_busqueda: null,
+        p_limite: 50,
+        p_desplazamiento: 0,
+      },
+    });
+  });
+
+  it("traduce la fila de la base al objeto que consumen las pantallas", async () => {
+    dobles.cliente = crearCliente({ respuesta: { data: [FILA], error: null } });
+
+    const { existencias, error } = await consultarExistencias();
+
+    expect(error).toBeNull();
+    expect(existencias).toEqual([
+      {
+        medicamentoId: "med-1",
+        medicamento: "Amoxicilina",
+        concentracion: "500 mg",
+        presentacion: "capsula",
+        marca: "Generico",
+        componentes: ["Amoxicilina"],
+        cantidadDisponible: 120,
+        fechaVencimientoProxima: "2027-03-01",
+        lotesDisponibles: 3,
+      },
+    ]);
+  });
+
+  it("devuelve el total sin paginar que viene repetido en cada fila", async () => {
+    dobles.cliente = crearCliente({ respuesta: { data: [FILA, FILA], error: null } });
+
+    const { total } = await consultarExistencias();
+
+    expect(total).toBe(7);
+  });
+
+  it("convierte el numero de pagina en desplazamiento", async () => {
+    const cliente = crearCliente();
+    dobles.cliente = cliente;
+
+    await consultarExistencias({ limite: 20, pagina: 3 });
+
+    expect(cliente.llamadas[0].parametros.p_limite).toBe(20);
+    expect(cliente.llamadas[0].parametros.p_desplazamiento).toBe(40);
+  });
+
+  it("pasa la bodega y la busqueda cuando vienen", async () => {
+    const cliente = crearCliente();
+    dobles.cliente = cliente;
+
+    await consultarExistencias({ bodega: "bod-1", busqueda: "amoxi" });
+
+    expect(cliente.llamadas[0].parametros.p_bodega_id).toBe("bod-1");
+    expect(cliente.llamadas[0].parametros.p_busqueda).toBe("amoxi");
+  });
+
+  it.each([
+    ["bodega vacia", { bodega: "" }, "p_bodega_id"],
+    ["busqueda vacia", { busqueda: "" }, "p_busqueda"],
+  ])("%s viaja como null y no como cadena vacia", async (_caso, filtros, parametro) => {
+    const cliente = crearCliente();
+    dobles.cliente = cliente;
+
+    await consultarExistencias(filtros);
+
+    expect(cliente.llamadas[0].parametros[parametro]).toBeNull();
+  });
+
+  it.each([
+    ["limite cero", { limite: 0 }, 50, 0],
+    ["limite negativo", { limite: -5 }, 1, 0],
+    ["pagina cero", { pagina: 0 }, 50, 0],
+    ["pagina negativa", { pagina: -2 }, 50, 0],
+  ])("%s se normaliza a un rango valido", async (_caso, filtros, limite, desplazamiento) => {
+    const cliente = crearCliente();
+    dobles.cliente = cliente;
+
+    await consultarExistencias(filtros);
+
+    expect(cliente.llamadas[0].parametros.p_limite).toBe(limite);
+    expect(cliente.llamadas[0].parametros.p_desplazamiento).toBe(desplazamiento);
+  });
+
+  it("una lista vacia devuelve total cero y no revienta", async () => {
+    dobles.cliente = crearCliente({ respuesta: { data: [], error: null } });
+
+    const { existencias, total, error } = await consultarExistencias();
+
+    expect(existencias).toEqual([]);
+    expect(total).toBe(0);
+    expect(error).toBeNull();
+  });
+
+  it("un error de la base se normaliza y devuelve lista vacia", async () => {
+    dobles.cliente = crearCliente({
+      respuesta: { data: null, error: { code: "42501", message: "denegado" } },
+    });
+
+    const { existencias, total, error } = await consultarExistencias();
+
+    expect(existencias).toEqual([]);
+    expect(total).toBe(0);
+    expect(error).not.toBeNull();
+  });
+
+  it("un fallo de red llega como excepcion y tambien se normaliza", async () => {
+    dobles.cliente = crearCliente({ respuesta: new Error("Failed to fetch") });
+
+    const { existencias, error } = await consultarExistencias();
+
+    expect(existencias).toEqual([]);
+    expect(error).not.toBeNull();
+  });
+});
+
+describe("consultarExistenciasDeBodega", () => {
+  it("sin bodega no llama al cliente", async () => {
+    const { existencias, total, error } = await consultarExistenciasDeBodega();
+
+    expect(existencias).toEqual([]);
+    expect(total).toBe(0);
+    expect(error).toBeNull();
+  });
+
+  it("con bodega delega en consultarExistencias con ese filtro", async () => {
+    const cliente = crearCliente();
+    dobles.cliente = cliente;
+
+    await consultarExistenciasDeBodega("bod-9", { busqueda: "ibu" });
+
+    expect(cliente.llamadas[0].parametros.p_bodega_id).toBe("bod-9");
+    expect(cliente.llamadas[0].parametros.p_busqueda).toBe("ibu");
+  });
+});
+
+describe("consultarLotesDisponibles", () => {
+  it("sin medicamentoId no toca el cliente", async () => {
+    const { lotes, error } = await consultarLotesDisponibles(undefined);
+
+    expect(lotes).toEqual([]);
+    expect(error).toBeNull();
+  });
+
+  it("consulta vista_lotes_disponibles filtrando por medicamento, sin exigir bodega", async () => {
+    const cliente = crearClienteDeVista({ data: [], error: null });
+    dobles.cliente = cliente;
+
+    await consultarLotesDisponibles("med-1");
+
+    expect(cliente.llamadas[0]).toEqual({ paso: "from", tabla: "vista_lotes_disponibles" });
+    expect(cliente.llamadas).toContainEqual({
+      paso: "eq",
+      columna: "medicamento_id",
+      valor: "med-1",
+    });
+    expect(cliente.llamadas).not.toContainEqual(
+      expect.objectContaining({ paso: "eq", columna: "bodega_id" }),
+    );
+  });
+
+  it("con bodega agrega el segundo filtro", async () => {
+    const cliente = crearClienteDeVista({ data: [], error: null });
+    dobles.cliente = cliente;
+
+    await consultarLotesDisponibles("med-1", { bodega: "bod-1" });
+
+    expect(cliente.llamadas).toContainEqual({ paso: "eq", columna: "bodega_id", valor: "bod-1" });
+  });
+
+  it("nunca devuelve null: sin lotes se dibuja una lista vacia", async () => {
+    dobles.cliente = crearClienteDeVista({ data: null, error: null });
+
+    const { lotes, error } = await consultarLotesDisponibles("med-1");
+
+    expect(error).toBeNull();
+    expect(lotes).toEqual([]);
+  });
+
+  it("un lote con cantidad_disponible en cero no lo devuelve la vista, y aqui no se inventa", async () => {
+    // vista_lotes_disponibles (00047) ya excluye lo vencido y lo que esta en cero: esta prueba
+    // fija que la funcion no filtra nada por su cuenta y devuelve exactamente lo que la vista
+    // entrega, sin usar lotes.cantidad_ingresada como sustituto (issue #690).
+    // Los alias van en el propio .select() (PostgREST los resuelve del lado del servidor), asi
+    // que la fila que "contesta" el doble ya viene en camelCase, igual que la real.
+    const cliente = crearClienteDeVista({
+      data: [
+        {
+          loteId: "lote-1",
+          medicamentoId: "med-1",
+          numeroLote: "L-1",
+          fechaVencimiento: "2027-01-01",
+          cantidadDisponible: 30,
+          bodegaId: "bod-1",
+          bodega: "Central",
+        },
+      ],
+      error: null,
+    });
+    dobles.cliente = cliente;
+
+    const { lotes, error } = await consultarLotesDisponibles("med-1");
+
+    expect(error).toBeNull();
+    expect(lotes).toEqual([
+      {
+        loteId: "lote-1",
+        medicamentoId: "med-1",
+        numeroLote: "L-1",
+        fechaVencimiento: "2027-01-01",
+        cantidadDisponible: 30,
+        bodegaId: "bod-1",
+        bodega: "Central",
+      },
+    ]);
+  });
+
+  it("clasifica como fallo de red la excepcion del fetch", async () => {
+    dobles.cliente = crearClienteDeVista(new Error("network down"));
+
+    const { lotes, error } = await consultarLotesDisponibles("med-1");
+
+    expect(lotes).toEqual([]);
+    expect(error).not.toBeNull();
+  });
+});
+
+describe("listarExistenciasDisponibles", () => {
+  it("consulta vista_lotes_disponibles sin exigir medicamento ni bodega", async () => {
+    const cliente = crearClienteDeVista({ data: [], error: null });
+    dobles.cliente = cliente;
+
+    await listarExistenciasDisponibles();
+
+    expect(cliente.llamadas[0]).toEqual({ paso: "from", tabla: "vista_lotes_disponibles" });
+    expect(cliente.llamadas).not.toContainEqual(
+      expect.objectContaining({ paso: "eq", columna: "bodega_id" }),
+    );
+    expect(cliente.llamadas).not.toContainEqual(expect.objectContaining({ paso: "ilike" }));
+  });
+
+  it("con bodega y busqueda agrega los dos filtros", async () => {
+    const cliente = crearClienteDeVista({ data: [], error: null });
+    dobles.cliente = cliente;
+
+    await listarExistenciasDisponibles({ bodega: "bod-1", busqueda: "amoxi" });
+
+    expect(cliente.llamadas).toContainEqual({ paso: "eq", columna: "bodega_id", valor: "bod-1" });
+    expect(cliente.llamadas).toContainEqual({
+      paso: "ilike",
+      columna: "medicamento_nombre",
+      valor: "%amoxi%",
+    });
+  });
+
+  it("nunca devuelve null: sin filas se dibuja una lista vacia", async () => {
+    dobles.cliente = crearClienteDeVista({ data: null, error: null });
+
+    const { existencias, error } = await listarExistenciasDisponibles();
+
+    expect(error).toBeNull();
+    expect(existencias).toEqual([]);
+  });
+
+  it("un error de la base se normaliza y devuelve lista vacia", async () => {
+    dobles.cliente = crearClienteDeVista({
+      data: null,
+      error: { code: "42501", message: "denegado" },
+    });
+
+    const { existencias, error } = await listarExistenciasDisponibles();
+
+    expect(existencias).toEqual([]);
+    expect(error).not.toBeNull();
+  });
+
+  it("clasifica como fallo de red la excepcion del fetch", async () => {
+    dobles.cliente = crearClienteDeVista(new Error("network down"));
+
+    const { existencias, error } = await listarExistenciasDisponibles();
+
+    expect(existencias).toEqual([]);
+    expect(error).not.toBeNull();
+  });
+});

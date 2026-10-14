@@ -1,0 +1,531 @@
+// Hook de pantalla del formulario de jornada: alta y edicion (issue #179).
+//
+// Un solo hook para las dos operaciones (revision del plan, PLAN.md seccion 7, decision 4): los
+// cinco campos, la carga de catalogos, la consulta de duplicado y la validacion son identicos
+// entre alta y edicion, y dos hooks casi iguales terminan divergiendo justo en lo que mas
+// importa. `jornada` ausente/sin `id` es alta (llama registrarJornada()); `jornada` con `id` es
+// edicion (llama actualizarJornada(id, datos, { rol })).
+//
+// SOLO SE USA `jornada.id` DE LO QUE LLEGA POR PARAMETRO. El resto de los datos de edicion se
+// vuelve a pedir con obtenerJornada(id): la tarjeta del kanban (useJornadasKanban.js,
+// armarTarjeta()) solo trae nombre/fecha/comunidad/responsable/estado como TEXTO para pintar la
+// tarjeta -- nunca comunidadId, responsableId ni proyectoId, que es justo lo que este formulario
+// necesita para precargar los <select>. Pedirlo de nuevo aca, en vez de asumir que quien llama
+// hidrato el objeto completo, evita que el formulario dependa de un contrato implicito con el
+// kanban (y de paso trae datos frescos, no los que el tablero cargo hace rato).
+//
+// El selector de comunidad se filtra en cascada por departamento y municipio (criterio 2). Son
+// dos selectores auxiliares que NO son campos del formulario -- jornadas no guarda departamento
+// ni municipio, solo comunidad_id (00012_jornadas.sql) -- asi que su estado vive aparte de
+// `valores` y solo sirven para acotar las opciones de `comunidad`. Las tres tablas del catalogo
+// territorial las expone packages/shared/territorio/ (excepcion de alcance autorizada, ver
+// PLAN.md seccion 7, decision 6).
+//
+// El rol se recibe por parametro y se pasa tal cual a actualizarJornada(): nunca se hardcodea el
+// literal 'administrador', porque la politica de escritura de jornadas (00039) tambien admite
+// tiene_permiso('jornadas.gestionar') y fijar el literal afirmaria una garantia que el servidor
+// no da.
+//
+// El hook en si no se prueba montado (packages/shared corre vitest con environment "node", sin
+// DOM, mismo motivo que useAltaUsuario.test.js/useEdicionUsuario.test.js): valoresInicialesDeJornada() y
+// aDatosDeJornada() se exportan aparte para poder probarlas sin montar nada.
+
+import { useCallback, useEffect, useMemo, useState } from "react";
+
+import { listarBodegas, registrarBodega } from "../inventario/bodegas.api.js";
+import { puedeAdministrarBodegas } from "../inventario/bodegas.permisos.js";
+import { ESTADOS_JORNADA } from "../enums.js";
+import { listarProyectos } from "../proyectos/api.js";
+import { proyectosQueAdmitenCambios } from "../proyectos/validaciones.js";
+import {
+  listarComunidades,
+  listarDepartamentos,
+  listarMunicipios,
+  obtenerComunidad,
+} from "../territorio/api.js";
+import { useAltaDeComunidadEnLinea } from "../territorio/useAltaDeComunidadEnLinea.js";
+import { listarUsuarios } from "../usuarios/api.js";
+import {
+  actualizarJornada,
+  listarJornadas,
+  mensajeDeBodegaOcupada,
+  obtenerJornada,
+  registrarJornada,
+} from "./api.js";
+import { advertirJornadaDuplicada, validarJornada } from "./validaciones.js";
+
+/**
+ * Valores del formulario a partir de una jornada completa (la de obtenerJornada(), con
+ * comunidadId/responsableId/proyectoId), o vacios para el alta.
+ *
+ * Los campos del formulario son los ids de CAMPOS_FORMULARIO_JORNADA (comunidad, responsable,
+ * proyecto y botiquinBodega sin el sufijo `Id`): esta funcion traduce entre las dos formas.
+ *
+ * Se llamaba `valoresIniciales`, igual que la de usuarios/usePerfilPropio.js. El barril recibia
+ * las dos por sendas estrellas y ESM excluye del namespace un nombre ambiguo: `valoresIniciales`
+ * llegaba como undefined a quien lo importara de `@ecopac/shared`, sin ningun error. Es el mismo
+ * bug #365 que ya costo una vez, y lo destapo la primera prueba de apps/mobile (issue #702), que
+ * al cargar el barril con Babel falla de golpe -- "Cannot redefine property" -- en vez de en
+ * silencio. Las dos se renombraron con el sufijo del dominio, como `valoresInicialesDeGasto`.
+ *
+ * cupoEstimado se precarga como numero o `null` (nunca cadena): lo captura NumberField
+ * (ModalJornada.jsx), que ya entrega el valor convertido -o `null` si se vacia el campo- por su
+ * propio contrato (ver NumberField.jsx), asi que aDatosDeJornada() no necesita convertirlo.
+ *
+ * @param {object|null} [jornada]
+ * @returns {{ nombre: string, fecha: string, comunidad: string, responsable: string,
+ *   proyecto: string, cupoEstimado: number|null, botiquinBodega: string }}
+ */
+export function valoresInicialesDeJornada(jornada) {
+  return {
+    nombre: jornada?.nombre ?? "",
+    fecha: jornada?.fecha ?? "",
+    comunidad: jornada?.comunidadId ?? "",
+    responsable: jornada?.responsableId ?? "",
+    proyecto: jornada?.proyectoId ?? "",
+    cupoEstimado: jornada?.cupoEstimado ?? null,
+    botiquinBodega: jornada?.botiquinBodegaId ?? "",
+  };
+}
+
+/**
+ * Traduce `valores` del formulario a lo que registrarJornada()/actualizarJornada() esperan.
+ *
+ * Solo normaliza `proyecto` y `botiquinBodega` (issue #756): los dos se resuelven con un
+ * `<select>`, y un `''` sin elegir no es un UUID valido. `botiquinBodega` (00178) y `proyecto`
+ * (00169) son obligatorios y validarJornada() ya los exige, pero si un `''` se colara igual
+ * viaja como null y la base lo rechaza como dato obligatorio, no como UUID mal formado.
+ * `cupoEstimado` no necesita normalizarse aca: NumberField ya entrega numero o `null`. El resto
+ * de campos viaja tal cual.
+ *
+ * @param {object} valores
+ * @returns {object}
+ */
+export function aDatosDeJornada(valores) {
+  return {
+    ...valores,
+    proyecto: valores?.proyecto || null,
+    botiquinBodega: valores?.botiquinBodega || null,
+  };
+}
+
+/** Mapea filas de un catalogo a la forma { label, value } que consumen Selector/FilterBar. */
+function aOpciones(filas, etiquetaDe) {
+  return (filas ?? []).map((fila) => ({ value: fila.id, label: etiquetaDe(fila) }));
+}
+
+/**
+ * Opciones del selector de bodega de la jornada: las bodegas moviles y la principal (00178 y
+ * 00181: la base rechaza cualquier otra fija). La principal va primero y lo dice en la etiqueta.
+ * La movil que ya esta en otra jornada en curso tambien lo dice (00179: no se puede iniciar esta
+ * jornada con ella mientras la otra siga en curso); la principal no se ocupa. Se exporta aparte
+ * para probarla sin montar el hook.
+ *
+ * @param {{ id: string, nombre: string, esMovil?: boolean, esPrincipal?: boolean }[]} bodegas
+ * @param {{ ocupadas?: Record<string, { id: string, nombre: string }>, jornadaId?: string|null }}
+ *   [opciones] `ocupadas`: por id de bodega, la jornada en curso que la tiene.
+ * @returns {{ value: string, label: string }[]}
+ */
+export function opcionesDeBodegaDeBotiquin(bodegas, { ocupadas = {}, jornadaId = null } = {}) {
+  const lista = bodegas ?? [];
+  const principal = lista
+    .filter((bodega) => bodega.esPrincipal)
+    .map((bodega) => ({
+      value: bodega.id,
+      label: `${bodega.nombre} (principal, entrega directo)`,
+    }));
+  const moviles = lista
+    .filter((bodega) => bodega.esMovil && !bodega.esPrincipal)
+    .map((bodega) => {
+      const otra = ocupadas[bodega.id];
+      return {
+        value: bodega.id,
+        label:
+          otra && otra.id !== jornadaId
+            ? `${bodega.nombre} (en curso en ${otra.nombre})`
+            : bodega.nombre,
+      };
+    });
+  return [...principal, ...moviles];
+}
+
+function nombreDePerfil(perfil) {
+  return [perfil.nombres, perfil.apellidos].filter(Boolean).join(" ");
+}
+
+/**
+ * Estado y envio del formulario de alta/edicion de jornada.
+ *
+ * @param {object} [opciones]
+ * @param {{ id: string }|null} [opciones.jornada] Con `id`, edicion (el resto de sus campos se
+ *   ignora, ver encabezado del archivo); sin `id` o ausente, alta.
+ * @param {string} [opciones.rol] Rol de quien tiene abierto el formulario
+ *   (useSesionCompartida().rol en la web). Se pasa tal cual a actualizarJornada().
+ * @returns {{
+ *   valores: object,
+ *   errores: Record<string, string>,
+ *   error: object|null,
+ *   enviando: boolean,
+ *   cargando: boolean,
+ *   esEdicion: boolean,
+ *   catalogos: { departamentos: object[], municipios: object[], comunidades: object[],
+ *     perfiles: object[], proyectos: object[], bodegas: object[] },
+ *   departamentoId: number|string|null,
+ *   municipioId: number|string|null,
+ *   setDepartamento: (id: number|string|null) => void,
+ *   setMunicipio: (id: number|string|null) => void,
+ *   setCampo: (id: string, valor: unknown) => void,
+ *   advertenciaDuplicado: string|null,
+ *   enviar: () => Promise<{ ok: boolean, jornada?: object|null }>,
+ *   cancelar: () => void,
+ *   puedeCrearComunidad: boolean,
+ *   registrarComunidad: (nombre: string) => Promise<object>,
+ *   erroresComunidad: Record<string, string>,
+ *   creandoComunidad: boolean,
+ *   puedeCrearBodega: boolean,
+ *   registrarBodegaMovil: (nombre: string) => Promise<object>,
+ *   erroresBodega: Record<string, string>,
+ *   creandoBodega: boolean,
+ * }}
+ */
+export function useFormularioJornada({ jornada, rol } = {}) {
+  const jornadaId = jornada?.id ?? null;
+  const esEdicion = Boolean(jornadaId);
+
+  // En edicion arranca vacio: se rellena cuando obtenerJornada() resuelve, mas abajo. En alta no
+  // hay nada que pedir, arranca vacio directo.
+  const [jornadaBase, setJornadaBase] = useState(null);
+  const [valores, setValores] = useState(() =>
+    valoresInicialesDeJornada(esEdicion ? null : jornada),
+  );
+  const [errores, setErrores] = useState({});
+  const [error, setError] = useState(null);
+  const [enviando, setEnviando] = useState(false);
+  const [cargando, setCargando] = useState(esEdicion);
+
+  const [departamentoId, setDepartamentoId] = useState(null);
+  const [municipioId, setMunicipioId] = useState(null);
+
+  const [departamentos, setDepartamentos] = useState([]);
+  const [municipios, setMunicipios] = useState([]);
+  const [comunidades, setComunidades] = useState([]);
+  const [perfiles, setPerfiles] = useState([]);
+  const [proyectos, setProyectos] = useState([]);
+  const [bodegas, setBodegas] = useState([]);
+  // 00179: por id de bodega, la jornada en curso que la tiene.
+  const [bodegasOcupadas, setBodegasOcupadas] = useState({});
+  const [erroresBodega, setErroresBodega] = useState({});
+  const [creandoBodega, setCreandoBodega] = useState(false);
+  const puedeCrearBodega = puedeAdministrarBodegas(rol);
+
+  const [advertenciaDuplicado, setAdvertenciaDuplicado] = useState(null);
+
+  // Que catalogos ya respondieron, aunque sea con cero filas. Sin esto el formulario no distinguia
+  // "todavia no llego" de "no hay ninguno" y dejaba el <select> en "Cargando..." para siempre.
+  const [catalogosCargados, setCatalogosCargados] = useState({});
+  const marcarCargado = (nombre) =>
+    setCatalogosCargados((previos) => ({ ...previos, [nombre]: true }));
+
+  // Catalogos que no dependen de la cascada: se cargan una sola vez, al montar.
+  useEffect(() => {
+    let vigente = true;
+
+    listarDepartamentos().then(({ departamentos: filas }) => {
+      if (!vigente) return;
+      setDepartamentos(aOpciones(filas, (fila) => fila.nombre));
+      marcarCargado("departamentos");
+    });
+
+    listarUsuarios({ estado: true }).then(({ usuarios }) => {
+      if (!vigente) return;
+      setPerfiles(aOpciones(usuarios, nombreDePerfil));
+      marcarCargado("perfiles");
+    });
+
+    // Filas completas, no opciones: el estado decide cuales se ofrecen (mas abajo).
+    listarProyectos().then(({ proyectos: filas }) => {
+      if (!vigente) return;
+      setProyectos(filas ?? []);
+      marcarCargado("proyectos");
+    });
+
+    // botiquin_bodega_id (00036) es la bodega de la jornada, obligatoria desde la 00178: una movil
+    // o la principal (00181). Se piden todas y opcionesDeBodegaDeBotiquin() deja esas. Sin ninguna
+    // bodega movil se puede crear aqui mismo (registrarBodegaMovil).
+    listarBodegas().then(({ bodegas: filas }) => {
+      if (!vigente) return;
+      setBodegas(filas ?? []);
+      marcarCargado("bodegas");
+    });
+
+    listarJornadas({ estado: ESTADOS_JORNADA.EN_CURSO }).then(({ jornadas: filas }) => {
+      if (!vigente) return;
+      const ocupadas = {};
+      for (const fila of filas ?? []) {
+        if (fila.botiquinBodegaId) ocupadas[fila.botiquinBodegaId] = fila;
+      }
+      setBodegasOcupadas(ocupadas);
+    });
+
+    return () => {
+      vigente = false;
+    };
+  }, []);
+
+  // Edicion: pide la jornada completa (comunidadId/responsableId/proyectoId incluidos, que la
+  // tarjeta del kanban no trae, ver encabezado del archivo) y, con su comunidad, resuelve la
+  // cascada completa de departamento y municipio para preseleccionarlos. Solo al montar: la
+  // jornada que se edita no cambia durante la vida del formulario (quien llama monta un
+  // componente nuevo por cada jornada, mismo criterio que useEdicionUsuario.js).
+  useEffect(() => {
+    if (!esEdicion) return undefined;
+    let vigente = true;
+
+    (async () => {
+      const { jornada: completa, error: errorDeLectura } = await obtenerJornada(jornadaId);
+      if (!vigente) return;
+
+      if (errorDeLectura || !completa) {
+        setError(errorDeLectura);
+        setCargando(false);
+        return;
+      }
+
+      setJornadaBase(completa);
+      setValores(valoresInicialesDeJornada(completa));
+
+      if (completa.comunidadId) {
+        const { comunidad } = await obtenerComunidad(completa.comunidadId);
+        if (!vigente) return;
+        setDepartamentoId(comunidad?.departamentoId ?? null);
+        setMunicipioId(comunidad?.municipioId ?? null);
+      }
+
+      setCargando(false);
+    })();
+
+    return () => {
+      vigente = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Cascada, paso 1: departamento -> municipios. Cambiar de departamento limpia la comunidad ya
+  // elegida, porque ya no tiene sentido en el nuevo departamento.
+  useEffect(() => {
+    if (!departamentoId) {
+      setMunicipios([]);
+      return undefined;
+    }
+    let vigente = true;
+
+    listarMunicipios({ departamentoId }).then(({ municipios: filas }) => {
+      if (vigente) setMunicipios(aOpciones(filas, (fila) => fila.nombre));
+    });
+
+    return () => {
+      vigente = false;
+    };
+  }, [departamentoId]);
+
+  // Cascada, paso 2: municipio -> comunidades.
+  useEffect(() => {
+    if (!municipioId) {
+      setComunidades([]);
+      return undefined;
+    }
+    let vigente = true;
+
+    listarComunidades({ municipioId }).then(({ comunidades: filas }) => {
+      if (vigente) setComunidades(aOpciones(filas, (fila) => fila.nombre));
+    });
+
+    return () => {
+      vigente = false;
+    };
+  }, [municipioId]);
+
+  // Criterio 4: advierte, nunca impide. Un fallo de esta consulta deja la advertencia en null,
+  // nunca bloquea el guardado (ver PLAN.md, verificacion C).
+  useEffect(() => {
+    if (!valores.comunidad || !valores.fecha) {
+      setAdvertenciaDuplicado(null);
+      return undefined;
+    }
+    let vigente = true;
+
+    listarJornadas({
+      comunidad: valores.comunidad,
+      fechaInicio: valores.fecha,
+      fechaFin: valores.fecha,
+    }).then(({ jornadas: filas, error: errorDeConsulta }) => {
+      if (!vigente) return;
+      setAdvertenciaDuplicado(
+        errorDeConsulta
+          ? null
+          : advertirJornadaDuplicada({ jornadas: filas, jornadaActualId: jornadaId }),
+      );
+    });
+
+    return () => {
+      vigente = false;
+    };
+  }, [valores.comunidad, valores.fecha, jornadaId]);
+
+  const setDepartamento = useCallback((id) => {
+    setDepartamentoId(id);
+    setMunicipioId(null);
+    setComunidades([]);
+    setValores((anteriores) => ({ ...anteriores, comunidad: "" }));
+  }, []);
+
+  const setMunicipio = useCallback((id) => {
+    setMunicipioId(id);
+    setValores((anteriores) => ({ ...anteriores, comunidad: "" }));
+  }, []);
+
+  const setCampo = useCallback((id, valor) => {
+    setValores((anteriores) => ({ ...anteriores, [id]: valor }));
+    // Se limpia el error de ESE campo al tocarlo, no todos, mismo criterio que useAltaUsuario.js.
+    setErrores((anteriores) => {
+      if (!(id in anteriores)) return anteriores;
+      return Object.fromEntries(Object.entries(anteriores).filter(([clave]) => clave !== id));
+    });
+  }, []);
+
+  // Alta de comunidad sin salir del modal (issue #838): la comunidad de una jornada nueva muchas
+  // veces todavia no esta en el catalogo, y hasta ahora la unica salida era cerrar el formulario,
+  // ir a /pacientes/comunidades y volver a empezar. Es el mismo hook -- y por lo tanto el mismo
+  // flujo y las mismas reglas -- que ya usaba el alta de paciente.
+  const alCrearComunidad = useCallback(
+    async (comunidad) => {
+      const { comunidades: filas } = await listarComunidades({ municipioId });
+      setComunidades(aOpciones(filas ?? [], (fila) => fila.nombre));
+      setValores((anteriores) => ({ ...anteriores, comunidad: comunidad.id }));
+    },
+    [municipioId],
+  );
+
+  const {
+    puedeCrear: puedeCrearComunidad,
+    crear: registrarComunidad,
+    errores: erroresComunidad,
+    creando: creandoComunidad,
+  } = useAltaDeComunidadEnLinea({ municipioId, rol, alCrear: alCrearComunidad });
+
+  // A un proyecto cancelado no se le asocian jornadas (00154): no se ofrece. En edicion se conserva
+  // el que la jornada ya tenia, para que el <select> siga mostrando su valor.
+  const opcionesDeProyecto = useMemo(
+    () =>
+      aOpciones(
+        proyectosQueAdmitenCambios(proyectos, jornadaBase?.proyectoId ?? null),
+        (fila) => fila.nombre,
+      ),
+    [proyectos, jornadaBase],
+  );
+
+  const opcionesDeBodega = useMemo(
+    () => opcionesDeBodegaDeBotiquin(bodegas, { ocupadas: bodegasOcupadas, jornadaId }),
+    [bodegas, bodegasOcupadas, jornadaId],
+  );
+
+  // Alta de bodega movil sin salir del modal: toda jornada lleva una (00178), y si no hay ninguna
+  // la unica salida era ir a Inventario > Bodegas. Queda elegida al crearse.
+  const registrarBodegaMovil = useCallback(async (nombre) => {
+    const limpio = String(nombre ?? "").trim();
+    if (!limpio) {
+      const errores = { nombre: "Escribe el nombre de la bodega móvil." };
+      setErroresBodega(errores);
+      return { errores };
+    }
+    setErroresBodega({});
+    setCreandoBodega(true);
+    const { bodega, error: fallo } = await registrarBodega({ nombre: limpio, esMovil: true });
+    if (fallo) {
+      setCreandoBodega(false);
+      return { error: fallo };
+    }
+    const { bodegas: filas } = await listarBodegas();
+    setBodegas(filas ?? []);
+    setValores((anteriores) => ({ ...anteriores, botiquinBodega: bodega.id }));
+    setCreandoBodega(false);
+    return { bodega };
+  }, []);
+
+  const cancelar = useCallback(() => {
+    setValores(valoresInicialesDeJornada(esEdicion ? jornadaBase : jornada));
+    setErrores({});
+    setError(null);
+    setEnviando(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [jornadaBase]);
+
+  const enviar = useCallback(async () => {
+    const erroresDeValidacion = validarJornada(valores);
+    // 00179: una jornada en curso no toma una bodega movil que esta en otra jornada en curso. La
+    // principal no se ocupa (00181).
+    const esLaPrincipal = bodegas.some(
+      (bodega) => bodega.id === valores.botiquinBodega && bodega.esPrincipal,
+    );
+    const otra = esLaPrincipal ? null : bodegasOcupadas[valores.botiquinBodega];
+    if (jornadaBase?.estado === ESTADOS_JORNADA.EN_CURSO && otra && otra.id !== jornadaId) {
+      erroresDeValidacion.botiquinBodega = mensajeDeBodegaOcupada(otra.nombre);
+    }
+    if (Object.keys(erroresDeValidacion).length > 0) {
+      setErrores(erroresDeValidacion);
+      return { ok: false };
+    }
+
+    setEnviando(true);
+    setError(null);
+
+    const datos = aDatosDeJornada(valores);
+    const resultado = esEdicion
+      ? await actualizarJornada(jornadaId, datos, { rol })
+      : await registrarJornada(datos);
+
+    setEnviando(false);
+
+    if (resultado.error) {
+      setError(resultado.error);
+      return { ok: false };
+    }
+
+    if (!esEdicion) setValores(valoresInicialesDeJornada(null));
+    return { ok: true, jornada: resultado.jornada };
+  }, [valores, esEdicion, jornadaId, rol, bodegas, bodegasOcupadas, jornadaBase]);
+
+  return {
+    valores,
+    errores,
+    error,
+    enviando,
+    cargando,
+    esEdicion,
+    catalogos: {
+      departamentos,
+      municipios,
+      comunidades,
+      perfiles,
+      proyectos: opcionesDeProyecto,
+      bodegas: opcionesDeBodega,
+    },
+    catalogosCargados,
+    departamentoId,
+    municipioId,
+    setDepartamento,
+    setMunicipio,
+    setCampo,
+    advertenciaDuplicado,
+    enviar,
+    cancelar,
+    puedeCrearComunidad,
+    registrarComunidad,
+    erroresComunidad,
+    creandoComunidad,
+    puedeCrearBodega,
+    registrarBodegaMovil,
+    erroresBodega,
+    creandoBodega,
+  };
+}

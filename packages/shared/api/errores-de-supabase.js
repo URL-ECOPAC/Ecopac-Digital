@@ -1,0 +1,336 @@
+// Traduccion de los errores del servidor a algo que se le pueda ensenar a una persona.
+//
+// Sin esta capa, una enfermera en jornada veria en pantalla
+// `duplicate key value violates unique constraint "pacientes_dpi_key"`: no le dice que hacer
+// y de paso le ensena el nombre de una tabla.
+//
+// Dos reglas gobiernan este archivo:
+//
+//   1. El mensaje que se muestra SIEMPRE se escribe aqui. Nunca se reenvia el texto del
+//      servidor, porque es por ahi por donde se filtran nombres de tabla y fragmentos de SQL.
+//   2. El detalle tecnico se conserva para el log, pero SANEADO. supabase-js documenta que
+//      PostgrestError.details trae "often the offending value, key, or row", asi que una
+//      violacion de unicidad sobre pacientes dejaria un DPI en los registros. La regla de
+//      confidencialidad de AGENTS.md prohibe datos de pacientes en los logs.
+//
+// No confundir con errores.js, que son errores de programacion y los lee el desarrollador.
+// Estos los lee el usuario final.
+
+import { labels } from "@ecopac/ui-tokens";
+
+/** Clasificacion del error, para que quien lo atrape decida sin leer el texto. */
+export const CODIGOS_DE_ERROR_DE_SUPABASE = {
+  UNICIDAD: "unicidad",
+  LLAVE_FORANEA: "llave_foranea",
+  CHECK: "check",
+  CAMPO_REQUERIDO: "campo_requerido",
+  PERMISO_DENEGADO: "permiso_denegado",
+  SESION_EXPIRADA: "sesion_expirada",
+  CREDENCIALES_INVALIDAS: "credenciales_invalidas",
+  CUENTA_DESACTIVADA: "cuenta_desactivada",
+  SIN_RESULTADOS: "sin_resultados",
+  FALLO_DE_RED: "fallo_de_red",
+  LIMITE_EXCEDIDO: "limite_excedido",
+  DESCONOCIDO: "desconocido",
+};
+
+/**
+ * Codigos SQLSTATE de PostgreSQL que llegan a traves de PostgREST.
+ * https://www.postgresql.org/docs/current/errcodes-appendix.html
+ */
+const SQLSTATE = {
+  NOT_NULL_VIOLATION: "23502",
+  FOREIGN_KEY_VIOLATION: "23503",
+  UNIQUE_VIOLATION: "23505",
+  CHECK_VIOLATION: "23514",
+  INSUFFICIENT_PRIVILEGE: "42501",
+  CONFIGURATION_LIMIT_EXCEEDED: "53400",
+  // PL/pgSQL propios, usados por RAISE EXCEPTION ... USING ERRCODE en las funciones del
+  // servidor (p.ej. fn_atender_alerta_caducidad, 00138/00143). Sin esta entrada caian en el
+  // "default" de clasificarPostgrest() -> DESCONOCIDO, y una alerta que no se pudo atender por
+  // una razon conocida (la fila ya no existe, o una accion no se pudo completar del todo)
+  // terminaba mostrando el mismo "Ocurrio un error inesperado" que un fallo de verdad
+  // impredecible, sin distincion.
+  NO_DATA_FOUND: "P0002",
+  OBJECT_NOT_IN_PREREQUISITE_STATE: "55000",
+};
+
+/** Codigos propios de PostgREST. */
+const POSTGREST = {
+  JWT_INVALIDO: "PGRST301",
+  SIN_FILAS: "PGRST116",
+};
+
+/**
+ * Mensaje por clasificacion. Son textos propios, no del servidor.
+ *
+ * Dicen que hacer y no solo que fallo: quien los lee esta atendiendo pacientes, no depurando.
+ */
+const MENSAJES = {
+  [CODIGOS_DE_ERROR_DE_SUPABASE.UNICIDAD]:
+    "Ese registro ya existe. Revisa los datos e intenta de nuevo.",
+  [CODIGOS_DE_ERROR_DE_SUPABASE.LLAVE_FORANEA]:
+    "El registro está relacionado con otros datos, así que no se puede guardar o eliminar tal " +
+    "como esta. Revisa que lo que seleccionaste siga existiendo.",
+  [CODIGOS_DE_ERROR_DE_SUPABASE.CHECK]:
+    "Alguno de los datos no cumple las reglas del sistema. Revisa el formulario y corrige lo " +
+    "que este marcado.",
+  [CODIGOS_DE_ERROR_DE_SUPABASE.CAMPO_REQUERIDO]:
+    "Falta un dato obligatorio. Completa el formulario e intenta de nuevo.",
+  [CODIGOS_DE_ERROR_DE_SUPABASE.PERMISO_DENEGADO]:
+    "Tu usuario no tiene permiso para hacer esto. Si crees que debería tenerlo, pídeselo a la " +
+    "administradora.",
+  [CODIGOS_DE_ERROR_DE_SUPABASE.SESION_EXPIRADA]:
+    "Tu sesión expiró. Inicia sesión de nuevo para continuar.",
+  [CODIGOS_DE_ERROR_DE_SUPABASE.CREDENCIALES_INVALIDAS]:
+    "El correo o la contraseña no son correctos.",
+  [CODIGOS_DE_ERROR_DE_SUPABASE.CUENTA_DESACTIVADA]:
+    "Tu usuario esta desactivado. Pide a la administradora que lo reactive para volver a entrar.",
+  [CODIGOS_DE_ERROR_DE_SUPABASE.SIN_RESULTADOS]: "No se encontró el registro que buscabas.",
+  [CODIGOS_DE_ERROR_DE_SUPABASE.FALLO_DE_RED]:
+    `${labels.errorDeConexion}. Revisa tu conexion e intenta de nuevo; ` +
+    "los datos que escribiste no se perdieron.",
+  [CODIGOS_DE_ERROR_DE_SUPABASE.LIMITE_EXCEDIDO]:
+    "Se hicieron demasiadas peticiones en poco tiempo. Espera un momento e intenta de nuevo.",
+  [CODIGOS_DE_ERROR_DE_SUPABASE.DESCONOCIDO]:
+    "Ocurrió un error inesperado. Intenta de nuevo; si sigue pasando, avisa a la administradora.",
+};
+
+/**
+ * Clasificaciones que vale la pena reintentar.
+ *
+ * Lo consume el manejo global de errores (#231) para no tener que volver a olfatear el error.
+ * Un fallo de unicidad o de permisos no cambia por insistir; uno de red, si.
+ */
+const REINTENTABLES = new Set([CODIGOS_DE_ERROR_DE_SUPABASE.FALLO_DE_RED]);
+
+/**
+ * Quita de un texto tecnico los literales, que es donde viajan los datos de la fila.
+ *
+ * `Key (dpi)=(2547891230101) already exists.` queda como `Key (...)=(...) already exists.`:
+ * se conserva la forma del problema, que es lo que sirve para diagnosticar, y desaparece el
+ * dato del paciente. Tambien se recorta, porque un log no necesita parrafos.
+ *
+ * @param {string} texto
+ * @returns {string}
+ */
+export function sanearDetalle(texto) {
+  if (typeof texto !== "string" || texto.trim() === "") return "";
+
+  return texto
+    .replace(/\([^)]*\)/g, "(...)")
+    .replace(/'[^']*'/g, "'...'")
+    .replace(/"[^"]*"/g, '"..."')
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 200);
+}
+
+/** Nombre de la restriccion que fallo, si el mensaje del servidor lo menciona. */
+function nombreDeRestriccion(mensaje) {
+  const encontrado = /constraint "([a-z0-9_]+)"/i.exec(mensaje ?? "");
+  return encontrado ? encontrado[1] : "";
+}
+
+/**
+ * Reconoce un fallo de red.
+ *
+ * El mensaje cambia segun la plataforma: el navegador dice "Failed to fetch" y React Native
+ * "Network request failed". supabase-js ademas envuelve algunos en AuthRetryableFetchError.
+ *
+ * FunctionsFetchError es el mismo caso en functions.invoke(): el fetch a la Edge Function ni
+ * siquiera obtuvo respuesta. Su mensaje ("Failed to send a request to the Edge Function") no
+ * contiene ninguna de las cadenas de abajo, asi que sin esta linea caia en "error inesperado".
+ * El navegador no deja distinguir un corte de red de un preflight CORS rechazado -por ejemplo,
+ * una funcion que no esta desplegada y responde 404 al OPTIONS-: los dos llegan como este error.
+ *
+ * @param {object} error
+ * @returns {boolean}
+ */
+export function esErrorDeRed(error) {
+  if (!error) return false;
+  if (error.name === "AuthRetryableFetchError") return true;
+  if (error.name === "FunctionsFetchError") return true;
+
+  const mensaje = String(error.message ?? error).toLowerCase();
+  return (
+    mensaje.includes("failed to fetch") ||
+    mensaje.includes("network request failed") ||
+    mensaje.includes("networkerror") ||
+    mensaje.includes("fetch failed")
+  );
+}
+
+/**
+ * Distingue el aborto deliberado de una peticion de un fallo de verdad.
+ *
+ * Cuando se cancela una consulta con un AbortSignal, supabase-js propaga el error del fetch. No
+ * es un fallo que la pantalla deba mostrar: abortar es exactamente lo que se pidio. Se comprueban
+ * las tres formas en que llega, porque el navegador lanza un DOMException llamado AbortError,
+ * Node uno con code "ABORT_ERR", y PostgREST puede envolverlo dejando solo el mensaje.
+ *
+ * Va aparte de normalizarError() a proposito: una cancelacion no es un error que haya que
+ * clasificar, es un resultado que hay que ignorar.
+ *
+ * @param {unknown} error
+ * @returns {boolean}
+ */
+export function esErrorDeCancelacion(error) {
+  if (!error) return false;
+  if (error.name === "AbortError") return true;
+  if (error.code === "ABORT_ERR" || error.code === 20 || error.code === "20") return true;
+
+  return String(error.message ?? error)
+    .toLowerCase()
+    .includes("abort");
+}
+
+/** Un error de Supabase Auth se marca a si mismo, sin importar la subclase. */
+function esErrorDeAuth(error) {
+  return Boolean(error && (error.__isAuthError || error.name?.startsWith("Auth")));
+}
+
+/** Clasifica un error de Auth por su codigo o, si no lo trae, por su estado HTTP. */
+function clasificarAuth(error) {
+  const codigo = String(error.code ?? "").toLowerCase();
+
+  if (codigo.includes("invalid_credentials") || codigo.includes("invalid_grant")) {
+    return CODIGOS_DE_ERROR_DE_SUPABASE.CREDENCIALES_INVALIDAS;
+  }
+  if (codigo.includes("session") || codigo.includes("token") || codigo.includes("jwt")) {
+    return CODIGOS_DE_ERROR_DE_SUPABASE.SESION_EXPIRADA;
+  }
+  if (error.status === 400 || error.status === 401) {
+    return CODIGOS_DE_ERROR_DE_SUPABASE.CREDENCIALES_INVALIDAS;
+  }
+  if (error.status === 403) return CODIGOS_DE_ERROR_DE_SUPABASE.PERMISO_DENEGADO;
+
+  return CODIGOS_DE_ERROR_DE_SUPABASE.DESCONOCIDO;
+}
+
+/** Clasifica un error de PostgREST o de Postgres por su codigo. */
+function clasificarPostgrest(error) {
+  switch (error.code) {
+    case SQLSTATE.UNIQUE_VIOLATION:
+      return CODIGOS_DE_ERROR_DE_SUPABASE.UNICIDAD;
+    case SQLSTATE.FOREIGN_KEY_VIOLATION:
+      return CODIGOS_DE_ERROR_DE_SUPABASE.LLAVE_FORANEA;
+    case SQLSTATE.CHECK_VIOLATION:
+      return CODIGOS_DE_ERROR_DE_SUPABASE.CHECK;
+    case SQLSTATE.NOT_NULL_VIOLATION:
+      return CODIGOS_DE_ERROR_DE_SUPABASE.CAMPO_REQUERIDO;
+    case SQLSTATE.INSUFFICIENT_PRIVILEGE:
+      return CODIGOS_DE_ERROR_DE_SUPABASE.PERMISO_DENEGADO;
+    case SQLSTATE.CONFIGURATION_LIMIT_EXCEEDED:
+      return CODIGOS_DE_ERROR_DE_SUPABASE.LIMITE_EXCEDIDO;
+    case POSTGREST.JWT_INVALIDO:
+      return CODIGOS_DE_ERROR_DE_SUPABASE.SESION_EXPIRADA;
+    case POSTGREST.SIN_FILAS:
+      return CODIGOS_DE_ERROR_DE_SUPABASE.SIN_RESULTADOS;
+    case SQLSTATE.NO_DATA_FOUND:
+      return CODIGOS_DE_ERROR_DE_SUPABASE.SIN_RESULTADOS;
+    case SQLSTATE.OBJECT_NOT_IN_PREREQUISITE_STATE:
+      return CODIGOS_DE_ERROR_DE_SUPABASE.CHECK;
+    default:
+      return CODIGOS_DE_ERROR_DE_SUPABASE.DESCONOCIDO;
+  }
+}
+
+/**
+ * Arma el detalle tecnico para el log: codigo, restriccion y resumen saneado.
+ *
+ * Nunca se incluye `hint`: para el codigo 42501 PostgREST devuelve ahi el SQL literal que
+ * arreglaria el permiso (`GRANT SELECT ON public.pacientes TO anon;`), que es exactamente lo
+ * que no queremos ni en pantalla ni en el log.
+ */
+function construirDetalle(error) {
+  const partes = [];
+
+  if (error?.code) partes.push(String(error.code));
+
+  const restriccion = nombreDeRestriccion(error?.message);
+  if (restriccion) partes.push(restriccion);
+
+  // `||` y no `??`: PostgrestError trae details como cadena vacia muy a menudo, y ahi el
+  // contexto util esta en message. Con `??` el detalle se quedaria solo en el codigo.
+  const resumen = sanearDetalle(error?.details || error?.message);
+  if (resumen) partes.push(resumen);
+
+  return partes.join(" | ");
+}
+
+/**
+ * Arma el objeto uniforme a partir de una clasificacion ya decidida.
+ *
+ * No todo error nace de una respuesta del servidor. Que un perfil este desactivado es una
+ * regla del sistema que el cliente comprueba por su cuenta, y aun asi tiene que llegar a la
+ * pantalla con la misma forma que los demas para que quien la muestra no distinga de donde
+ * vino. El texto sigue saliendo de MENSAJES, que es la regla 1 de este archivo.
+ *
+ * @param {string} codigo Uno de CODIGOS_DE_ERROR_DE_SUPABASE.
+ * @param {string} [detalle] Contexto tecnico para el log. Ya saneado por quien llama.
+ * @returns {{ codigo: string, mensaje: string, detalle: string, esReintentable: boolean }}
+ */
+export function construirError(codigo, detalle = "") {
+  return {
+    codigo,
+    // Siempre hay mensaje: quedarse sin texto que mostrar es peor que un texto generico.
+    mensaje: MENSAJES[codigo] ?? MENSAJES[CODIGOS_DE_ERROR_DE_SUPABASE.DESCONOCIDO],
+    detalle,
+    esReintentable: REINTENTABLES.has(codigo),
+  };
+}
+
+/**
+ * normalizarError() con mensajes propios para rechazos de negocio que se conocen de antemano.
+ *
+ * Las funciones del servidor rechazan con RAISE EXCEPTION por razones que la persona si puede
+ * resolver ("el proyecto esta cancelado", "a esta jornada le quedan 3"), y normalizarError() las
+ * convertia en "Alguno de los datos no cumple las reglas del sistema", que manda a revisar un
+ * formulario que esta bien (issue #925). Esto NO reenvia el texto del servidor -la regla 1 de este
+ * archivo sigue en pie-: cada regla reconoce un rechazo por su patron y devuelve un mensaje escrito
+ * aqui, en el cliente. De lo que coincidio solo se reutilizan numeros o valores de un enum, nunca
+ * texto libre.
+ *
+ * @param {unknown} error Lo que devolvio supabase-js.
+ * @param {Array<{ patron: RegExp, mensaje: string|((coincidencia: RegExpMatchArray) => string) }>} reglas
+ * @returns {{ codigo: string, mensaje: string, detalle: string, esReintentable: boolean }}
+ */
+export function normalizarErrorConReglas(error, reglas = []) {
+  const base = normalizarError(error);
+  const texto = typeof error?.message === "string" ? error.message : "";
+  if (!texto) return base;
+
+  for (const { patron, mensaje } of reglas) {
+    const coincidencia = texto.match(patron);
+    if (coincidencia) {
+      return { ...base, mensaje: typeof mensaje === "function" ? mensaje(coincidencia) : mensaje };
+    }
+  }
+  return base;
+}
+
+/**
+ * Convierte cualquier error de Supabase en un objeto uniforme.
+ *
+ * @param {unknown} error Lo que devolvio supabase-js, o lo que sea que llego.
+ * @returns {{ codigo: string, mensaje: string, detalle: string, esReintentable: boolean }}
+ *   `mensaje` es apto para pantalla; `detalle` es para el log y no debe mostrarse.
+ */
+export function normalizarError(error) {
+  // El orden importa: un fallo de red puede llegar disfrazado de error de Auth, y un error
+  // sin codigo no debe caer en la rama de Postgres.
+  let codigo;
+
+  if (esErrorDeRed(error)) {
+    codigo = CODIGOS_DE_ERROR_DE_SUPABASE.FALLO_DE_RED;
+  } else if (esErrorDeAuth(error)) {
+    codigo = clasificarAuth(error);
+  } else if (error?.code) {
+    codigo = clasificarPostgrest(error);
+  } else {
+    codigo = CODIGOS_DE_ERROR_DE_SUPABASE.DESCONOCIDO;
+  }
+
+  return construirError(codigo, construirDetalle(error));
+}

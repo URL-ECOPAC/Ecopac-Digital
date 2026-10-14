@@ -1,0 +1,273 @@
+// Consultas de los insumos previstos de una jornada (tabla jornada_insumos, migracion 00151).
+//
+// Desde la 00151 los insumos se planean por jornada, igual que los gastos se registran contra una
+// jornada, y el proyecto solo los muestra agrupados. Es una LISTA DE LO PREVISTO: no toca
+// existencias, lotes ni movimientos de inventario (mismo criterio que proyecto_insumos, 00147). La
+// forma de cada fila y la traduccion del formulario son las mismas que las de un insumo de
+// proyecto, y se reutilizan de proyectos/insumos.api.js.
+//
+// Escribe la administradora o quien tenga jornadas.gestionar; leen ademas quien gestiona proyectos
+// y el rol al que la matriz le abrio Jornadas o Proyectos (RLS). El personal de campo no los ve:
+// llevan costo (#864).
+//
+// Todas devuelven `{ ..., error }` en vez de lanzar.
+
+import { obtenerSupabase } from "../api/cliente.js";
+import { normalizarError } from "../api/errores-de-supabase.js";
+import { aColumnasDeInsumoPrevisto, aInsumoPrevisto } from "../proyectos/insumos.api.js";
+
+const COLUMNAS_DEL_INSUMO_DE_JORNADA = [
+  "id",
+  "jornadaId:jornada_id",
+  "medicamentoId:medicamento_id",
+  "cantidad",
+  "unidad",
+  "costoUnitarioEstimado:costo_unitario_estimado",
+  "nota",
+  "createdAt:created_at",
+  "updatedAt:updated_at",
+  "articulo:medicamentos(nombre, concentracion, marca)",
+].join(", ");
+
+/**
+ * Insumos previstos de una jornada, en el orden en que se fueron agregando.
+ *
+ * @param {string} jornadaId UUID de la jornada.
+ * @returns {Promise<{ insumos: object[], error: object|null }>}
+ */
+export async function listarInsumosDeJornada(jornadaId) {
+  if (!jornadaId) return { insumos: [], error: null };
+
+  try {
+    const { data, error } = await obtenerSupabase()
+      .from("jornada_insumos")
+      .select(COLUMNAS_DEL_INSUMO_DE_JORNADA)
+      .eq("jornada_id", jornadaId)
+      .order("created_at", { ascending: true });
+
+    if (error) return { insumos: [], error: normalizarError(error) };
+    return { insumos: (data ?? []).map(aInsumoPrevisto), error: null };
+  } catch (error) {
+    return { insumos: [], error: normalizarError(error) };
+  }
+}
+
+/**
+ * Insumos previstos de todas las jornadas de un proyecto, cada uno con el nombre y la fecha de su
+ * jornada. Es lo que la pestana Insumos del proyecto muestra, agrupado por jornada.
+ *
+ * @param {string} proyectoId UUID del proyecto.
+ * @returns {Promise<{ insumos: object[], error: object|null }>} Cada insumo trae ademas
+ *   `jornadaNombre` y `jornadaFecha`.
+ */
+export async function listarInsumosDeLasJornadasDelProyecto(proyectoId) {
+  if (!proyectoId) return { insumos: [], error: null };
+
+  try {
+    const { data, error } = await obtenerSupabase()
+      .from("jornada_insumos")
+      .select(
+        `${COLUMNAS_DEL_INSUMO_DE_JORNADA}, jornada:jornadas!inner(nombre, fecha, proyecto_id)`,
+      )
+      .eq("jornada.proyecto_id", proyectoId)
+      .order("created_at", { ascending: true });
+
+    if (error) return { insumos: [], error: normalizarError(error) };
+    return {
+      insumos: (data ?? []).map(({ jornada, ...fila }) => ({
+        ...aInsumoPrevisto(fila),
+        jornadaNombre: jornada?.nombre ?? null,
+        jornadaFecha: jornada?.fecha ?? null,
+      })),
+      error: null,
+    };
+  } catch (error) {
+    return { insumos: [], error: normalizarError(error) };
+  }
+}
+
+/**
+ * Las bodegas de botiquin de las jornadas de un proyecto, cada una con las jornadas que la usan
+ * (issue #911). Lo que hay en ellas es parte de los insumos del proyecto; dos jornadas pueden
+ * compartir bodega, y entonces se cuenta una vez.
+ *
+ * La bodega principal no entra en `bodegas` (00181): su existencia es la de toda la organizacion,
+ * no la del proyecto. Las jornadas que la usan salen aparte, en `jornadasConBodegaPrincipal`, para
+ * sumar solo lo que se entrego en ellas.
+ *
+ * @param {string} proyectoId UUID del proyecto.
+ * @returns {Promise<{ bodegas: { bodegaId: string, bodegaNombre: string|null,
+ *   jornadas: string[] }[], jornadasConBodegaPrincipal: { id: string, nombre: string }[],
+ *   error: object|null }>}
+ */
+export async function listarBodegasDeLasJornadasDelProyecto(proyectoId) {
+  if (!proyectoId) return { bodegas: [], jornadasConBodegaPrincipal: [], error: null };
+
+  try {
+    const { data, error } = await obtenerSupabase()
+      .from("jornadas")
+      .select(
+        "id, nombre, fecha, bodegaId:botiquin_bodega_id, bodega:bodegas(nombre, esPrincipal:es_principal)",
+      )
+      .eq("proyecto_id", proyectoId)
+      .not("botiquin_bodega_id", "is", null)
+      .order("fecha", { ascending: true });
+
+    if (error) {
+      return { bodegas: [], jornadasConBodegaPrincipal: [], error: normalizarError(error) };
+    }
+
+    const porBodega = new Map();
+    const jornadasConBodegaPrincipal = [];
+    for (const jornada of data ?? []) {
+      if (jornada.bodega?.esPrincipal) {
+        jornadasConBodegaPrincipal.push({ id: jornada.id, nombre: jornada.nombre });
+        continue;
+      }
+      if (!porBodega.has(jornada.bodegaId)) {
+        porBodega.set(jornada.bodegaId, {
+          bodegaId: jornada.bodegaId,
+          bodegaNombre: jornada.bodega?.nombre ?? null,
+          jornadas: [],
+        });
+      }
+      porBodega.get(jornada.bodegaId).jornadas.push(jornada.nombre);
+    }
+    return { bodegas: [...porBodega.values()], jornadasConBodegaPrincipal, error: null };
+  } catch (error) {
+    return { bodegas: [], jornadasConBodegaPrincipal: [], error: normalizarError(error) };
+  }
+}
+
+/**
+ * Una fila de fn_insumos_de_proyecto con la forma de listarContenidoDeBodegas() (aContenidoDeBodega),
+ * mas la jornada a la que le queda. `cantidadDisponible` es lo que le queda a la jornada, no lo que
+ * hay en la bodega. Pura y exportada para probarla sin Supabase.
+ *
+ * @param {object} fila
+ * @returns {object}
+ */
+export function aInsumoQueQuedaEnProyecto(fila) {
+  const tieneCosto = fila.costo_unitario !== null && fila.costo_unitario !== undefined;
+  const cantidad = Number(fila.queda ?? 0);
+  return {
+    jornadaId: fila.jornada_id,
+    jornada: fila.jornada ?? null,
+    loteId: fila.lote_id,
+    bodegaId: null,
+    bodega: fila.bodega ?? null,
+    numeroLote: fila.numero_lote ?? null,
+    fechaVencimiento: fila.fecha_vencimiento ?? null,
+    vencido: false,
+    articulo: fila.concentracion ? `${fila.articulo} (${fila.concentracion})` : fila.articulo,
+    cantidadDisponible: cantidad,
+    costoUnitario: tieneCosto ? Number(fila.costo_unitario) : null,
+    valor: tieneCosto ? Math.round(Number(fila.costo_unitario) * cantidad * 100) / 100 : null,
+  };
+}
+
+/**
+ * Lo que les queda a las jornadas de un proyecto en sus bodegas moviles, por jornada y lote
+ * (fn_insumos_de_proyecto, 00186). Antes el proyecto sumaba el contenido de toda bodega que alguna
+ * de sus jornadas hubiera usado, y una bodega compartida con otro proyecto contaba en los dos
+ * (issue #925).
+ *
+ * @param {string} proyectoId UUID del proyecto.
+ * @returns {Promise<{ insumos: object[], error: object|null }>}
+ */
+export async function listarInsumosQueQuedanEnElProyecto(proyectoId) {
+  if (!proyectoId) return { insumos: [], error: null };
+
+  try {
+    const { data, error } = await obtenerSupabase().rpc("fn_insumos_de_proyecto", {
+      p_proyecto_id: proyectoId,
+    });
+
+    if (error) return { insumos: [], error: normalizarError(error) };
+    return { insumos: (data ?? []).map(aInsumoQueQuedaEnProyecto), error: null };
+  } catch (error) {
+    return { insumos: [], error: normalizarError(error) };
+  }
+}
+
+/**
+ * Agrega un insumo previsto a una jornada. Un articulo figura una sola vez por jornada: repetirlo
+ * llega como violacion de unicidad ya normalizada.
+ *
+ * @param {string} jornadaId UUID de la jornada.
+ * @param {{ medicamentoId: string, cantidad: number|string, unidad: string,
+ *   costoUnitarioEstimado?: number|string|null, nota?: string }} datos
+ * @returns {Promise<{ insumo: object|null, error: object|null }>}
+ */
+export async function agregarInsumoAJornada(jornadaId, datos = {}) {
+  if (!jornadaId || !datos.medicamentoId) return { insumo: null, error: null };
+
+  try {
+    const { data, error } = await obtenerSupabase()
+      .from("jornada_insumos")
+      .insert({ ...aColumnasDeInsumoPrevisto(datos), jornada_id: jornadaId })
+      .select(COLUMNAS_DEL_INSUMO_DE_JORNADA)
+      .single();
+
+    if (error) return { insumo: null, error: normalizarError(error) };
+    return { insumo: aInsumoPrevisto(data), error: null };
+  } catch (error) {
+    return { insumo: null, error: normalizarError(error) };
+  }
+}
+
+/**
+ * Cambia cantidad, unidad, costo o nota de un insumo de jornada. El articulo no se cambia: es
+ * quitar y agregar.
+ *
+ * @param {string} id UUID de la fila de jornada_insumos.
+ * @param {{ cantidad?: number|string, unidad?: string, costoUnitarioEstimado?: number|string|null,
+ *   nota?: string }} datos
+ * @returns {Promise<{ insumo: object|null, error: object|null }>}
+ */
+export async function actualizarInsumoDeJornada(id, datos = {}) {
+  if (!id) return { insumo: null, error: null };
+
+  const editable = { ...datos };
+  delete editable.medicamentoId;
+  const fila = aColumnasDeInsumoPrevisto(editable);
+  if (Object.keys(fila).length === 0) return { insumo: null, error: null };
+
+  try {
+    const { data, error } = await obtenerSupabase()
+      .from("jornada_insumos")
+      .update(fila)
+      .eq("id", id)
+      .select(COLUMNAS_DEL_INSUMO_DE_JORNADA)
+      .maybeSingle();
+
+    if (error) return { insumo: null, error: normalizarError(error) };
+    return { insumo: aInsumoPrevisto(data), error: null };
+  } catch (error) {
+    return { insumo: null, error: normalizarError(error) };
+  }
+}
+
+/**
+ * Quita un insumo de la jornada. Un DELETE que RLS no deja pasar borra cero filas: `quitado` solo
+ * es true si de verdad se borro algo.
+ *
+ * @param {string} id UUID de la fila de jornada_insumos.
+ * @returns {Promise<{ quitado: boolean, error: object|null }>}
+ */
+export async function quitarInsumoDeJornada(id) {
+  if (!id) return { quitado: false, error: null };
+
+  try {
+    const { data, error } = await obtenerSupabase()
+      .from("jornada_insumos")
+      .delete()
+      .eq("id", id)
+      .select("id");
+
+    if (error) return { quitado: false, error: normalizarError(error) };
+    return { quitado: (data ?? []).length > 0, error: null };
+  } catch (error) {
+    return { quitado: false, error: normalizarError(error) };
+  }
+}

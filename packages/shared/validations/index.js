@@ -1,4 +1,135 @@
-// Validaciones y reglas de negocio compartidas
-// - No entregar medicamento vencido
-// - Validar formato de datos de pacientes
-// - Reglas de asignación de jornadas
+// Piezas genericas de validacion, compartidas por todos los modulos.
+//
+// Aqui no vive ninguna regla de negocio: solo el motor que aplica lo que los descriptores de
+// campos ya declaran, y la forma del resultado. Las reglas de cada modulo van en su propio
+// validaciones.js (packages/shared/usuarios/validaciones.js, y asi con el resto), como manda
+// docs/ARQUITECTURA-FRONTEND.md.
+//
+// La forma del resultado es siempre un objeto plano { campo: mensaje }, vacio cuando todo
+// esta bien. Nunca un booleano: un booleano obliga a cada pantalla a inventarse el texto que
+// muestra, y web y movil terminarian diciendo cosas distintas ante el mismo error.
+
+/** Resultado cuando no hay nada que corregir. */
+export const SIN_ERRORES = Object.freeze({});
+
+/**
+ * Indica si un objeto de errores trae al menos un campo con problema.
+ *
+ * @param {object} errores
+ * @returns {boolean}
+ */
+export function hayErrores(errores) {
+  return Object.keys(errores ?? {}).length > 0;
+}
+
+/**
+ * Recorta espacios y trata cualquier cosa que no sea texto como cadena vacia.
+ *
+ * @param {*} valor Cualquier valor; solo un texto se recorta.
+ * @returns {string}
+ */
+export function normalizarTexto(valor) {
+  return typeof valor === "string" ? valor.trim() : "";
+}
+
+/**
+ * Un campo esta vacio si no hay texto, o si es una lista sin elementos.
+ *
+ * Los numeros NO estan vacios, y hay que decirlo explicitamente: normalizarTexto() devuelve
+ * cadena vacia para todo lo que no sea string, asi que sin esta linea un `120` en un campo
+ * obligatorio se reportaba como "es obligatorio". Nadie lo habia notado porque hasta la issue
+ * #117 ningun modulo validaba campos numericos con validarConDescriptores(): afectaba tambien a
+ * cantidadEntregada de CAMPOS_RECETA y a cantidadIngresada de CAMPOS_INGRESO.
+ *
+ * NaN si cuenta como vacio: es lo que produce un `Number("")` o un input numerico sin llenar.
+ *
+ * @param {*} valor Texto, arreglo, numero, booleano, null o undefined.
+ * @returns {boolean}
+ */
+export function esTextoVacio(valor) {
+  if (Array.isArray(valor)) return valor.length === 0;
+  if (valor === null || valor === undefined) return true;
+  if (typeof valor === "boolean") return false;
+  if (typeof valor === "number") return Number.isNaN(valor);
+  return normalizarTexto(valor) === "";
+}
+
+/**
+ * Aplica las reglas declaradas en un arreglo de descriptores de campo.
+ *
+ * Los descriptores son los mismos que dibujan el formulario (por ejemplo CAMPOS_USUARIO en
+ * packages/shared/usuarios/campos.js), asi que el limite de longitud se escribe una sola vez
+ * y no puede desincronizarse entre lo que el formulario permite y lo que la validacion
+ * acepta. Solo se aplica lo que el descriptor puede expresar; el formato de un correo o de
+ * un telefono es regla de negocio y va en el modulo.
+ *
+ * @param {Array<object>} campos Descriptores con { id, label, validacion }.
+ * @param {object} valores Valores del formulario, indexados por el id del campo.
+ * @returns {Record<string, string>} Errores por campo.
+ */
+export function validarConDescriptores(campos, valores) {
+  const errores = {};
+
+  for (const campo of campos ?? []) {
+    const reglas = campo?.validacion;
+    // Un campo de solo lectura no viaja al servidor: validarlo solo podria bloquear una
+    // correccion por un dato que la persona no puede tocar (issue #840, B1).
+    if (!reglas || campo.soloLectura) continue;
+
+    const valor = valores?.[campo.id];
+    const etiqueta = campo.label ?? campo.id;
+
+    if (reglas.requerido && esTextoVacio(valor)) {
+      // "Fecha es obligatorio" no concuerda; "Fecha: dato obligatorio." vale para cualquier
+      // etiqueta y conserva el nombre del campo para las pantallas que listan los errores juntos
+      // (issue #925).
+      errores[campo.id] = `${etiqueta}: dato obligatorio.`;
+      continue;
+    }
+
+    // Un campo opcional y vacio no tiene nada mas que revisar.
+    if (esTextoVacio(valor)) continue;
+
+    if (reglas.maxLongitud && normalizarTexto(valor).length > reglas.maxLongitud) {
+      errores[campo.id] =
+        `${etiqueta} no puede pasar de ${reglas.maxLongitud} caracteres. ` +
+        `Escribiste ${normalizarTexto(valor).length}.`;
+      continue;
+    }
+
+    if (reglas.maxLongitudPorEtiqueta && Array.isArray(valor)) {
+      const larga = valor.find(
+        (elemento) => normalizarTexto(elemento).length > reglas.maxLongitudPorEtiqueta,
+      );
+      if (larga !== undefined) {
+        errores[campo.id] =
+          `Cada valor de ${etiqueta} debe caber en ` +
+          `${reglas.maxLongitudPorEtiqueta} caracteres.`;
+      }
+    }
+  }
+
+  return errores;
+}
+
+/**
+ * Une varios objetos de errores en uno solo.
+ *
+ * Gana el primero que reporte cada campo: las reglas del descriptor se evaluan antes, y una
+ * regla de negocio posterior no debe tapar un "es obligatorio" con un "formato invalido"
+ * cuando el campo simplemente esta vacio.
+ *
+ * @param {...Record<string, string>} gruposDeErrores
+ * @returns {Record<string, string>}
+ */
+export function combinarErrores(...gruposDeErrores) {
+  const combinados = {};
+
+  for (const grupo of gruposDeErrores) {
+    for (const [campo, mensaje] of Object.entries(grupo ?? {})) {
+      if (combinados[campo] === undefined) combinados[campo] = mensaje;
+    }
+  }
+
+  return combinados;
+}

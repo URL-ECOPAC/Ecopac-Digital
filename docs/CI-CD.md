@@ -1,0 +1,1380 @@
+# CI/CD - Ecopac Digital
+
+Que corre automaticamente, cuando, contra que ambiente, y que hacer cuando algo falla.
+
+## Los seis workflows
+
+| Workflow                 | Archivo                                      | Cuando corre                                 |
+| ------------------------ | -------------------------------------------- | -------------------------------------------- |
+| CI                       | `.github/workflows/ci.yml`                   | PR hacia develop o main, y push a esas ramas |
+| Supabase                 | `.github/workflows/supabase.yml`             | PR hacia develop o main, y push a esas ramas |
+| Verificar despliegue     | `.github/workflows/verificar-despliegue.yml` | Todos los dias a las 13:00 UTC, y a mano     |
+| Mantener Supabase activo | `.github/workflows/keep-alive-supabase.yml`  | Cada 3 dias, y a mano                        |
+| Alertas de vencimiento   | `.github/workflows/alertas-vencimiento.yml`  | Todos los dias a las 06:00 UTC, y a mano     |
+| Respaldo de la base      | `.github/workflows/respaldo-base.yml`        | Todos los dias a las 07:00 UTC, y a mano     |
+
+El despliegue de la web **no** es un workflow: esta pensado para la app de Vercel conectada al
+repositorio. Vercel publica un preview por cada PR y produccion desde `main`, al margen del
+CI, asi que un CI en rojo no detiene un deploy de Vercel.
+
+> **Esa conexion no es posible en el plan Hobby**, porque el repositorio pertenece a una
+> organizacion de GitHub (`docs/COSTOS-Y-LIMITES.md`, seccion 6.1). Las salidas -desplegar por CLI
+> desde un workflow, Vercel Pro, o mover la web a Cloudflare Pages o Netlify- y su costo estan en
+> ese documento; la decision se toma en la #252 (salida a produccion). Mientras no se tome, este
+> parrafo describe el diseno, no lo que hay desplegado.
+
+## Que hace el workflow de CI
+
+Un solo job, **Lint y build**, que corre en este orden:
+
+1. **Auditoria de dependencias** con `npm audit` (issue #760), bloqueante solo en `critical`.
+2. **Guarda de esquema**: `packages/shared` contra `supabase/migrations/` (issue #492).
+3. **Cabeceras de seguridad HTTP**: `vercel.json` (raiz y `apps/web`) y `apps/web/nginx.conf`
+   declaran las mismas seis cabeceras (issue #760).
+4. `npm run lint` en todos los workspaces.
+5. `npm run format:check` con Prettier, alcance JS/JSX/TS/TSX/JSON (issue #515).
+6. `npm test` en todos los workspaces que tengan el script (issue #218), que desde la issue
+   **#219** comprueba ademas **cobertura de las validaciones**. El mismo paso avisa (issue
+   #515) que workspaces se saltaron por no tener script `test`.
+7. **Resumen de las pruebas** en la pagina de la corrida (issue #223).
+8. Build de la web con los secrets del ambiente que corresponde a la rama.
+
+Cada paso va antes del siguiente por lo que cuesta: la guarda de esquema es analisis de texto y
+tarda un segundo; una prueba rota se ve en segundos, sin esperar a que la web compile. Y todo va
+dentro de este job y no en uno propio porque **Lint y build** ya es check requerido en `develop`
+y `main`; un job nuevo no lo seria hasta que alguien lo agregue en Settings > Branches, y
+mientras tanto un PR en rojo se podria mergear igual.
+
+### El presupuesto de tiempo del pipeline
+
+**Diez minutos**, y lo fija la issue #223. Lo hacen cumplir los `timeout-minutes` de los **dos
+checks requeridos que corren en cada PR**, que son los que componen el tiempo que alguien espera
+para poder mergear:
+
+| Job                                 | Workflow       | Tope   | Medido                     |
+| ----------------------------------- | -------------- | ------ | -------------------------- |
+| **Lint y build**                    | `ci.yml`       | 10 min | 37-50 s                    |
+| **Validar migraciones y funciones** | `supabase.yml` | 10 min | 4-9 s, o 142-187 s con SQL |
+
+Dentro de **Lint y build**, `npm ci` son ~14 s, el lint ~6 s, las pruebas ~10 s y el build ~1 s.
+El job caro es el de Supabase, que levanta el stack, aplica las migraciones desde cero y corre
+las suites pgTAP; su coste crece con cada migracion y cada suite nuevas, asi que **es el que hay
+que mirar** cuando alguien se pregunte si el presupuesto sigue alcanzando.
+
+`Aplicar migraciones` se queda en 15 minutos a proposito: corre en `push`, despues del merge, y
+no es tiempo que nadie este esperando.
+
+**Un tope no es una meta.** Si un dia una corrida se acerca a los diez minutos, lo que hay que
+averiguar es que la hizo crecer; subir el numero es la ultima opcion, no la primera.
+
+### El resultado de las pruebas en el PR
+
+La DoD de la #223 pide que el resultado de las pruebas **se vea en el PR**. Se reparte en dos, y
+conviene saber cual pone cada parte:
+
+- **El conteo lo publica vitest solo.** Cuando detecta que corre en Actions agrega su reporter
+  `github-actions`, que escribe un "Vitest Test Report" en el resumen de la corrida con cuantos
+  archivos y cuantas pruebas pasaron. **No se ve al correr las pruebas en local**, porque ese
+  reporter solo se activa con `GITHUB_ACTIONS`, y por eso es facil creer que no existe.
+- **La cobertura la publica `scripts/resumen-de-pruebas.mjs`**, que es lo que vitest no trae. Y es
+  el numero que hace falta vigilar: desde la #219 la cobertura de las validaciones es una guarda
+  con umbral, no una estadistica, asi que ver cuanto margen queda vale mas que repetir el conteo.
+
+Detalles que conviene conocer antes de tocarlo:
+
+- **Los umbrales no se copian al workflow**: se leen de `packages/shared/vitest.config.js`, que es
+  donde los declara la guarda de la #219. Una segunda copia podria divergir en silencio.
+- **Corre con `if: always()`** -el resumen de una corrida en rojo es el que mas falta hace- y
+  **nunca falla**: si el informe de cobertura no existe, escribe una nota y sale con 0. Es un
+  reporte, no una guarda. En una corrida roja ese informe no existe, y no es un caso raro: vitest
+  limpia su directorio de cobertura al arrancar y no lo reescribe si las pruebas fallan.
+- Se eligio el resumen y no un comentario en el PR porque escribir en `$GITHUB_STEP_SUMMARY` no
+  pide permisos: el workflow sigue con `contents: read`. Comentar obligaria a
+  `pull-requests: write` y a ensuciar el hilo en cada push.
+
+### Que cubre la suite, y que no
+
+`npm test` en la raiz corre `npm run test --workspaces --if-present`. El `--if-present` es la
+trampa: un workspace **sin** script `test` se salta en silencio y la corrida queda en verde igual.
+Por eso el CI tiene un paso, **"Avisar que workspaces no tienen script test"**, que lo dice en el
+resumen, y por eso `scripts/resumen-de-pruebas.mjs` lista los **tres** workspaces con codigo y no
+solo los que corren.
+
+Los tres corren pruebas desde la issue #702:
+
+| Workspace         | Runner            | Que cubre                                                     |
+| ----------------- | ----------------- | ------------------------------------------------------------- |
+| `packages/shared` | vitest (`node`)   | Las validaciones enteras, con guarda de cobertura con umbral   |
+| `apps/web`        | vitest (`jsdom`)  | Enrutado, guard de rol y las pantallas que la #710 reconecto   |
+| `apps/mobile`     | `jest-expo`       | Guarda de rol y navegacion por rol                             |
+
+**Por que movil usa Jest y no vitest, como los otros dos.** React Native necesita el preset de
+Babel de RN, el resolver de plataformas (`.ios`/`.android`/`.native`) y mocks de los modulos
+nativos de Expo (`expo-secure-store`, `expo-crypto`). Montar eso sobre vitest significa mantener a
+mano el mapa de transforms y los mocks, y es donde se rompe en cada subida del SDK. `jest-expo` es
+el preset que publica Expo para su propia version del SDK y sube con el. El precio es un segundo
+runner en el monorepo; la decision esta escrita en `apps/mobile/jest.config.js`.
+
+**Lo que la cobertura del 97,7% NO significa.** Ese numero es de `packages/shared` y mide **solo
+las validaciones** (`**/validaciones.js`), no el paquete entero: es lo unico que se puede probar
+completo sin base de datos ni dobles, y `packages/shared/vitest.config.js` lo explica. No es la
+cobertura del sistema. Las API, los hooks, las pantallas y las politicas RLS se cubren por otras
+vias -- pruebas de API con dobles, las pruebas de enrutado de web, y las 28 suites pgTAP -- y hay
+partes que no cubre nadie. Leer ese porcentaje como cobertura global es el error que esta nota
+existe para evitar.
+
+**Primera prueba de movil, primer hallazgo.** Al cargar `@ecopac/shared` desde Jest, la suite fallo
+con `Cannot redefine property: valoresIniciales`: dos modulos (`jornadas` y `usuarios`) exportaban
+ese mismo nombre y el barril los recibia por sendas estrellas. Bajo ESM eso no revienta, solo
+excluye el nombre del namespace y lo entrega como `undefined` -- el bug #365 otra vez. Se
+renombraron con el sufijo del dominio. Vale la pena registrarlo: es exactamente el tipo de defecto
+que el CI no podia ver mientras un workspace entero no ejecutara nada.
+
+### La guarda de cobertura de las validaciones
+
+Las validaciones de `packages/shared` son las reglas de negocio del sistema: vencimiento de
+medicamentos, disponibilidad de stock, jornada activa, rangos de signos vitales, datos de
+paciente. Hoy las cubren **193 casos** en once archivos, con una cobertura de **97.7% de
+sentencias, 94.9% de ramas y 100% de funciones**.
+
+Nada vigilaba que eso siguiera asi. La guarda vive en `packages/shared/vitest.config.js`, y entra
+por donde ya pasa todo: el script `test` del paquete es `vitest run --coverage`, asi que la
+comprueban por igual `npm test` en la maquina de quien desarrolla y el job **Lint y build** del
+CI. **No hizo falta agregar ningun paso al workflow.**
+
+|         |                                                                       |
+| ------- | --------------------------------------------------------------------- |
+| Alcance | `**/validaciones.js`, `**/*.validaciones.js` y `validations/index.js` |
+| Umbral  | sentencias 97, ramas 94, funciones 100, lineas 98                     |
+| Coste   | la suite pasa de ~4.0 s a ~4.7 s                                      |
+
+**El umbral es un trinquete y solo sube.** Los numeros son el suelo medido, redondeado hacia
+abajo, no una aspiracion: una guarda que nace por encima de lo real solo deja el CI en rojo el
+primer dia. Quien mejore la cobertura sube el suelo en el mismo PR; quien la baje lo explica en
+la descripcion, no cambia el numero en silencio.
+
+**Que caza y que no**, comprobado a proposito y dicho aqui para que nadie le pida mas de lo que
+da:
+
+- **Una validacion nueva sin pruebas**: la caza, y es la regresion que mas importa. Los cuatro
+  umbrales fallan a la vez, porque `functions: 100` no admite una funcion sin ejercer.
+- **Una suite entera borrada**: la caza de sobra (la cobertura cae al 84%).
+- **Un solo caso de prueba borrado**: **no la caza**. Es un umbral global sobre once archivos y un
+  caso de 193 no mueve el porcentaje. Un umbral por archivo lo detectaria, pero habria que
+  bajarlo al 87% para que el repositorio lo cumpliera hoy, y eso protege menos que este.
+
+### La guarda de esquema
+
+`scripts/verificar-shared-vs-esquema.mjs` lee las migraciones, construye el inventario de tablas,
+columnas y funciones, y lo compara con lo que `packages/shared` pide. **Falla el PR** si shared
+nombra algo que no existe, diciendo archivo, linea y nombre.
+
+Existe porque **siete issues describen el mismo defecto** (#454, #396, #489, #490, #491, #509,
+#523): codigo de shared que consulta columnas inexistentes, mergeado con el CI en verde. Las
+pruebas no lo detectan y no es descuido: el doble del cliente de Supabase se escribe leyendo el
+codigo que se va a probar, no la migracion, asi que reproduce el mismo error y lo verifica contra
+si mismo. Pasaria en verde aunque el esquema no existiera.
+
+Comprueba, para cada `.from("tabla")` y dentro del mismo statement:
+
+| Que                                     | Donde                                                              |
+| --------------------------------------- | ------------------------------------------------------------------ |
+| que la tabla exista                     | `.from()`                                                          |
+| las columnas pedidas                    | `.select()`, literal o por constante                               |
+| **las columnas dentro de un embed**     | `consulta:consultas(...)`, recursivo, cada una contra SU tabla     |
+| **que la relacion embebida exista**     | el nombre de `alias:relacion!hint(...)`                            |
+| las columnas de los filtros             | `.eq .neq .gt .gte .lt .lte .in .is .like .ilike .contains .order` |
+| **los filtros sobre rutas anidadas**    | `.eq("consulta.expediente.paciente_id", ...)`                      |
+| **las claves escritas**                 | `.insert()`, `.update()`, `.upsert()`                              |
+| que la funcion exista                   | `.rpc()`                                                           |
+
+Las claves de escritura son la fila que importa: por ahi entraron #490, #491 y #509, y es lo que
+una revision por encima no mira.
+
+Las tres filas de relaciones embebidas son de la **issue #751**. Hasta entonces el script
+descartaba el token con parentesis entero -`if (token.includes("(")) continue;`- y **esa omision
+era la unica que no se contaba ni se informaba**: quien leia la salida concluia, con razon, que se
+habia revisado todo lo que no aparecia en la lista de omitidos. Como casi toda consulta que importa
+lleva embeds, el area no revisada era grande: al encenderla pasaron a comprobarse **114 relaciones
+embebidas** y las referencias a columnas subieron de 830 a 1154.
+
+Los filtros sobre rutas anidadas son la otra mitad. Un `.eq("consulta.expediente.paciente_id")`
+cuyo `select` no embeba esa cadena de alias **no devuelve datos: falla con PGRST108** ("no es un
+recurso embebido en esta peticion"), que es como la pestania de Recetas de la ficha del paciente
+fallaba siempre (#750).
+
+**Lo que no comprueba, a proposito**, y lo dice en cada corrida en vez de callarlo:
+
+- **Las columnas de las vistas.** Salen del `SELECT` que las define, y `vista_reporte_impacto` se
+  redefine en la 00027, la 00054 y la 00064. Los siete defectos conocidos eran sobre tablas.
+- **Los `.rpc()` con nombre dinamico**, que no se resuelven sin ejecutar el codigo.
+- **Los `.select()` cuya constante no se pueda resolver.** Hoy son dos, las dos de
+  `historial.api.js`, que compone la lista con arrays anidados. Llegaron a ser **doce** por dos
+  fallos del analizador que la #751 corrigio: un comentario `//` con una coma dentro del array
+  partia la lista y descartaba la constante entera -nueve `.select()`, `COLUMNAS_DEL_PROYECTO`
+  entre ellos-, y una lista partida por concatenacion (`"a" + "b"`) tampoco se resolvia, que era
+  el caso de `COLUMNAS_DE_LA_ENTREGA`, justo la consulta del modulo donde vivio el defecto que esta
+  guarda no vio.
+- **Las relaciones embebidas que se nombran por su columna foranea** en vez de por la tabla
+  (`lote:lote_id(...)`): resolverlas exige leer las claves foraneas del esquema. Hoy no hay ninguna
+  asi en `packages/shared` -los 25 embeds nombran una tabla real-, y si aparece una **se cuenta y
+  se informa**, no se descarta.
+- **Las Edge Functions.** La comprobacion **esta escrita y probada pero apagada** tras la
+  constante `VERIFICAR_EDGE_FUNCTIONS`: hoy encontraria `invitar-usuario`, que es la issue #523 y
+  tiene dueno. Se enciende poniendola en `true` en el mismo PR que escriba la funcion.
+
+**Falla tambien si un archivo de `shared` no lo reexporta ningun barril** (issue #700). `vite build`
+no lo compila, asi que un error suyo no aparece hasta que alguien conecta la pantalla: fue el
+segundo motivo por el que #454 paso el CI, y la forma en que #571 llego a `develop`.
+
+Hasta la #700 esto era un aviso, y llevaba meses imprimiendose sin que nadie lo mirara -la forma
+mas cara de tener una comprobacion: cuesta lo mismo y no impide nada-. El coste de ignorarlo estaba
+medido: **seis de los archivos que nombraba eran justo los que las apps importaban por ruta
+relativa**, porque el paquete no los resolvia de ninguna otra forma.
+
+Antes de convertirlo en fallo hubo que quitarle **tres falsos positivos**, porque un check
+requerido que se equivoca deja el CI rojo por codigo correcto:
+
+| Caso | Por que no es huerfano |
+| --- | --- |
+| `donaciones/useResumenDonaciones.js` | Lo reexporta el **barril raiz**, no el de su modulo, y la comprobacion solo miraba el del modulo |
+| `entorno/fuente.js` | `entorno/index.js` lo importa como `./fuente`, **sin extension**: ahi eligen Metro y Vite segun la plataforma (es la excepcion que documenta la regla del bug #390) |
+| `entorno/fuente.native.js` | Es la otra mitad de esa resolucion por plataforma. **Nunca** va en un barril: nombrarla explicitamente romperia la web |
+
+### Ningun emoji en el codigo
+
+`scripts/verificar-sin-emojis.mjs` (`npm run verificar:sin-emojis`) **falla el PR** si aparece un
+emoji en `apps/` o `packages/`. `AGENTS.md` lo prohibia desde siempre y **nada lo verificaba**: al
+escribir la guarda habia **79 lineas con pictogramas en 30 archivos** (issue #700).
+
+La mitad eran comentarios. La otra mitad era interfaz, y ahi deja de ser un asunto de estilo: en
+`ReportesPage` el nivel de alerta se mostraba como la palabra precedida de un circulo de color, y
+ese circulo era **el unico portador del nivel** ademas del texto. Un lector de pantalla no lo lee.
+Ahora el nivel sale de `NIVELES_ALERTA_VENCIMIENTO` en `enums.js`, la etiqueta de `labels` y el
+color de `statusColors`, las dos en `@ecopac/ui-tokens`, dibujados por el `StatusChip` que ya
+existia.
+
+**Que cuenta como emoji, y que no.** La regla es la presentacion, no "todo caracter raro":
+
+| Cae | Pasa |
+| --- | --- |
+| Los caracteres con presentacion emoji por defecto (`\p{Emoji_Presentation}`) | La tipografia monocroma |
+| Cualquier simbolo seguido del selector `U+FE0F`, que es como se pide presentacion emoji para un caracter que por defecto es monocromo | El mismo simbolo sin ese selector |
+
+Es decir: cae el triangulo de advertencia con selector y no cae sin el.
+
+**Las flechas y la equis de cerrar quedan fuera a proposito.** `←  →  ↑  ↓` son texto de botones
+-"Avanzar →"- y hay pruebas que los buscan por ese texto, en `JornadasPage` y
+`DashboardMetricasPage`; `✕` cierra los modales. Prohibirlos obligaria a cambiar interfaz y pruebas,
+que es un cambio de producto disfrazado de limpieza. **Si algun dia se decide, es una linea de la
+expresion regular**, y queda anotado aqui para que se pueda revisar sin volver a investigarlo.
+
+El detector tiene sus propias pruebas: `npm run verificar:sin-emojis -- --autoprueba` corre ocho
+casos, cada comprobacion con su caso bueno y su caso malo. `scripts/` no es un workspace, asi que
+`npm test` no lo alcanza; por eso es un paso propio del CI, igual que la autoprueba de la guarda de
+esquema.
+
+### El contrato de API que consume `apps/`
+
+`scripts/verificar-contratos-de-api.mjs` (`npm run verificar:contratos`) **falla el PR** cuando algo
+de `apps/` o de `packages/shared` lee una clave o un campo que la API no devuelve.
+
+Es **la primera guarda que mira `apps/`**. Las otras cuatro miran `packages/shared`, y por eso la
+ficha del paciente en movil pudo estar rota de punta a punta -tres pestanias vacias, la cabecera sin
+nombre- con `npm run lint` en verde, 2.145 pruebas en verde y `verificar:shared-esquema` en verde
+(issues #818, #821). El defecto era este:
+
+```js
+const respuesta = await obtenerTriajes(pacienteId);
+const lista = Array.isArray(respuesta) ? respuesta : respuesta?.datos || [];
+```
+
+`obtenerTriajes()` devuelve `{ triajes, error }`. Ni un arreglo, ni `datos`. `lista` era `[]`
+siempre, sin excepcion, sin mensaje y sin log, porque **equivocarse de clave no lanza nada**: las
+161 funciones de `*.api.js` no comparten una forma unica de sobre.
+
+Comprueba tres cosas:
+
+| Que | Ejemplo de lo que falla |
+| --- | --- |
+| **El sobre**: quien llama lee claves que la funcion devuelve | `respuesta.datos` cuando devuelve `{ triajes, error }` |
+| **La forma del elemento**, siguiendola por el hook que la guarda en estado hasta el componente | `receta.fecha` cuando `aReceta()` arma `createdAt` |
+| **Los descriptores** de columnas contra el mapeador de su modulo | `COLUMNAS_LOTE` nombrando un campo que `aLote()` no arma |
+
+La segunda es la que llega a `apps/`: un componente nunca llama a la API, llama al hook, y la cadena
+`useState` -> `setRecetas(respuesta.recetas)` -> `return { recetas }` es mecanica y se sigue entera.
+
+**Lo que no comprueba, a proposito**, con su conteo en cada corrida: las llamadas dentro de
+`Promise.all`, las de `.then(...)` y los `return await`; los mapeadores de forma **abierta** -los que
+devuelven `{ ...fila, algo }`, donde las claves las pone la consulta y no el literal-; y los
+descriptores de un modulo que no tiene un mapeador del mismo nombre. Comprueba menos de lo que se
+podria a proposito: **un check requerido que se equivoca se termina ignorando**, que es justo lo que
+le paso al aviso de huerfanos de la guarda de esquema. Lo que ampliaria la cobertura de verdad es
+unificar el sobre de las funciones de API en una sola forma, o activar `checkJs` sobre `apps/`; las
+dos son decisiones de arquitectura que tocan el paquete entero y van en su propia issue, no aqui.
+
+Lo acompana una regla de ESLint contra las dos formas que convertian un contrato roto en una
+pantalla que miente, acotadas para no tocar el idioma legitimo que se les parece:
+
+| Se prohibe | Sigue permitido |
+| --- | --- |
+| `Array.isArray(x) ? x : x?.datos \|\| []` -la rama alternativa vuelve a hurgar en el mismo valor- | `Array.isArray(value) ? value : []`, poner un arreglo por defecto a una prop |
+| `typeof useAlgo === "function" ? useAlgo : () => ({ datos: [] })` | `typeof onCrear === "function" ? "Crear" : "Agregar"`, preguntar por una callback opcional |
+
+La guarda tiene sus propias pruebas: `npm run verificar:contratos -- --autoprueba` corre trece
+casos, cada comprobacion con su caso bueno y su caso malo, incluido el de la forma abierta, que es el
+unico falso positivo que aparecio al calibrarla. `scripts/` no es un workspace, asi que `npm test` no
+lo alcanza; por eso es un paso propio del CI.
+
+### Toda funcion exportada de `packages/shared` lleva JSDoc
+
+`npm run verificar:jsdoc` (issue #233). `packages/shared` es la API que consumen las dos apps, y
+su documentacion vive en el propio codigo: [API-SHARED.md](./API-SHARED.md) dice que exporta cada
+modulo, y el JSDoc de cada funcion dice que recibe y que devuelve. El paso **falla** si un export
+no tiene un bloque `/** ... */` encima. Los bloques que existen pero no nombran sus `@param` solo
+se informan (eran 183 al escribir la guarda, bloques anteriores que explican el porque en prosa);
+`-- --estricto` los hace fallar tambien, y `-- --lista` los enumera.
+
+### La frontera entre las apps y `packages/shared`
+
+ESLint (`eslint.config.mjs`) prohibe, por app:
+
+| Regla | Desde la issue |
+| --- | --- |
+| Importar `@supabase/supabase-js` desde una app | #282 |
+| Importar de `apps/web` en `apps/mobile`, y al reves | #282 |
+| **Importar `packages/shared` o `packages/ui-tokens` por ruta relativa** | **#700** |
+
+La tercera existe porque **nada la verificaba y por eso se incumplia**: 28 imports en 14 archivos, y
+las cinco pantallas moviles de los cinco PR mas recientes los traian todas. Una ruta relativa se
+salta el barril, y lo que ningun barril reexporta `vite build` no lo compila.
+
+**Cuidado al tocar estas reglas**: ESLint **no fusiona** las opciones de una misma regla entre
+bloques de configuracion -gana el ultimo que la declare-, asi que hay **un solo**
+`no-restricted-imports` por app y los patrones nuevos van **dentro** del `patterns` que ya existe.
+Es un error que no se ve leyendo: la unica forma de saber que una regla sigue viva es **verla
+fallar**.
+
+**Salida de emergencia:** la etiqueta **`esquema-verificado-a-mano`** en el PR salta la guarda,
+igual que `migracion-editada-a-proposito` con la de migraciones. Deja un aviso visible en el
+resumen de la corrida, y la descripcion del PR tiene que decir por que.
+
+El analizador tiene sus propias pruebas: `npm run verificar:shared-esquema -- --autoprueba` corre
+veintitres casos que cubren las trampas reales del repositorio -`ALTER TABLE` multi-clausula,
+relaciones embebidas anidadas, objetos dentro de llamadas, propiedades shorthand, constantes-. Cada
+comprobacion de la #751 entro con su caso bueno y su caso malo, porque **una guarda que no se ha
+visto fallar no se sabe si comprueba algo**; el caso bueno esta por un motivo concreto: un falso
+positivo aqui bloquea los PR de todo el equipo, porque esto corre dentro de un check requerido.
+`scripts/` no es un workspace, asi que `npm test` no lo alcanza; por eso la autoprueba es un paso
+propio del CI.
+
+### Auditoria de dependencias (issue #760)
+
+Dos pasos, con umbrales distintos a proposito:
+
+| Paso | Umbral | Bloquea el PR |
+| --- | --- | --- |
+| "Auditoria de dependencias (bloqueante en critical)" | `npm audit --audit-level=critical` | Si |
+| "Auditoria de dependencias (aviso en high, no bloquea)" | `npm audit --audit-level=high` | No: deja `::warning::` y un bloque en `$GITHUB_STEP_SUMMARY` |
+
+Medido el 2026-09-17: 15 vulnerabilidades conocidas (14 moderate, 1 high), la alta en la cadena
+de `@expo/config-plugins` (tooling de mobile, no codigo publicado al cliente), sin arreglo
+disponible sin un downgrade que rompe Expo. Bloquear en `high` dejaria el PR en rojo por algo
+que no se puede resolver hoy; `critical` si es nuevo de verdad. Revisar este umbral cuando la
+cadena de Expo se actualice o cuando aparezca una vulnerabilidad `critical` real.
+
+### Dependencias fijadas: Dependabot y acciones por SHA (issue #760)
+
+- **[`.github/dependabot.yml`](../.github/dependabot.yml)** abre PRs mensuales hacia `develop`
+  para el ecosistema `npm` (todo el arbol de workspaces via `package-lock.json`, agrupado por
+  `dependency-type`) y para `github-actions`.
+- **Las ~17 referencias a acciones de terceros en los seis workflows estan fijadas por SHA**,
+  no por etiqueta movil (`actions/checkout`, `actions/setup-node`, `supabase/setup-cli`,
+  `denoland/setup-deno`, `actions/github-script`), con el tag como comentario al lado
+  (`uses: owner/accion@<sha> # v5`). Una etiqueta puede volver a apuntar a otro commit sin que
+  nadie lo note; un SHA no. Dependabot (ecosistema `github-actions`, arriba) abre el PR que
+  actualiza el SHA cuando sale una version nueva, asi que fijarlo no significa dejar de
+  actualizar, solo hacerlo de forma visible y revisada.
+- **Caso particular: `denoland/setup-deno@v2` no era una etiqueta, era una rama.** Confirmado
+  contra el repositorio de la accion: no existe un tag `v2`, solo `v2.0.0`...`v2.0.5` y una
+  rama `v2` que se mueve con cada patch. Fijarla por SHA importaba mas ahi que en las demas,
+  donde `v2`/`v3`/`v4`/`v5`/`v8` si son etiquetas (inmutables por convencion, aunque nada impide
+  reescribirlas).
+- **`.nvmrc`** (raiz, `22`) y **`engines.node: "22.x"`** en `package.json` (raiz) documentan la
+  version que los workflows ya fijaban (`node-version: "22"`), para quien instale localmente con
+  `nvm use` o reciba un aviso de npm si usa otra version.
+
+## Que hace el workflow de Supabase
+
+Siete jobs. Los tres primeros validan, los siguientes despliegan y avisan, y el ultimo
+resume el resultado de todos.
+
+| Job                                 | Cuando                   | Que hace                                                                                                                                                                   |
+| ----------------------------------- | ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Detectar cambios                    | siempre                  | Averigua si el cambio toca `supabase/`, `packages/shared/` o `pruebas/`, para no levantar el stack local sin necesidad                                                     |
+| **Migraciones no editadas**         | PR y push                | Falla si el PR modifica o borra una migracion que ya existe en la rama base, y si la numeracion de `supabase/migrations/` tiene un choque                                  |
+| **Validar migraciones y funciones** | PR y push                | Levanta el stack local, aplica todas las migraciones desde cero, corre `db lint`, las suites pgTAP, **las pruebas de flujos criticos** y el lint de Edge Functions         |
+| Estado de la base remota            | PR                       | Lista que migraciones estan aplicadas en `Ecopac-Digital-Dev` y cuales se aplicarian al mergear                                                                            |
+| Aplicar migraciones                 | push a develop o main    | Comprueba que el historial de la base coincida con la rama, corre `supabase db push` contra el proyecto del ambiente y **despliega las Edge Functions**. Depende de que los dos jobs en negrita hayan pasado |
+| Avisar fallo                        | si algo fallo en un push | Abre una issue con el paso que fallo y **si las migraciones se aplicaron o no**                                                                                            |
+| Supabase completo                   | siempre                  | Mira el resultado de los otros cinco jobs -validacion **y despliegue**- y falla si alguno termino en `failure` o `cancelled`                                               |
+
+Los jobs en negrita son **checks requeridos** hoy: sin ellos en verde, la rama protegida no
+deja mergear. **Supabase completo** esta pensado para reemplazarlos a los dos, pero eso se
+configura a mano en Settings; mientras no se haga, es un job mas que corre sin bloquear nada.
+Ver "Ramas protegidas".
+
+### Por que existe Supabase completo
+
+Por dos motivos, y el primero es una trampa que no se ve:
+
+1. **Un check requerido que termina en `skipped` cuenta como aprobado.** No como fallo, ni como
+   pendiente: como aprobado. `Estado de la base remota` solo corre en `pull_request`, asi que en
+   cada push queda `skipped`, y como check requerido eso se ve igual que si hubiera pasado.
+   Marcar cada job por separado da una lista larga que aparenta cobertura, pero algunos de esos
+   nombres se satisfacen solos. **Supabase completo** mira el resultado job por job y decide
+   explicitamente: acepta `success` y `skipped`, rechaza `failure` y `cancelled`.
+2. **Deja la lista de checks requeridos en un nombre por workflow.** Los nombres de los checks no
+   viven en el repositorio: renombrar un job obliga a ir a Settings a corregirlo, y si nadie lo
+   hace, el PR queda esperando un check que ya no existe. Con un solo nombre por workflow,
+   renombrar o agregar jobs adentro ya no rompe la configuracion.
+
+**`Aplicar migraciones` entra en esa cuenta**, aunque solo corra en push. No estaba, y por eso un
+despliegue fallido se reportaba como exito: el 30 de agosto los merges de #606 y #607 tumbaron el
+despliegue -deriva de historial, y ninguno de los dos traia una linea de SQL- y **Supabase
+completo** dijo `success` en las dos corridas. El resumen que explica el fallo estaba escrito y
+bien escrito; lo que fallaba era que nada lo senalaba, y hay que saber que existe un job aparte
+para ir a abrirlo. En un `pull_request` el job sale `skipped` y cuenta como aprobado, asi que
+incluirlo no cambia nada ahi.
+
+### La deriva de historial se avisa en el PR
+
+Mientras la base de `ecopac-dev` tenga aplicada una migracion cuyo archivo no esta en `develop`,
+`supabase db push` falla en **todo** push a esa rama, traiga SQL o no: valida el historial
+completo antes de mirar si hay algo pendiente. El fallo le aparece a quien mergee despues, que
+normalmente no tiene nada que ver.
+
+`Estado de la base remota` ya corria el `--dry-run` que lo detecta, pero su salida caia dentro de
+un bloque de codigo del resumen y no la miraba nadie. Ahora, cuando aparece deriva, ese job emite
+un `::warning::` y una seccion propia diciendo que el PR no la causa y que no la empeora. **Sigue
+sin fallar nunca**: depende de secrets y de la red, y convertirlo en guarda haria que un corte de
+conexion bloquee PRs ajenos. Quien corta es `Aplicar migraciones`, despues del merge.
+
+Eso incluye no poder conectarse. Hasta el PR #744 el paso que vincula el proyecto era el unico
+del job sin guarda, asi que la regla de arriba no se cumplia: el 8 de septiembre el secret
+`SUPABASE_ACCESS_TOKEN` dejo de valer y el check se puso en rojo en un PR que solo tocaba
+`apps/mobile` y `packages/shared`. Ahora, si `supabase link` falla, el job avisa con un
+`::warning::` y un resumen que nombra la causa -- token vencido si el CLI dijo `Unauthorized`,
+red o project ref en cualquier otro caso -- se salta la comparacion de historial y termina en
+verde. Lo que si conviene saber es que **el mismo secret lo usa `Aplicar migraciones`**: mientras
+la credencial no sirva, todo push a `develop` va a fallar ahi, traiga SQL o no.
+
+El aviso solo salta por **deriva de verdad**: una version aplicada en la base cuyo archivo no
+esta ni en el tip de la rama base. Que a la rama del PR le falten migraciones que entraron a
+`develop` despues de abrirla no es deriva -- es una rama desactualizada, que no le hace dano a
+nadie. Sin ese filtro el aviso saltaba en casi todos los PR y dejaba de significar algo.
+
+Lo que ninguna de las dos cosas arregla es una **rama que se quedo vieja**: ningun check se vuelve
+a correr solo cuando `develop` avanza, asi que dos PRs pueden reservar el mismo numero de
+migracion y las dos pasar en verde. Eso lo cierra `strict` ("Require branches to be up to date"),
+que vive en Settings > Branches.
+
+### Un despliegue superado no despliega
+
+`Aplicar migraciones` comprueba, antes de tocar nada, si el commit que esta desplegando sigue
+siendo el tip de la rama. Si ya hay uno mas nuevo, **no despliega**: deja un `::notice::`, escribe
+por que en el resumen y termina en verde.
+
+No es una optimizacion, es correccion. Los grupos de concurrencia llevan el SHA a proposito para
+no perder corridas (ver el Caso 5), y el precio es que dos despliegues pueden solaparse. Solaparse
+no es inofensivo: el mas nuevo aplica una migracion, el mas viejo la ve en la base sin tenerla en
+su commit y muere con `Remote migration versions not found`. Ese fallo no significa nada -- pero
+es indistinguible del que si significa algo (Caso 4), abre issue y manda a buscar un PR que ya
+esta mergeado.
+
+Saltarse la corrida vieja no pierde nada: **`supabase db push` es acumulativo**, sube todo lo que
+falte y no solo lo del commit que lo dispara, asi que la corrida del tip despliega tambien lo que
+traia la que se salto. Y el tip siempre tiene corrida propia, porque su grupo de concurrencia
+lleva su SHA y nadie lo cancela.
+
+No se resuelve con `concurrency` a nivel de job: GitHub guarda **una sola corrida en espera** por
+grupo, asi que encolar despliegues los cancela entre si, y un `cancelled` lo reporta **Supabase
+completo** como fallo. Seria cambiar un falso rojo por otro.
+
+Queda una ventana que la guarda del tip no cierra: que el merge nuevo entre justo despues de la
+comprobacion. Para eso, cuando aparece `Remote migration versions not found`, el paso vuelve a
+consultar el tip y mira si los archivos de esas versiones ya estan ahi. Si estan, es lo mismo de
+arriba y termina en verde; si no, es deriva de verdad y falla.
+
+No se puede llegar a **un** unico check para todo el repositorio: `Lint y build` vive en otro
+workflow y un job no puede declarar `needs` de un workflow ajeno. El minimo son dos nombres.
+
+### Lo que el CI no puede predecir: los privilegios del rol
+
+`Validar migraciones y funciones` aplica todo desde cero, pero lo hace en el stack local, donde
+el rol que corre las migraciones **es superusuario**. En Supabase gestionado no lo es. Todo lo
+que dependa de ese privilegio pasa el CI en verde y falla en el despliegue.
+
+Es lo que ocurrio con la `00068` (issue #487). La funcion `fn_buscar_pacientes` llevaba
+`SET pg_trgm.word_similarity_threshold = 0.4` en el `CREATE FUNCTION`, y el despliegue murio con:
+
+```
+ERROR: permission denied to set parameter "pg_trgm.word_similarity_threshold" (SQLSTATE 42501)
+```
+
+Postgres valida la clausula `SET` contra las GUCs que conoce. Si la libreria de la extension no
+esta cargada en la sesion, `pg_trgm.word_similarity_threshold` todavia no es una GUC: es un
+placeholder con prefijo custom, y fijar un placeholder exige superusuario, porque Postgres no
+puede saber aun si la variable sera `USERSET` o `SUSET`. En local el rol es superusuario y pasa;
+en Supabase no. La solucion no fue bajar el umbral ni cambiar de rol, sino **cargar pg_trgm antes
+del `CREATE FUNCTION`**, en el mismo archivo -llamar a una funcion C de la extension ejecuta su
+`_PG_init`, que es donde la GUC se define-. Con la GUC ya conocida, el permiso se comprueba como
+lo que es, `USERSET`, y cualquier rol puede fijarla.
+
+La leccion general: **verde en el CI no prueba que el despliegue vaya a pasar** cuando la
+migracion toca privilegios, GUCs de extensiones, roles o propiedad de objetos. Eso se prueba
+corriendo el SQL como un rol `NOSUPERUSER` (basta un cluster desechable con `initdb`), no
+mirando el check.
+
+**El caso inverso, y mas peligroso: verde en el CI tampoco prueba que un agujero este cerrado**
+(issue #706). El stack local arranca con la CLI que fija el CI (2.115.0 al momento de escribir
+esto), cuyo script de arranque **no** concede a `anon` `EXECUTE` sobre las funciones de `public`.
+Un proyecto real, creado desde el Dashboard, arranca con el script de una CLI mas reciente
+(2.116.0 midio esto) que **si** se lo concede -25 funciones ejecutables por `anon` sin ninguna
+sesion, comprobado contra `ecopac-dev` el 9 de septiembre de 2026, y una de ellas,
+`fn_generar_alertas_caducidad`, escribio una fila real-. La 00102 y la propia
+`fn_generar_alertas_caducidad` (00088) ya tenian su `REVOKE ... FROM PUBLIC`, y **ninguno de los
+dos cerro nada en el proyecto real**: ahi la concesion a `anon` es explicita
+(`anon=X/postgres` en el ACL), no la via implicita de `PUBLIC` que revocar alcanza a cerrar en
+local. La 00120 revoca de las dos vias -- `anon` explicito y `PUBLIC` implicito -- por eso.
+
+La consecuencia practica para quien escriba pruebas de privilegios: la suite
+`privilegios_anon.sql` corre solo contra el stack local (ver su comentario final, "no hay una
+prueba 10"), y **eso no es una prueba de que el problema de la 00120 siga cerrado en
+`ecopac-dev`**. La suite pgTAP nunca se ha ejecutado contra un proyecto remoto -no hay ningun
+workflow ni instruccion para hacerlo-. Repetir a mano las cinco llamadas de la evidencia de la
+issue #706 contra `ecopac-dev` despues de cada migracion que toque `GRANT`/`REVOKE`/
+`ALTER DEFAULT PRIVILEGES` sigue siendo, por ahora, la unica forma real de confirmarlo.
+
+### Las pruebas de flujos criticos (issue #222)
+
+`pruebas/e2e/` recorre de punta a punta los tres flujos que no pueden fallar el dia de una
+jornada:
+
+| Archivo                             | Flujo                                                                     |
+| ----------------------------------- | ------------------------------------------------------------------------- |
+| `atencion-clinica.e2e.test.js`      | Registrar paciente, ponerlo en cola, consulta con diagnostico, receta y descuento de existencias |
+| `inventario-validacion.e2e.test.js` | Ingreso que nace pendiente, bandeja de validacion, aprobacion y rechazo    |
+| `medicamento-vencido.e2e.test.js`   | El bloqueo de un lote vencido en las tres capas donde puede romperse       |
+
+Corren dentro del job **Validar migraciones y funciones**, aprovechando el stack local que ese
+job ya levanto. En local:
+
+```bash
+supabase start
+supabase db reset     # imprescindible: siembra las cuentas y los datos que las pruebas usan
+npm run test:e2e
+```
+
+**No entran en `npm test`** a proposito: `npm test` recorre los workspaces y tiene que seguir
+funcionando en una maquina sin Docker.
+
+Tres cosas que conviene saber antes de escribir una prueba nueva aqui:
+
+- **Inician sesion de verdad**, con las cuentas del seed demo (`supabase/seed-demo.sql`), y cada
+  paso lo ejecuta el rol que lo ejecutaria en campo. Las politicas RLS son parte de lo que se
+  prueba, no un obstaculo que rodear con un administrador.
+- **Corren en serie.** `packages/shared` mantiene una sola instancia del cliente de Supabase, asi
+  que la sesion es un recurso global del proceso.
+- **Limpian lo que crean**, incluidas las existencias que hayan movido. La base queda como estaba.
+
+Lo que justifica su existencia es lo que ninguna de las otras dos capas puede ver. `npm test`
+prueba `packages/shared` contra un doble de Supabase escrito a mano, que acepta cualquier
+consulta que el codigo bajo prueba quiera hacer -- incluido un `INSERT` al que le faltan tres
+columnas `NOT NULL`. pgTAP prueba la base desde dentro, simulando la sesion con
+`SET request.jwt.claim.sub`, y nunca ejecuta el codigo del cliente. El hueco entre las dos es por
+donde se colaron el defecto de `registrarGasto()` (issue #300) y el de `registrarIngreso()` que
+encontro esta issue: los dos, un `INSERT` al que le faltaban columnas obligatorias, verdes en las
+dos suites.
+
+### Las Edge Functions se despliegan con las migraciones
+
+`supabase db push` aplica migraciones y **nada mas**. Hasta que el job "Aplicar migraciones"
+incorporo `supabase functions deploy`, el codigo de `supabase/functions/` vivia en el repositorio
+sin llegar nunca al proyecto: las dos funciones respondian **404** en `ecopac-dev`.
+
+Eso no era un detalle de infraestructura. `crearUsuario()` invoca `invitar-usuario`, y es el unico
+camino para dar de alta a una persona desde la aplicacion porque el registro publico esta cerrado
+(`00074`): sin la funcion desplegada, **la administradora no podia crear a nadie** y habia que
+hacerlo a mano desde el panel de Supabase. El cron de alertas habria dado 404 por la misma razon.
+
+**Cada funcion declara su mapa de imports en `supabase/config.toml`** (`[functions.<nombre>]` con
+`import_map = "./functions/deno.json"`). El codigo importa `@supabase/supabase-js` por nombre, y
+`supabase functions deploy` no lee el `deno.json` de la raiz de `supabase/functions/`. Sin esa
+seccion el empaquetado falla con `Relative import path "@supabase/supabase-js" not prefixed with /`.
+Asi paso con el primer despliegue real (PR #808): el paso tiene `continue-on-error`, la corrida salio
+verde y la funcion siguio respondiendo 404. El lint del CI no lo detecta porque recibe `--config`
+explicito. **Una funcion nueva agrega su seccion en el mismo PR.**
+
+Se despliegan **todas** las funciones en cada push, no solo las que cambiaron: el estado que
+importa es el del proyecto, no el del commit, y desplegar solo lo modificado deja fuera el caso
+que de verdad duele -una funcion que nunca se desplego, o un proyecto nuevo que arranca vacio-.
+Es idempotente y tarda segundos.
+
+Si el despliegue de funciones falla, **el job no se pone en rojo**: las migraciones ya se
+aplicaron, y un job rojo sugeriria que la base quedo a medias, que es lo contrario de lo que paso.
+El resultado se reporta en el resumen de la corrida.
+
+### La programacion de las alertas de vencimiento (issue #167)
+
+`fn_generar_alertas_caducidad` (migracion 00088, redefinida por la 00129, la 00138 y la 00162)
+genera una alerta pendiente por cada lote con existencia positiva que vence dentro de la antelacion
+mas larga configurada **o que ya vencio**, y avisa a la administracion en cada etapa. Quien la
+invoca es la Edge Function `alertas-vencimiento`, y quien invoca a la funcion es el workflow del
+mismo nombre, todos los dias a las 06:00 UTC, que son las 00:00 de Guatemala.
+
+**Antelaciones configurables (issue #899, 00162).** La administracion elige en la web (Inventario >
+Alertas > Configurar avisos) de cero a cuatro antelaciones, entre 1 y 365 dias; por defecto 90. Se
+agregan de una en una segun se necesiten; sin ninguna solo se avisa el dia del vencimiento. El
+aviso del dia del vencimiento no se configura: siempre se envia. Cada vez que una alerta pendiente
+llega a una etapa mas cercana -una antelacion o el dia del vencimiento- se registra una fila en
+`avisos_caducidad` y esa fila genera la notificacion (buzon y correo). Una alerta nueva avisa solo
+su etapa actual, no todas las que ya dejo atras, y volver a correr la rutina no repite nada. Las
+fechas se calculan con la de Guatemala (`fn_hoy_guatemala`), no con `CURRENT_DATE`, que en la base
+es UTC. Una alerta pendiente cuyo lote se quedo sin existencia se cierra sola.
+
+**Por que tambien lo ya vencido (issue #838).** La 00088 solo tomaba lo que vence dentro de los
+proximos 30 dias, con un limite inferior en `CURRENT_DATE`. Eso dejaba permanentemente fuera a los
+lotes que ya habian vencido, y `alertas_caducidad` no es solo un aviso: tiene `accion`,
+`atendida_por` y `atendida_en`, o sea que es el registro de la baja, y el bloque "Vencidos - Para
+dar de baja" de la pestania de alertas se llena de ahi. Un lote vencido con existencia no tenia por
+donde darse de baja. Sigue sin generar alerta un lote **sin** existencia, vencido o no: no hay nada
+que dar de baja.
+
+Ademas de la rutina, la administradora puede adelantar la generacion desde la propia pantalla con
+`fn_sincronizar_alertas_caducidad` (00129), para no esperar a la corrida de la noche siguiente. Es
+un envoltorio `SECURITY DEFINER` que comprueba `es_administrador()` por dentro; el detalle esta en
+`docs/PERMISOS.md`.
+
+**No es pg_cron.** El plan gratuito de Supabase no lo incluye, asi que el cron vive en GitHub
+Actions. Eso arrastra dos consecuencias que hay que tener presentes:
+
+1. **`schedule` se lee de `main`.** Mientras el archivo solo este en `develop`, el horario no
+   corre ni una vez, y no hay ninguna senal de ello: la pestania Actions simplemente no muestra
+   corridas. Se puede forzar antes con Actions > Alertas de vencimiento > Run workflow.
+2. **GitHub desactiva los workflows programados tras 60 dias sin actividad en el repositorio.** Si
+   las alertas dejan de llegar y aqui no hay corridas, ese es el primer sitio donde mirar.
+
+Cada corrida deja en el resumen la fecha, el resultado y cuantas alertas genero. Si falla, el job
+**Avisar fallo** abre una issue (`type:bug`, `module:inventario`, `priority:alta`) y, si vuelve a
+fallar, comenta en la que ya existe en vez de abrir otra. La razon de que exista ese aviso es que
+un cron que falla en silencio es peor que no tenerlo: la organizacion cree que alguien vigila los
+vencimientos y nadie lo hace, y la pantalla de alertas se ve igual de vacia cuando no hay nada que
+alertar que cuando la rutina no corrio.
+
+Volver a dispararlo a mano es seguro: `fn_generar_alertas_caducidad` es idempotente y no duplica
+alertas de un lote que ya tiene una pendiente, ni avisos de una etapa ya avisada.
+
+### Las notificaciones al administrador y su correo (issue #755)
+
+Cada incidencia que espera a la administracion -una alerta de caducidad nueva, un movimiento por
+validar, un gasto por aprobar, un medicamento que se queda sin existencia- crea una notificacion
+por administrador activo (`notificaciones`, migracion `00138`). Se ve en el buzon del perfil (web y
+movil) y sale por correo, **uno por notificacion, en el orden en que llegaron**.
+
+El correo sale en el momento: un trigger de la `00138` llama con **`pg_net`** a la Edge Function
+`enviar-notificaciones`, que barre todo lo pendiente. La rutina diaria (`alertas-vencimiento`) hace
+el mismo barrido como reintento, y su resumen muestra `correo`, `correosEnviados` y
+`correosFallidos`. Un correo solo se marca enviado cuando el servidor SMTP lo acepto, asi que un
+fallo se reintenta y un exito no se repite.
+
+**Lo que hay que configurar por ambiente, una sola vez.** Ninguno de estos valores es un secret de
+GitHub y ninguno se sube al repositorio.
+
+1. Los secrets de las Edge Functions, con `supabase secrets set --project-ref <ref>` o desde el
+   Dashboard (Edge Functions > Secrets):
+
+   | Secret      | Que es                                                                                |
+   | ----------- | ------------------------------------------------------------------------------------- |
+   | `SMTP_HOST` | Servidor SMTP del proveedor de correo                                                 |
+   | `SMTP_PORT` | **465** (SMTPS). Las Edge Functions de Supabase bloquean la salida por 25 y por 587    |
+   | `SMTP_USER` | Usuario del SMTP                                                                      |
+   | `SMTP_PASS` | Contrasena o llave del SMTP                                                           |
+   | `SMTP_FROM` | Remitente, p. ej. `Ecopac Digital <no-responder@dominio>`                             |
+   | `WEB_URL`   | Raiz de la web del ambiente, para armar el enlace del correo. Sin valor por defecto a proposito: un `localhost` de respaldo mandaria enlaces que no abren nada |
+
+   Sin `SMTP_HOST`, `SMTP_FROM` o `WEB_URL` la funcion responde `correo: "sin configurar"`, no
+   reclama nada y las notificaciones quedan pendientes de correo hasta que se configure. El buzon
+   funciona igual.
+
+2. Las dos entradas de **Supabase Vault** que lee el trigger, desde el SQL Editor del proyecto:
+
+   ```sql
+   SELECT vault.create_secret('https://<ref>.supabase.co/functions/v1/enviar-notificaciones', 'notificaciones_url');
+   SELECT vault.create_secret('<service_role key del proyecto>', 'notificaciones_llave');
+   ```
+
+   Sin ellas el trigger no hace nada: el correo no sale en el momento sino en la siguiente corrida
+   diaria.
+
+En el stack local, el correo se ve en Mailpit (`http://localhost:54424`), con `SMTP_HOST=inbucket`
+y `SMTP_PORT=1025`; ver `.env.example`. El alias de red es `inbucket` a secas: el nombre largo del
+contenedor no resuelve desde el runtime de las funciones y el envio falla en silencio.
+
+## Ambientes
+
+| Rama      | Proyecto Supabase   | Secret del project-ref      | Despliegue web    |
+| --------- | ------------------- | --------------------------- | ----------------- |
+| `develop` | Ecopac-Digital-Dev  | `SUPABASE_PROJECT_REF_DEV`  | Local             |
+| `main`    | Ecopac-Digital-Prod | `SUPABASE_PROJECT_REF_PROD` | Vercel Produccion |
+
+Cada migracion se aplica **una vez por base**. El push a `develop` va contra `Ecopac-Digital-Dev` y el
+push a `main` contra `Ecopac-Digital-Prod`: son bases distintas, no una doble aplicacion. Ademas
+`supabase db push` consulta `supabase_migrations.schema_migrations` del destino y aplica solo
+lo pendiente, asi que aunque el workflow corriera dos veces no repetiria nada.
+
+### Secrets
+
+Se configuran en Settings > Secrets and variables > Actions.
+
+| Secret                                                  | Lo usa                         |
+| ------------------------------------------------------- | ------------------------------ |
+| `SUPABASE_ACCESS_TOKEN`                                 | Vincular con proyectos remotos |
+| `SUPABASE_DB_PASSWORD`                                  | Vincular con proyectos remotos |
+| `SUPABASE_PROJECT_REF_DEV`                              | Aplicar migraciones en develop |
+| `SUPABASE_PROJECT_REF_PROD`                             | Aplicar migraciones en main    |
+| `SUPABASE_SERVICE_ROLE_KEY_DEV`                         | Disparar alertas-vencimiento y keep-alive |
+| `SUPABASE_URL_DEV`, `SUPABASE_ANON_KEY_DEV`             | Keep-alive de la rama `main`   |
+| `VITE_SUPABASE_URL_DEV`, `VITE_SUPABASE_ANON_KEY_DEV`   | Build de la web en develop y keep-alive |
+| `VITE_SUPABASE_URL_PROD`, `VITE_SUPABASE_ANON_KEY_PROD` | Build de la web en main        |
+| `SUPABASE_DB_PASSWORD_PROD`                             | Respaldo de la base: contrasena de la base de produccion, distinta de la de desarrollo (#252, punto 2) |
+| `RESPALDO_GPG_CLAVE_PUBLICA`                            | Respaldo de la base: llave **publica** GPG de la organizacion con la que se cifra. La privada nunca va aqui |
+| `RESPALDO_DRIVE_CLIENT_ID`, `RESPALDO_DRIVE_CLIENT_SECRET` | Respaldo de la base: cliente de OAuth del proyecto de Google Cloud de la organizacion |
+| `RESPALDO_DRIVE_TOKEN`                                  | Respaldo de la base: token de rclone de la cuenta de Drive de la organizacion |
+
+Los valores SMTP y las entradas de Vault del correo de notificaciones **no** van aqui: son secrets de
+las Edge Functions y de la base, ver "Las notificaciones al administrador y su correo".
+
+El monitoreo de errores (issue #762) tampoco usa secrets de Actions. Son tres variables, una por
+destino, y ninguna es obligatoria: sin ella los errores se quedan en la consola o en el log de la
+funcion, como en local.
+
+| Variable | Donde se configura | La lee |
+| --- | --- | --- |
+| `VITE_SENTRY_DSN` | Vercel, Environment Variables, por ambiente | `apps/web/src/main.jsx` |
+| `EXPO_PUBLIC_SENTRY_DSN` | EAS, variables del perfil de build | `apps/mobile/App.js` |
+| `SENTRY_DSN` | `supabase secrets set SENTRY_DSN=... --project-ref <ref>` | `supabase/functions/_shared/errores.ts` |
+| `AMBIENTE` (opcional) | `supabase secrets set AMBIENTE=production ...` | La etiqueta de ambiente del evento de una Edge Function |
+
+El DSN es publico por diseno. Un DSN mal escrito no tumba nada: la app lo dice en la consola al
+arrancar y la funcion en su log.
+
+`SUPABASE_URL_DEV` y `VITE_SUPABASE_URL_DEV` son la misma URL con dos nombres, y conviven a
+proposito: el keep-alive de `main` lee el primero y el de `develop` el segundo. Renombrar uno
+mientras las dos ramas no esten al dia deja un workflow sin secret, que es justo el caso que
+termina en verde sin haber hecho nada.
+
+Cuando falta un secret, el workflow **avisa de forma visible pero no falla**: deja un bloque en
+el resumen de la corrida y una anotacion de warning. La idea es no bloquear al equipo mientras
+termina de configurar los ambientes, pero que una omision nunca se vea igual que un despliegue
+exitoso.
+
+**La excepcion es el respaldo de la base**, que con un secret de menos falla en rojo y abre una
+issue: un respaldo que no se hizo no puede verse en verde. De donde sale cada uno de sus secrets
+esta en [RESPALDO-Y-RECUPERACION.md](./RESPALDO-Y-RECUPERACION.md), seccion 7. Los cinco secrets
+nuevos de la tabla y `SUPABASE_PROJECT_REF_PROD` **todavia no existen** (11 de octubre de 2026):
+dependen de la cuenta de Google de la organizacion y de `Ecopac-Digital-Prod` (#252).
+
+## Respaldos y restauracion
+
+Issues #762 (bloque 4) y #914. **Estado: respaldo cifrado y restauracion ensayados de punta a punta
+contra el stack local (11 de octubre de 2026); restauracion desde un proyecto remoto todavia no
+probada.** El plan completo de produccion -que se respalda, cada cuanto, quien puede abrirlo y el
+procedimiento de recuperacion paso a paso- esta en
+[RESPALDO-Y-RECUPERACION.md](./RESPALDO-Y-RECUPERACION.md). Esta seccion conserva el detalle del
+volcado, el porque de cada paso de la prueba y la tabla "Registro". Un respaldo sin restauracion
+probada no es un respaldo, asi que nada se da por cerrado hasta que se restaure un respaldo bajado
+de Drive y se anote la fecha en la tabla del final.
+
+### Que respalda Supabase por su cuenta
+
+Depende del plan contratado y **no se da por supuesto aqui**. Hay que confirmarlo en el Dashboard
+de cada proyecto (Database > Backups) y anotarlo en la tabla del final: si hay respaldos
+automaticos, con que frecuencia, cuantos dias se conservan y si se pueden restaurar desde el
+propio Dashboard. Si el plan no los ofrece, el respaldo propio de abajo es el unico que hay.
+
+Un proyecto **pausado por inactividad** no pierde los datos, pero mientras esta pausado no responde
+y no se puede respaldar. El keep-alive (`keep-alive-supabase.yml`) es lo que lo evita, y desde la
+#762 avisa en el resumen de la corrida cuando no hizo nada por falta de secrets.
+
+### Respaldo propio
+
+Con la CLI vinculada al proyecto (`supabase link --project-ref <ref>`). Son lecturas: no aplican
+migraciones, asi que no chocan con la regla de "Las migraciones se aplican mergeando, no a mano".
+
+```bash
+supabase db dump --linked --role-only -f roles.sql
+supabase db dump --linked -f esquema.sql
+supabase db dump --linked --data-only --use-copy -f datos.sql
+```
+
+**Un volcado de produccion contiene expedientes clinicos reales.** Lo genera solo la persona
+responsable de la base, se guarda cifrado fuera del repositorio y fuera de equipos personales, y
+se borra al terminar la prueba. Ninguno de los tres archivos se sube a GitHub, a un chat ni a un
+correo. La primera prueba se hace con `Ecopac-Digital-Dev`, que no tiene datos reales.
+
+### Prueba de restauracion
+
+Contra el stack local, que es desechable:
+
+```bash
+supabase start
+supabase db reset --no-seed    # esquema de supabase/migrations, SIN seed.sql ni seed-demo.sql
+docker exec -i supabase_db_ecopac-digital psql -U postgres -d postgres -v ON_ERROR_STOP=1 <<'SQL'
+DO $$
+DECLARE tablas TEXT;
+BEGIN
+  SELECT string_agg(format('public.%I', tablename), ', ') INTO tablas
+  FROM pg_tables WHERE schemaname = 'public';
+  EXECUTE 'TRUNCATE ' || tablas || ', auth.users CASCADE';
+END $$;
+SQL
+docker exec -i supabase_db_ecopac-digital psql -U postgres -d postgres < datos.sql
+```
+
+(Con `psql` instalado en el equipo vale igual `psql "postgresql://postgres:postgres@127.0.0.1:54422/postgres"`,
+puerto de `[db]` en `supabase/config.toml`; el `docker exec` evita tener que instalarlo.)
+
+Se restauran los **datos** sobre el esquema de las migraciones, y no el `esquema.sql` volcado,
+porque la fuente de verdad del esquema es `supabase/migrations/` (AGENTS.md): si el volcado y las
+migraciones no coinciden, eso ya es un hallazgo que hay que reportar.
+
+**Por que el `--no-seed` y el `TRUNCATE`, que la primera version de este procedimiento no tenia.**
+El ensayo del 24 de septiembre lo encontro: con un `db reset` a secas, la carga de `datos.sql` da 29
+errores de clave duplicada, porque el reset vuelve a sembrar los datos de demostracion. Con
+`--no-seed` quedan 13, porque **las propias migraciones tambien siembran**: el catalogo geografico,
+los idiomas, los permisos, las presentaciones, las condiciones cronicas, los diagnosticos, las
+bodegas y el primer administrador (`00063`). Y un `COPY` que choca con una sola fila **descarta la
+tabla entera**: en ese ensayo `perfiles` y `auth.users` quedaron con una fila en vez de ocho, y
+`eventos_auditoria` con dos en vez de 57. El `TRUNCATE` de todo `public` y de `auth.users` vacia lo
+que sembraron las migraciones sin tocar el esquema, y el volcado repone todo lo demas.
+
+No hace falta desactivar triggers a mano: `supabase db dump --data-only` abre el archivo con
+`SET session_replication_role = replica`, que los apaga durante la carga. Sin eso, cada fila de
+`movimientos_inventario` volveria a mover `existencias` y cada escritura sensible volveria a
+escribir en `eventos_auditoria`. Las secuencias las repone el propio volcado con `setval`.
+
+Dos errores son **esperados** y no invalidan la prueba: `permission denied for table
+buckets_vectors` y `... vector_indexes`, dos tablas vacias de `storage` que `postgres` no puede
+escribir en el stack local. El proyecto no usa Storage (`docs/COSTOS-Y-LIMITES.md`, seccion 1).
+Cualquier otro `ERROR` en la salida de la carga si invalida la prueba.
+
+La prueba solo cuenta si, despues de restaurar:
+
+1. `select count(*)` de `pacientes`, `atenciones`, `recetas`, `lotes` y `movimientos_inventario`
+   coincide con el del proyecto de origen en el momento del volcado.
+2. Se puede iniciar sesion en la web local (`npm run dev:web` contra el stack local) y abrir la
+   ficha de un paciente con su historial.
+3. `supabase test db` sigue en verde.
+
+### Registro
+
+| Proyecto | Respaldos del plan (confirmado en Dashboard) | Ultima restauracion probada | Quien |
+| --- | --- | --- | --- |
+| Ecopac-Digital-Dev | **ninguno**: plan Free (24-09-2026) | nunca | - |
+| Ecopac-Digital-Prod | pendiente de confirmar | nunca | - |
+| Stack local (ensayo del procedimiento) | no aplica | 24-09-2026: conteos identicos en las nueve tablas comparadas, sesion del administrador demo y lectura de pacientes con su expediente, `supabase test db` 48 archivos / 754 pruebas en verde | PR de la #762 |
+| Stack local (ensayo del workflow de respaldo, `scripts/respaldo-base.sh`) | no aplica | 11-10-2026: respaldo cifrado con GPG, subido con rclone a un destino local, descifrado y restaurado. `scripts/comprobar-restauracion.sh`: 96 tablas y 1195 filas identicas a las del respaldo; carga con solo los dos errores esperados; `supabase test db` 1211 de 1212, con el mismo fallo que una base recien creada (`limites_de_uso.sql`, prueba 13), ajeno a la restauracion | PR de la #914 |
+
+El ensayo local **no sustituye** la prueba con `Ecopac-Digital-Dev`: prueba que los comandos y el
+orden son correctos con el esquema y los datos de demostracion actuales, no que un volcado remoto
+real se restaure. Lo que queda es correr los tres `supabase db dump --linked` de arriba contra dev y
+repetir exactamente esto.
+
+Database > Backups de `Ecopac-Digital-Dev` dice literalmente "Free Plan does not include project
+backups. Upgrade to the Pro Plan for up to 7 days of scheduled backups" (issue #879). O sea que
+para dev **el respaldo propio de arriba no es un complemento: es el unico que hay**, y mientras
+nadie lo corra no existe ninguna copia. `Ecopac-Digital-Prod` esta pausado y su plan se confirma al
+reanudarlo (issue #252).
+
+La prueba de restauracion sigue sin hacerse. No es un olvido: `supabase db dump --linked` necesita
+vincular la CLI, y vincular pide la contrasena de la base. Queda como procedimiento escrito hasta
+que la persona responsable de la base lo corra, y esta fila es la que hay que actualizar cuando
+pase.
+
+### Plan para produccion
+
+`Ecopac-Digital-Dev` se queda sin respaldos a proposito: no tiene datos reales y el plan Free no los
+ofrece. Lo que no puede pasar es que **produccion** arranque igual.
+
+**Decision de la organizacion (27 de septiembre de 2026):** produccion se queda en el plan Free, y
+el respaldo es un **workflow de GitHub Actions que saca el volcado de la base y lo guarda en Google
+Drive**, en la cuenta de la organizacion.
+
+Eso ya esta implementado (issue #914): `.github/workflows/respaldo-base.yml` corre todos los dias y
+a mano, llama a `scripts/respaldo-base.sh`, cifra con la llave publica de la organizacion antes de
+subir, conserva los 30 respaldos mas recientes y falla en rojo si cualquier paso falla. **Nunca
+como artefacto de GitHub Actions**: en un repositorio publico los artefactos los descarga cualquier
+cuenta de GitHub. El plan, el procedimiento de recuperacion y la puesta en marcha estan en
+[RESPALDO-Y-RECUPERACION.md](./RESPALDO-Y-RECUPERACION.md).
+
+Lo que la #252 sigue teniendo como requisito para abrir produccion, y que no se puede hacer antes:
+
+1. La credencial de Drive y el par de llaves, que salen de la cuenta de Google de la organizacion.
+2. `develop` en `main` y los secrets de produccion: el workflow solo corre desde la rama por
+   defecto.
+3. **La primera restauracion real**, desde un respaldo bajado de Drive, anotada en "Registro"
+   antes de que produccion reciba datos reales. Despues, una vez por ano, al cierre de temporada de
+   jornadas.
+
+## La regla mas importante: una migracion aplicada no se edita
+
+Cuando una migracion corre en una base, Supabase la registra en
+`supabase_migrations.schema_migrations` y **no la vuelve a ejecutar nunca**. Editar el archivo
+despues no cambia nada en esa base.
+
+Eso crea una divergencia silenciosa:
+
+|                          | Que ejecuta                                                           |
+| ------------------------ | --------------------------------------------------------------------- |
+| El CI en el PR           | `supabase db reset`: aplica **todo desde cero** en una base limpia    |
+| El despliegue al mergear | `supabase db push`: aplica **solo lo pendiente sobre el estado real** |
+
+Mientras nadie edite una migracion aplicada, los dos escenarios coinciden y el CI predice bien
+lo que va a pasar. En cuanto alguien la edita, dejan de coincidir: el CI queda verde y el
+despliegue falla despues del merge.
+
+### Como corregir una migracion aplicada
+
+Hacia adelante, con una migracion nueva. Nunca editando la anterior.
+
+`supabase/migrations/00005_corregir_schema_de_extensiones.sql` es el ejemplo: mueve las
+extensiones al schema correcto **solo si hace falta**, de modo que corrige `Ecopac-Digital-Dev` y es un
+no-op en una base fresca. El mismo archivo sirve para los tres destinos.
+
+### Cuando de verdad hay que editarla
+
+Solo si la migracion no se aplico todavia en ninguna base — tipicamente porque se agrego en el
+mismo PR. Ahi la guarda ya la deja pasar, porque contra la rama base figura como archivo nuevo.
+
+Si aun asi hace falta saltarse la guarda, se agrega la etiqueta
+`migracion-editada-a-proposito` al PR. Queda registrado en la corrida que se salto y por que.
+
+## Las migraciones se aplican mergeando, no a mano
+
+**Nadie corre `supabase db push` contra `ecopac-dev` ni `ecopac-prod` desde su maquina.** Una
+migracion llega a una base de un solo modo: se mergea su PR y la aplica el workflow.
+
+La razon no es de estilo. `db push` valida el historial completo antes de aplicar nada, asi que
+en cuanto la base tiene registrada una version cuyo archivo no esta en la rama, **todo push a esa
+rama falla**, lo traiga o no:
+
+```
+Remote migration versions not found in local migrations directory.
+```
+
+El que aplica a mano no rompe su propio trabajo: rompe el de todos los demas, hasta que su PR
+entre. Y el fallo aparece en el merge de otra persona, que no toco SQL y no tiene forma de
+adivinar por que. Es el [Caso 4](#caso-4-la-base-tiene-una-migracion-que-la-rama-no).
+
+Para probar una migracion antes de mergear esta el stack local:
+
+```bash
+supabase start
+supabase db reset   # aplica todo desde cero, igual que el CI
+```
+
+Eso es tambien lo que corre el CI en el PR, asi que si pasa ahi, pasa al mergear.
+
+## La otra regla: el numero se elige dos veces
+
+El nombre de una migracion es `NNNNN_descripcion_en_snake_case.sql`, con cinco digitos y
+numeracion secuencial. Elegir mal el numero rompe el despliegue de dos formas distintas, y las
+dos las comprueba el paso **Verificar la numeracion de las migraciones**.
+
+### Repetir un numero
+
+En `supabase_migrations.schema_migrations`, la columna `version` es **el prefijo numerico solo**
+\-`00065`, sin el nombre, que va en otra columna- y es **clave primaria**. Medido contra una base
+local con dos archivos `00066`:
+
+```
+Applying migration 00066_prueba_dup_a.sql...
+Applying migration 00066_prueba_dup_b.sql...
+ERROR: duplicate key value violates unique constraint "schema_migrations_pkey" (SQLSTATE 23505)
+Key (version)=(00066) already exists.
+```
+
+El primero se aplica y se registra. El segundo ejecuta su SQL, choca al registrarse, y **toda su
+transaccion se revierte**: ni esa migracion ni las que vinieran despues quedan aplicadas, y
+`db push` sale con codigo 1. No es un problema de orden, como podria parecer: es un despliegue
+roto.
+
+Y limpiarlo despues del merge es mas caro de lo que parece, porque renumerar el archivo es
+renombrarlo, y renombrar un archivo que ya existe en la rama base es justo lo que bloquea la
+guarda de inmutabilidad: hace falta la etiqueta `migracion-editada-a-proposito`.
+
+### Usar un numero por debajo del ultimo
+
+`supabase db push` se niega a aplicar una migracion anterior a la ultima que la base ya registro:
+aborta con `Found local migration files to be inserted before the last migration on remote
+database` y exige `--include-all`. **La salida correcta es renumerar por encima con `git mv`,
+nunca pasar `--include-all`**, que aplicaria la migracion fuera de orden en unas bases y no en
+otras.
+
+### Por eso el numero se verifica dos veces
+
+Se elige al abrir la rama y **se vuelve a verificar antes de mergear**, porque otra rama pudo
+tomarlo mientras tanto. La comprobacion compara contra el **tip actual** de la rama base, no
+contra el punto donde nacio la rama, asi que cada vez que el check se reejecuta usa el estado de
+`develop` de ese momento.
+
+Eso deja un unico hueco, y conviene conocerlo: **dos PR abiertos a la vez que reserven el mismo
+numero pasan los dos**, porque cuando cada uno se evaluo el numero todavia estaba libre. Si
+ninguno se reejecuta entre un merge y el otro, el duplicado entra. Tres cosas lo acotan:
+
+1. La comprobacion corre tambien en `push`, asi que `develop` se pone rojo en el momento del
+   merge, y no cuando falle el despliegue.
+2. Cualquier commit nuevo en el segundo PR lo reevalua contra el `develop` ya avanzado, y ahi si
+   lo caza.
+3. Activar `strict` en `develop` (exigir la rama al dia antes de mergear) fuerza esa reevaluacion
+   siempre y cierra el hueco del todo. `main` ya lo tiene activo; `develop` no. Ver
+   "Ramas protegidas".
+
+### Caso de estudio: la `00061` y la `00062` duplicadas
+
+`00061_agregar_rls_bodegas_y_proveedores.sql` y `00062_agregar_rls_bodegas_y_proveedores.sql`
+crean las mismas cuatro politicas sobre las mismas dos tablas. La `00062` es la `00061` mas un
+`DROP POLICY IF EXISTS` antes de cada `CREATE POLICY`; por eso, aplicadas en ese orden, la
+segunda reemplaza a la primera sin error y el CI, que aplica todo desde cero, sale en verde.
+
+**No se corrigen.** Las dos ya estan aplicadas en `Ecopac-Digital-Dev`, asi que borrar o editar
+cualquiera de las dos seria justo lo que prohibe la regla de arriba: cambiaria lo que valida el
+CI sin cambiar nada en las bases reales. Quedan como estan, documentadas aqui.
+
+Como se llego a eso: los PR #444 a #449 se crearon **unos encima de otros** en vez de cada uno
+desde `develop`, asi que cada rama arrastraba los commits de la anterior y el mismo cambio de RLS
+viajo en dos PR distintos con dos numeros de migracion.
+
+De ahi la regla que ya esta en `AGENTS.md` y que conviene recordar con el caso concreto:
+
+> **Una rama por issue, y siempre desde `develop` recien actualizado.** Nunca desde otra rama de
+> trabajo, aunque lo que se necesite de ella parezca imprescindible.
+
+Si de verdad hace falta algo que todavia esta en revision, es mejor esperar el merge que apilar:
+apilar convierte cada PR en una revision de todo lo anterior, y ahi es donde un duplicado pasa
+inadvertido.
+
+### Caso de estudio: la `00031` que no existe
+
+La secuencia tiene huecos en `00014`, `00015`, `00031` y `00043`. No son migraciones borradas:
+esos numeros **nunca existieron**. Son numeros que una rama reservo y tuvo que abandonar porque
+otra mergeo primero. El PR #395 llego a describir su archivo como `00043` en el cuerpo del PR y
+termino mergeando como `00044`.
+
+El hueco en si no hace dano. Lo que quedo es peor: los comentarios de la `00032`, la `00033` y la
+`00034` **citan una `00031` que no existe**, y le atribuyen un `GRANT SELECT ON eventos_auditoria`
+que en realidad esta en la `00032` y la `00038`. Tres migraciones aplicadas documentan mal el
+esquema, y como no se pueden editar, ese error es permanente.
+
+Es el argumento de por que la guarda de numeracion existe: el numero equivocado no solo rompe un
+despliegue, tambien deja referencias cruzadas que ya no se pueden arreglar.
+
+## Que hacer cuando falla el despliegue
+
+El workflow abre una issue automatica. **Lo primero es leer que dice sobre el estado de la base**,
+porque hay desenlaces muy distintos y se arreglan de forma opuesta. La issue lo afirma leyendo
+el resultado de cada paso de la corrida, no suponiendolo.
+
+Los casos 1, 2 y 4 son los que avisa el propio workflow de Supabase. Los casos 3 y 5 son los que
+**ningun workflow puede avisar de si mismo**: en uno la corrida nunca se creo y en el otro se
+cancelo antes de arrancar, asi que el job que avisa tampoco existio.
+
+### Caso 1: el paso `Aplicar migraciones` no llego a correr
+
+Algo fallo antes -instalar el CLI, vincular el proyecto, un secret que falta- y el `supabase db
+push` quedo en `skipped`. **No se aplico nada y la base no quedo a medias.**
+
+No hay ninguna migracion rota que buscar. Se mira el paso que si fallo, se corrige la causa y se
+relanza la corrida; el siguiente push aplica lo pendiente igual, porque `db push` sube todo lo que
+falte.
+
+Es lo que paso en la issue #422: `setup-cli` no pudo resolver la version del CLI y el despliegue
+murio en su primer paso. La base se puso al dia sola en el merge siguiente.
+
+### Caso 2: el paso `Aplicar migraciones` corrio y fallo
+
+Ahi si se detuvo dentro de una migracion y **la base puede haber quedado a medias**:
+
+1. Abrir el log del job **Aplicar migraciones** y ver en que migracion se detuvo.
+2. Preguntarse primero si alguna migracion ya aplicada fue editada. Es la causa mas comun.
+3. Corregir con una migracion nueva y abrir un PR normal.
+4. Tras el merge, confirmar con `supabase migration list --linked` que la base quedo al dia.
+5. Cerrar la issue.
+
+Nunca se arregla editando una migracion que **si llego a quedar aplicada**: eso deja la base a
+medias y el proximo ambiente hereda el problema.
+
+#### La excepcion: la migracion que fallo no quedo registrada
+
+`supabase db push` aplica cada archivo **en una transaccion**. Si el error salta dentro de esa
+transaccion, se revierte entera: ni el SQL ni la fila de `supabase_migrations.schema_migrations`
+quedan. Esa migracion sigue **pendiente**, y el proximo push la vuelve a intentar **antes** que
+cualquier archivo posterior.
+
+Ahi corregir hacia adelante **no funciona**: la migracion nueva nunca se alcanza, porque el push
+muere otra vez en la que ya falla. La unica salida es corregir el archivo que falla, con la
+etiqueta `migracion-editada-a-proposito` en el PR. Es exactamente el caso que la seccion
+[Cuando de verdad hay que editarla](#cuando-de-verdad-hay-que-editarla) autoriza: no se aplico en
+ninguna base, asi que editarla no divide nada.
+
+Antes de editar hay que **confirmarlo**, no suponerlo: `supabase migration list --linked` tiene
+que mostrar esa version como pendiente en todas las bases (`develop` y `main`). Si alguna la
+tiene aplicada, se vuelve al camino normal, migracion nueva.
+
+### Caso 3: la corrida nunca se creo
+
+Es el mas dificil de ver, porque **no hay nada rojo que mirar**. No falla un paso: no existe la
+corrida.
+
+El 26 de agosto GitHub Actions tardo horas en despachar workflows. En el commit `864d3e5`
+-el merge del PR #447 en `develop`- solo se crearon dos check-runs, `Lint y build` y el
+`Supabase Preview` de Vercel. **El workflow de Supabase nunca se creo para ese push**, asi que
+`Aplicar migraciones` no corrio y la `00062` no se desplego.
+
+Y nadie se entero, por una razon estructural: el job `Avisar fallo` vive **dentro de ese mismo
+workflow**. Si el workflow no se crea, tampoco se crea el job que avisa.
+
+> **Un workflow no puede avisar de que el mismo no existio.** Cualquier alerta que dependa de la
+> corrida que fallo en crearse no sirve para esto.
+
+#### Como se detecta
+
+Con el workflow **Verificar despliegue**, que corre por su cuenta todos los dias y no depende de
+ninguna corrida de despliegue. En vez de vigilar el proceso, mira el resultado: pregunta a cada
+ambiente si tiene aplicadas todas las migraciones del repositorio.
+
+```bash
+supabase db push --dry-run --linked --output-format json
+# {"upToDate":true,"dryRun":true,"migrations":[],...}
+```
+
+`--dry-run` no aplica nada. Si `upToDate` es `false`, `migrations` trae exactamente las que no
+llegaron, y el workflow abre una issue con esa lista. Si ya hay una issue abierta para ese
+ambiente, no la duplica.
+
+Lo mismo se puede correr a mano en cualquier momento, o desde Actions con **Run workflow**.
+
+#### Que hacer cuando aparece esa issue
+
+1. Buscar el commit de merge que introdujo la primera migracion pendiente.
+2. Abrir su pagina de checks y ver si tiene corrida del workflow de Supabase.
+3. Si **no la tiene**, es este caso: relanzar el despliegue con `gh workflow run supabase.yml
+--ref develop`, o con un commit vacio a la rama.
+4. Si **si la tiene y fallo**, no es este caso: seguir el Caso 1 o el Caso 2 de arriba.
+5. Confirmar con `supabase migration list --linked` que la base quedo al dia y cerrar la issue.
+
+#### Que hacer si Actions no esta despachando corridas ahora mismo
+
+Cuando se nota que un PR lleva minutos sin que aparezcan sus checks (o
+[status.github.com](https://www.githubstatus.com/) reporta incidencia en Actions):
+
+- **No mergear** un PR al que le falten checks porque no llegaron a crearse. Un check ausente no
+  es un check en verde.
+- Forzar la corrida con un push vacio (`git commit --allow-empty`) o con `gh run rerun`.
+- **Nunca** usar el merge de administrador para saltarse un check que no aparecio. Es
+  precisamente lo que deja una migracion sin desplegar sin que quede rastro.
+
+Conviene saber que hoy **`enforce_admins` esta desactivado en `develop` y en `main`**, o sea que
+esa puerta esta abierta y solo la cierra la disciplina del equipo. Ver "Ramas protegidas".
+
+### Caso 4: la base tiene una migracion que la rama no
+
+> **Antes de leer el resto: si el resumen de la corrida dice "Corrida superada", este no es tu
+> caso y no hay nada que hacer.** Ese texto significa que se mergearon dos PR con segundos de
+> diferencia y esta corrida quedo atras; la del commit mas nuevo desplego todo. Termina en verde
+> y no abre issue. Ver "Un despliegue superado no despliega".
+>
+> Este caso, el de abajo, es el otro: la version que sobra en la base **no tiene archivo en
+> ninguna parte de la rama**. Ahi si hay algo que arreglar, y hasta que se arregle falla todo
+> push.
+
+El paso **Comprobar el historial remoto** falla y `Aplicar migraciones` queda en `skipped`. **No
+se aplico nada y la base no quedo a medias.** El resumen de la corrida lista las versiones que
+sobran en la base.
+
+Sin ese paso, el sintoma es el mensaje crudo del CLI:
+
+```
+Remote migration versions not found in local migrations directory.
+supabase migration repair --status reverted 00088
+```
+
+Lo que hay detras: la base tiene registrada una migracion cuyo archivo no esta en la rama.
+`supabase db push` valida el historial **completo** antes de mirar si hay algo pendiente, asi
+que mientras eso dure **falla todo push a la rama, traiga migraciones o no**.
+
+> Por eso este caso se reconoce por una senal rara: **fallo el despliegue de un merge que no
+> toca una sola linea de SQL**. El commit que lo dispara casi nunca es el culpable.
+
+La causa casi siempre es que alguien aplico esa migracion **a mano** contra `ecopac-dev` antes
+de mergear su PR. Ver [Las migraciones se aplican mergeando, no a
+mano](#las-migraciones-se-aplican-mergeando-no-a-mano).
+
+Como se sale:
+
+1. Buscar el PR que trae ese archivo y mergearlo. Con eso se arregla solo, y es lo que
+   corresponde si la migracion es legitima y solo llego antes de tiempo.
+2. Solo si esa migracion se descarto de verdad y no va a existir nunca, despegar el registro de
+   la base con `supabase migration repair --status reverted <version>`.
+3. Confirmar con `supabase migration list --linked` que la base quedo al dia.
+
+Relanzar la corrida **no sirve**: el problema esta en la base, no en la corrida.
+
+Caso real: el 30 de agosto la `00088` se aplico a mano contra `ecopac-dev` antes de que su PR
+(#586) se mergeara. El merge que se comio el fallo fue el #588, un hook de filtros de reportes
+sin nada de SQL. Se resolvio solo al entrar el #586.
+
+### Caso 5: la corrida se cancelo sin ejecutar ningun job
+
+Aparece como `cancelled` en la lista de Actions, pero al abrirla **no tiene ni un job**. Nadie la
+cancelo a mano: la descarto la cola de concurrencia.
+
+GitHub guarda **una sola corrida en espera** por grupo de concurrencia. Cuando el grupo era solo
+la rama, cada push nuevo a `develop` descartaba a la que todavia no habia arrancado -y
+`cancel-in-progress: false` no lo evita, porque solo protege a la que ya esta corriendo. El 30 de
+agosto se perdieron asi los despliegues de `676acb3` y `c71692f`.
+
+Hoy el grupo incluye el SHA en los push, asi que cada commit tiene el suyo y ninguno descarta a
+otro:
+
+```yaml
+group: supabase-${{ github.ref }}-${{ github.event_name == 'push' && github.sha || 'pr' }}
+```
+
+En los PR se conserva el grupo por rama, que es donde si conviene cancelar lo superado.
+
+Si aun asi aparece una corrida cancelada sin jobs, se trata como el Caso 3: la base pudo quedarse
+atras y quien lo detecta es **Verificar despliegue**. Se relanza con `gh workflow run
+supabase.yml --ref develop`.
+
+## La version del CLI de Supabase va fija
+
+Los cuatro pasos `Instalar Supabase CLI` -tres en `supabase.yml` y uno en
+`verificar-despliegue.yml`- declaran `version: 2.115.0` y **no** `version: latest`. No es por
+gusto:
+
+`setup-cli` resuelve `latest` consultando la API de releases de GitHub **sin autenticar**, y los
+runners comparten esa cuota por IP. El 25 de agosto el despliegue de `develop` murio con
+`Failed to resolve latest Supabase CLI release: rate limit exceeded` sin aplicar una sola
+migracion (issue #422). Con una version concreta esa llamada no se hace y el fallo no puede
+repetirse.
+
+De paso, el CI valida con la misma version que tiene instalada el equipo, en vez de con la que
+resulte ser la ultima ese dia.
+
+**Al subirla hay que cambiarla en los cuatro pasos a la vez**, y conviene que coincida con la
+que usa el equipo en local (`supabase --version`).
+
+## Correr las validaciones en local
+
+Lo que corre el job **Lint y build**:
+
+```bash
+npm run verificar:shared-esquema
+npm run verificar:shared-esquema -- --autoprueba
+npm run verificar:rewrite-vercel
+npm run verificar:sin-emojis
+npm run verificar:sin-emojis -- --autoprueba
+npm run verificar:paleta
+npm run verificar:paleta -- --autoprueba
+npm run verificar:contratos
+npm run verificar:contratos -- --autoprueba
+npm run lint
+npm test
+npm run build
+```
+
+La tabla de cobertura que se publica en el PR se puede ver igual en local, despues de correr
+`npm test`:
+
+```bash
+node scripts/resumen-de-pruebas.mjs
+```
+
+El conteo de pruebas que acompana a esa tabla en el PR **no sale en local**: lo agrega el reporter
+`github-actions` de vitest, que solo se activa dentro de Actions.
+
+Lo que corre el job **Validar migraciones y funciones**:
+
+```bash
+supabase start
+supabase db reset          # aplica todas las migraciones desde cero y siembra los seeds
+supabase db lint --local --fail-on warning
+supabase test db           # las suites pgTAP
+npm run test:e2e           # los flujos criticos
+```
+
+Esto ultimo reproduce el job. Lo que no reproduce es el escenario incremental contra una base
+con historial, que es justo lo que la guarda de inmutabilidad protege.
+
+`npm run test:e2e` necesita el `supabase db reset` previo: las cuentas y los datos que usa los
+siembra `supabase/seed-demo.sql`, no las migraciones.
+
+## Ramas protegidas
+
+`develop` y `main` requieren Pull Request y no admiten push directo, force-push ni borrado.
+
+Los nombres de los checks requeridos **no viven en el repositorio**: se configuran en
+Settings > Branches y solo se cambian ahi. Es la unica parte del CI/CD que no entra por PR, y
+por eso conviene tener escrito cual es el estado y cual deberia ser.
+
+### Estado configurado hoy
+
+|                                                      | `develop`                                                                    | `main`          |
+| ---------------------------------------------------- | ---------------------------------------------------------------------------- | --------------- |
+| Checks requeridos                                    | `Lint y build`, `Migraciones no editadas`, `Validar migraciones y funciones` | los mismos tres |
+| Exigir la rama al dia (`strict`)                     | no                                                                           | si              |
+| Aplicar tambien a administradores (`enforce_admins`) | **no**                                                                       | **no**          |
+
+### Lo que conviene cambiar
+
+1. **Reemplazar los dos checks de Supabase por `Supabase completo`.** Los checks requeridos
+   quedan en dos nombres, `Lint y build` y `Supabase completo`, y dejan de romperse cada vez que
+   se renombra o se agrega un job. El porque esta en "Por que existe Supabase completo".
+2. **Activar `enforce_admins` en las dos ramas.** Hoy un administrador puede mergear saltandose
+   un check que no aparecio, que es exactamente como se cuela una migracion sin desplegar. Es un
+   cambio de politica del equipo, no una decision tecnica: conviene acordarlo antes de activarlo,
+   porque tambien quita la salida de emergencia para desbloquear un PR atascado.
+
+3. **Activar `strict` en `develop`** (exigir la rama al dia antes de mergear). `main` ya lo tiene.
+   Es lo unico que cierra del todo el hueco de dos PR que reservan el mismo numero de migracion,
+   porque obliga a reevaluar el PR contra el `develop` ya avanzado. El coste es que hay que
+   actualizar la rama antes de mergear cuando develop avanzo.
+
+Cuidado con el orden al hacer el cambio 1: **agregar `Supabase completo` primero, comprobar en un
+PR que aparece, y solo entonces quitar los otros dos.** Si se agrega un check que todavia no
+existe en ningun workflow, los PR abiertos quedan esperando para siempre un check que nadie va a
+reportar.
+
+Y al reves: quitar un check requerido no rompe nada, pero deja de bloquear en el momento. Los dos
+cambios se hacen en Settings > Branches > Edit, en la seccion "Require status checks to pass
+before merging".
+
+## Cuando toman efecto los cambios a los workflows
+
+| Disparador                      | De donde toma el archivo        | Cuando aplica                                             |
+| ------------------------------- | ------------------------------- | --------------------------------------------------------- |
+| `pull_request`                  | Del merge ref (base + PR)       | En el propio PR que lo introduce                          |
+| `push`                          | Del commit pusheado             | Al mergear a develop o a main                             |
+| `schedule`, `workflow_dispatch` | De la rama por defecto (`main`) | Solo tras promover develop a main                         |
+| Ramas protegidas                | No vive en el repositorio       | Al configurarlo en Settings, sin depender de ningun merge |
+
+Por eso un cambio al keep-alive no surte efecto hasta que `develop` llegue a `main`, aunque el
+archivo ya este en develop.
+
+**Y por eso `Verificar despliegue` no va a correr solo al mergearlo a `develop`.** Se dispara por
+`schedule`, asi que GitHub lo lee de `main`: hasta la siguiente promocion a produccion, la
+comprobacion diaria no existe. Mientras tanto se puede correr a mano desde Actions >
+Verificar despliegue > Run workflow, eligiendo la rama, porque `workflow_dispatch` si permite
+escoger de donde tomar el archivo.

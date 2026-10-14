@@ -3,7 +3,15 @@
 #
 # Uso:
 #   docker compose up --build                  -> web en http://localhost:5173
-#   docker compose --profile db-local up       -> agrega un Postgres local (opcional)
+#
+# Para el esquema completo (RLS, roles anon/authenticated/service_role, esquema auth,
+# extensiones) usa el CLI oficial de Supabase, no un Postgres pelado: supabase start
+# (docs/QUICKSTART.md). Este archivo tenia antes un perfil db-local que montaba
+# supabase/migrations sobre postgres:16-alpine liso; la primera migracion ya asume auth.uid(),
+# el esquema extensions y esos tres roles, ninguno de los cuales existe en esa imagen, asi que
+# el perfil nunca llegaba a aplicar ni una migracion (issue #515). Se retira en vez de
+# arreglarse: arreglarlo bien es reconstruir adentro lo que supabase start ya hace, mejor y
+# mantenido por Supabase, no por este repositorio.
 #
 # Para produccion usa docker-compose.prod.yml:
 #   docker compose -f docker-compose.prod.yml up --build -d
@@ -35,23 +43,3 @@ services:
     env_file:
       - path: .env.development
         required: false
-
-  # Postgres local opcional para probar el esquema sin depender de internet.
-  # Para trabajar contra Supabase real, usa el CLI oficial: supabase start
-  db-local:
-    image: postgres:16-alpine
-    container_name: ecopac-db-local
-    environment:
-      POSTGRES_USER: ecopac
-      POSTGRES_PASSWORD: ecopac_dev_local
-      POSTGRES_DB: ecopac_local
-    ports:
-      - "5432:5432"
-    volumes:
-      - db-local-data:/var/lib/postgresql/data
-      - ./supabase/migrations:/docker-entrypoint-initdb.d
-    profiles:
-      - db-local
-
-volumes:
-  db-local-data:

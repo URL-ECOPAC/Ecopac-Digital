@@ -1,0 +1,356 @@
+// Da de alta a una persona nueva (issue #523).
+//
+// packages/shared/usuarios/api.js -> crearUsuario() invoca esta funcion via functions.invoke(),
+// que le adjunta el JWT de quien esta conectado como cabecera Authorization. El unico trabajo de
+// fila (auth.users, auth.identities, perfiles.rol) lo hace fn_crear_usuario_administrativo()
+// (migracion 00074, SECURITY DEFINER, REVOKE ALL FROM PUBLIC): esta funcion valida quien llama,
+// la reutiliza con la llave de servicio -la unica forma de invocarla- y dispara el correo para
+// establecer contrasena. No reimplementa el alta con la Admin API a proposito (ver la issue).
+//
+// Contrato de respuesta, exigido por normalizarError() en packages/shared/api/errores-de-supabase.js:
+// un error siempre es { code, message } en el cuerpo JSON, con `code` un SQLSTATE (o el mismo
+// que ya levanta fn_crear_usuario_administrativo), para que el cliente lo clasifique sin
+// adivinar. crearUsuario() desempaca ese cuerpo desde error.context antes de normalizar.
+
+import { createClient } from "@supabase/supabase-js";
+
+import { corsHeadersPara } from "../_shared/cors.ts";
+import {
+  componerCorreoDeInvitacion,
+  crearTransporte,
+  leerConfiguracionSmtp,
+} from "../_shared/correo.ts";
+import { reportarErrorDeFuncion } from "../_shared/errores.ts";
+
+// Mismo shape que COLUMNAS_DEL_PERFIL en packages/shared/usuarios/api.js. Se duplica: esta
+// funcion corre en Deno, fuera del bundle de shared, y las Edge Functions de este proyecto
+// todavia no comparten codigo con packages/ (ver docs/SEGURIDAD.md y la nota de alcance de la
+// issue #523 sobre el despliegue).
+const COLUMNAS_DEL_PERFIL =
+  "id, nombres, apellidos, email, telefono, rol, activo, fechaIngreso:fecha_ingreso";
+
+const CAMPOS_OBLIGATORIOS = ["nombres", "apellidos", "email", "rol"];
+
+function respuestaJson(req: Request, status: number, cuerpo: unknown) {
+  return new Response(JSON.stringify(cuerpo), {
+    status,
+    headers: { ...corsHeadersPara(req), "Content-Type": "application/json" },
+  });
+}
+
+function respuestaDeError(req: Request, status: number, code: string, message: string) {
+  return respuestaJson(req, status, { code, message });
+}
+
+export async function manejarSolicitud(
+  req: Request,
+  { crearCliente = createClient }: { crearCliente?: typeof createClient } = {},
+): Promise<Response> {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeadersPara(req) });
+  }
+
+  if (req.method !== "POST") {
+    return respuestaDeError(req, 405, "42601", "Metodo no soportado: use POST.");
+  }
+
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+
+  if (!supabaseUrl || !anonKey || !serviceRoleKey) {
+    await reportarErrorDeFuncion("invitar-usuario", "faltan variables de entorno de Supabase");
+    return respuestaDeError(
+      req,
+      500,
+      "desconocido",
+      "La funcion no esta configurada correctamente.",
+    );
+  }
+
+  try {
+    // ========================================================================
+    // 1. Quien llama tiene que ser administrador. No basta con que el cliente lo compruebe
+    //    (ModalAltaUsuario.jsx no tiene ningun chequeo de rol): la autorizacion real va aqui,
+    //    contra la fila real de perfiles de quien hizo la peticion.
+    // ========================================================================
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      return respuestaDeError(req, 401, "42501", "Falta la sesion.");
+    }
+
+    const clienteDeQuienLlama = crearCliente(supabaseUrl, anonKey, {
+      global: { headers: { Authorization: authHeader } },
+      auth: { persistSession: false },
+    });
+
+    const {
+      data: { user },
+      error: errorDeSesion,
+    } = await clienteDeQuienLlama.auth.getUser();
+
+    if (errorDeSesion || !user) {
+      return respuestaDeError(req, 401, "42501", "La sesion no es valida o expiro.");
+    }
+
+    // "rol, activo": pedir solo "rol" reabria el agujero que cerro la 00079. La politica de
+    // SELECT de perfiles deja leer la propia fila aunque este desactivada (para que
+    // evaluarPerfilDeSesion() lo pueda explicar en pantalla), asi que un administrador dado de
+    // baja con un JWT todavia vigente seguia viendo su fila con rol: 'administrador'. El chequeo
+    // de activo no lo hace RLS aqui -esta funcion lee con el cliente del llamador, no con
+    // rol_actual()-, asi que tiene que hacerse a mano (issue #691).
+    const { data: perfilDeQuienLlama, error: errorDePerfil } =
+      await clienteDeQuienLlama
+        .from("perfiles")
+        .select("rol, activo")
+        .eq("id", user.id)
+        .maybeSingle();
+
+    if (
+      errorDePerfil ||
+      perfilDeQuienLlama?.rol !== "administrador" ||
+      !perfilDeQuienLlama?.activo
+    ) {
+      return respuestaDeError(
+        req,
+        403,
+        "42501",
+        "Solo un administrador puede invitar a una persona nueva.",
+      );
+    }
+
+    // ========================================================================
+    // 2. Datos del body. telefono es el unico opcional: fn_crear_usuario_administrativo() no
+    //    tiene parametro para esa columna, se completa aparte mas abajo.
+    // ========================================================================
+    let body: Record<string, unknown>;
+    try {
+      body = await req.json();
+    } catch {
+      return respuestaDeError(
+        req,
+        400,
+        "22P02",
+        "El cuerpo de la peticion no es JSON valido.",
+      );
+    }
+
+    const camposFaltantes = CAMPOS_OBLIGATORIOS.filter(
+      (campo) => !body?.[campo] || String(body[campo]).trim() === "",
+    );
+    if (camposFaltantes.length > 0) {
+      return respuestaDeError(
+        req,
+        400,
+        "23502",
+        `Faltan datos obligatorios: ${camposFaltantes.join(", ")}.`,
+      );
+    }
+
+    const nombres = String(body.nombres).trim();
+    const apellidos = String(body.apellidos).trim();
+    const email = String(body.email).trim();
+    const rol = String(body.rol).trim();
+    const telefono = body.telefono ? String(body.telefono).trim() : null;
+
+    // supabaseAdmin se adelanta aqui (antes se creaba justo antes del paso 3) porque el paso
+    // 2.5 de abajo tambien lo necesita, con la llave de servicio: no hay JWT de quien invita
+    // disponible dentro de Postgres por este camino.
+    const supabaseAdmin = crearCliente(supabaseUrl, serviceRoleKey, {
+      auth: { persistSession: false },
+    });
+
+    // ========================================================================
+    // 2.5. Limite de invitaciones (issue #761): antes de tocar auth.users, para no dejar a
+    //      medias un alta que ya empezo a escribir filas si el limite se paso. Va despues de
+    //      validar el body -una peticion mal formada no consume la cuota de un administrador
+    //      honesto-, pero cualquier intento bien formado cuenta, incluido uno que despues falle
+    //      por correo duplicado.
+    // ========================================================================
+    const { error: errorDeLimite } = await supabaseAdmin.rpc(
+      "fn_verificar_limite_invitaciones",
+      { p_administrador_id: user.id },
+    );
+
+    if (errorDeLimite) {
+      const status = errorDeLimite.code === "53400" ? 429 : 400;
+      return respuestaDeError(
+        req,
+        status,
+        errorDeLimite.code || "desconocido",
+        errorDeLimite.message || "No se pudo verificar el limite de invitaciones.",
+      );
+    }
+
+    // ========================================================================
+    // 3. El alta de verdad: fn_crear_usuario_administrativo() con la llave de servicio, la
+    //    unica que puede llamarla (REVOKE ALL FROM PUBLIC en la 00074). Postgres valida `rol`
+    //    contra el enum rol_usuario solo: un valor invalido cae en el catch de abajo con
+    //    invalid_text_representation (22P02), sin duplicar aqui la lista de roles.
+    // ========================================================================
+    const { data: idNuevoUsuario, error: errorDeAlta } = await supabaseAdmin
+      .rpc(
+        "fn_crear_usuario_administrativo",
+        {
+          p_correo: email,
+          p_nombres: nombres,
+          p_apellidos: apellidos,
+          p_rol: rol,
+        },
+      );
+
+    if (errorDeAlta) {
+      const status = errorDeAlta.code === "23505" ? 409 : 400;
+      return respuestaDeError(
+        req,
+        status,
+        errorDeAlta.code || "desconocido",
+        errorDeAlta.message || "No se pudo dar de alta a la persona.",
+      );
+    }
+
+    // telefono no lo maneja la RPC: se completa con un UPDATE aparte. No aborta el alta si
+    // falla, igual que el correo de abajo: la cuenta ya quedo creada y el telefono se puede
+    // completar despues editando el perfil.
+    if (telefono) {
+      const { error: errorDeTelefono } = await supabaseAdmin
+        .from("perfiles")
+        .update({ telefono })
+        .eq("id", idNuevoUsuario);
+
+      if (errorDeTelefono) {
+        await reportarErrorDeFuncion(
+          "invitar-usuario",
+          "no se pudo guardar el telefono",
+          errorDeTelefono,
+        );
+      }
+    }
+
+    // ========================================================================
+    // 4. Correo para establecer contrasena. Mismo mecanismo que useRestablecerContrasena.js
+    //    (packages/shared/usuarios): fn_crear_usuario_administrativo() no fija contrasena a
+    //    proposito. No bloquea el alta si el envio falla.
+    //
+    //    ISSUE #864, punto 5. Antes se enviaba SIN redirectTo, razonando que la URL de retorno
+    //    depende de la plataforma y que en Deno no hay `window.location.origin`, asi que ganaba
+    //    el Site URL de Supabase Auth. El problema es a donde lleva ese Site URL: a la RAIZ de
+    //    la aplicacion. Comprobado de punta a punta en local: quien recibe la invitacion abre el
+    //    enlace, el token de recuperacion se canjea, y la persona aterriza en la pantalla de
+    //    inicio **con sesion y sin contrasena**, sin nada que la lleve a ponerse una. La ruta
+    //    /nueva-contrasena existe y funciona -- es la que usa "olvide mi contrasena", que si pasa
+    //    su redirectTo --, pero a la invitacion no habia forma de llegar a ella.
+    //
+    //    La URL de la web no se puede deducir aqui, pero si se puede configurar: WEB_URL es la
+    //    misma variable que ya usa _shared/correo.ts para los enlaces de las notificaciones
+    //    (issue #755), asi que no se agrega una pieza nueva de configuracion. Si no esta puesta
+    //    se vuelve al comportamiento anterior en vez de romper el alta.
+    //
+    //    OJO AL DESPLEGAR: el destino tiene que estar en Authentication > URL Configuration >
+    //    Redirect URLs del proyecto remoto, o Supabase lo ignora y vuelve a caer en el Site URL.
+    //    En local lo cubre el comodin de additional_redirect_urls de supabase/config.toml.
+    // ========================================================================
+    const supabaseAnon = crearCliente(supabaseUrl, anonKey, {
+      auth: { persistSession: false },
+    });
+
+    //    `?origen=invitacion` es lo que deja a la pantalla saber por cual de los dos caminos se
+    //    llego: "olvide mi contrasena" no lo lleva, asi que sigue leyendose como un
+    //    restablecimiento. Sin el, a quien estrena su cuenta se le pedia "restablecer" una
+    //    contrasena que nunca tuvo.
+    const urlDeLaWeb = Deno.env.get("WEB_URL")?.replace(/\/+$/, "");
+    const destinoParaFijarContrasena = urlDeLaWeb
+      ? `${urlDeLaWeb}/nueva-contrasena?origen=invitacion`
+      : undefined;
+
+    //    EL CORREO LO MANDAMOS NOSOTROS (issue #864). `resetPasswordForEmail()` dispara la
+    //    plantilla `recovery` de GoTrue, que es **la misma que usa "olvide mi contrasena"**: a
+    //    quien estrenaba su cuenta le llegaba un "Reset your password" en ingles, de una
+    //    contrasena que nunca tuvo, y no habia forma de distinguirlos cambiando la plantilla
+    //    porque es una sola para los dos casos.
+    //
+    //    `admin.generateLink()` devuelve el mismo enlace SIN mandar ningun correo, asi que el
+    //    texto lo componemos aqui (componerCorreoDeInvitacion) y lo enviamos por el SMTP que ya
+    //    usa enviar-notificaciones. La plantilla `recovery` queda entonces dedicada a lo unico
+    //    que le corresponde: recuperar el acceso de quien ya tenia cuenta.
+    //
+    //    Si el SMTP no esta configurado se vuelve al camino anterior en vez de dejar a la
+    //    persona sin enlace: peor que un correo en ingles es no recibir ninguno.
+    const configuracionSmtp = leerConfiguracionSmtp();
+    let errorDeCorreo: { message: string } | null = null;
+
+    if (configuracionSmtp && destinoParaFijarContrasena) {
+      const { data: enlace, error: errorDeEnlace } = await supabaseAdmin.auth.admin.generateLink({
+        type: "recovery",
+        email,
+        options: { redirectTo: destinoParaFijarContrasena },
+      });
+
+      const accionDelEnlace = enlace?.properties?.action_link;
+      if (errorDeEnlace || !accionDelEnlace) {
+        errorDeCorreo = errorDeEnlace ?? { message: "generateLink no devolvio action_link" };
+      } else {
+        const correo = componerCorreoDeInvitacion(
+          nombres,
+          accionDelEnlace,
+          configuracionSmtp.urlWeb,
+        );
+        try {
+          await crearTransporte(configuracionSmtp).sendMail({
+            from: configuracionSmtp.remitente,
+            to: email,
+            subject: correo.asunto,
+            text: correo.texto,
+            html: correo.html,
+          });
+        } catch (falloDeEnvio) {
+          errorDeCorreo = { message: String(falloDeEnvio) };
+        }
+      }
+    } else {
+      const { error } = await supabaseAnon.auth.resetPasswordForEmail(
+        email,
+        destinoParaFijarContrasena ? { redirectTo: destinoParaFijarContrasena } : undefined,
+      );
+      errorDeCorreo = error;
+    }
+
+    if (errorDeCorreo) {
+      await reportarErrorDeFuncion(
+        "invitar-usuario",
+        "no se pudo enviar el correo para establecer contrasena",
+        errorDeCorreo,
+      );
+    }
+
+    // ========================================================================
+    // 5. Responder con el perfil completo, no solo el id, para que quien llama (crearUsuario())
+    //    tenga los mismos datos que trae cualquier otra lectura de perfiles. `correoEnviado`
+    //    refleja el resultado real del paso 4 en vez de tragarselo: la cuenta se crea igual si
+    //    el correo falla, pero quien la creo tiene que poder saber que la persona invitada no va
+    //    a recibir el enlace para fijar su contrasena (issue #691).
+    // ========================================================================
+    const { data: perfilCreado } = await supabaseAdmin
+      .from("perfiles")
+      .select(COLUMNAS_DEL_PERFIL)
+      .eq("id", idNuevoUsuario)
+      .maybeSingle();
+
+    return respuestaJson(req, 200, {
+      ...(perfilCreado ?? { id: idNuevoUsuario }),
+      correoEnviado: !errorDeCorreo,
+    });
+  } catch (error) {
+    await reportarErrorDeFuncion("invitar-usuario", "error inesperado", error);
+    return respuestaDeError(
+      req,
+      500,
+      "desconocido",
+      "Ocurrio un error inesperado dando de alta.",
+    );
+  }
+}
+
+if (import.meta.main) {
+  Deno.serve((req) => manejarSolicitud(req));
+}

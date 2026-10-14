@@ -30,20 +30,55 @@ scripts/      Scripts de soporte del equipo
 
 ## Regla de arquitectura clave
 
-Todo lo que no es JSX/CSS debe vivir en `packages/shared` (llamadas a Supabase, validaciones,
-formateo de fechas, reglas de negocio). Las apps `web` y `mobile` solo importan esa logica y
-la envuelven en componentes visuales. Esto evita duplicar codigo entre plataformas.
+El frontend se escribe una sola vez y se reutiliza en las dos plataformas. La regla completa
+esta en `docs/ARQUITECTURA-FRONTEND.md` y es de lectura obligatoria antes de tocar `apps/` o
+`packages/shared`. En resumen:
 
-Cuando construyas una feature: escribe la logica en `shared` primero y luego el componente UI
-en la app correspondiente.
+> Una pantalla es **un hook y unos descriptores en `packages/shared`**, mas **un componente por
+> app**.
+
+En `packages/shared/<modulo>/` van `api.js`, `validaciones.js`, `campos.js` (esquema de
+formulario), `columnas.js` (columnas de tabla y campos de tarjeta), `filtros.js`, `permisos.js`
+y un `use<Pantalla>.js` por pantalla. Las apps solo renderizan eso: web con `react-bootstrap`,
+movil con los componentes de `apps/mobile/src/components/`. `packages/shared/pacientes/` es el
+ejemplar de referencia.
+
+Ambas apps implementan el **mismo catalogo de componentes con las mismas props**
+(`FilterBar`, `DataList`, `TextField`, `StatusChip`, ...), de modo que portar una pantalla de
+web a movil sea mecanico.
 
 Restricciones:
 
-- No usar APIs web-only (localStorage, document) dentro de `shared`.
+- `packages/shared` no puede importar `react-dom`, `react-native` ni `react-bootstrap`, ni usar
+  `document`, `window`, `localStorage` o `AsyncStorage`, ni devolver JSX.
+- `apps/web` y `apps/mobile` no pueden importar `@supabase/supabase-js` directamente, ni
+  escribir validaciones, formateo, reglas de negocio o decisiones de permisos dentro de un
+  componente.
+- Ningun color, espaciado ni tamano de fuente se escribe a mano: todo sale de
+  `@ecopac/ui-tokens`. En la web se consumen como `var(--color-*)`, publicadas por
+  `apps/web/src/theme.js`.
 - No importar componentes UI de `web` en `mobile` ni viceversa.
+- **Un import que falta o un contrato que cambia tiene que reventar, no degradar a vacio.** Las
+  funciones de `*.api.js` no comparten una forma unica de sobre -conviven `{ datos, error }`,
+  `{ triajes, error }`, `{ recetas, error }`-, asi que equivocarse de clave no lanza nada: devuelve
+  una lista vacia. Se lee el `api.js` del modulo y se usa la clave que devuelve; no se adivina con
+  `Array.isArray(x) ? x : x?.datos` ni se sustituye lo que quiza no existe por una implementacion
+  de mentira. Asi estuvo la ficha del paciente en movil rota de punta a punta con el lint, las
+  pruebas y las guardas en verde (issues #818, #821). Lo comprueban la regla `no-restricted-syntax`
+  de `eslint.config.mjs` y `npm run verificar:contratos`.
+- Los roles nunca se escriben como string suelto: se usan los de
+  `packages/shared/usuarios/roles.js`, que replican el enum `rol_usuario` de la migracion 00001.
+  Que puede hacer cada rol esta en `docs/PERMISOS.md`, y quien protege de verdad es RLS, no el
+  cliente. Un PR que cambia una politica o un GRANT actualiza ese documento en el mismo PR.
 - La app movil usa Expo v57.0.0: leer la documentacion versionada
   https://docs.expo.dev/versions/v57.0.0/ antes de escribir codigo movil (ver
   `apps/mobile/AGENTS.md`).
+
+## Fuente de verdad
+
+Cuando el codigo, la documentacion y la base de datos no coincidan, manda **lo que ya esta en
+`supabase/migrations/`**. Las migraciones aplicadas no se editan: los cambios entran como una
+migracion nueva.
 
 ## Stack
 
@@ -67,8 +102,53 @@ Las variables de entorno se copian desde `.env.example` a `.env.development` o
 `.env.production`. Nunca se suben llaves reales al repositorio.
 
 Los secrets del CI/CD se configuran en GitHub (Settings > Secrets and variables > Actions) y
-los nombres que usan los workflows estan documentados en `docs/QUICKSTART.md`. Mientras no
-esten configurados, los workflows de Supabase se omiten y terminan en verde (no fallan).
+los nombres que usan los workflows estan documentados en `docs/CI-CD.md`. Mientras no esten
+configurados, los workflows de Supabase avisan de forma visible en el resumen de la corrida
+pero no fallan.
+
+## Migraciones de base de datos
+
+**Una migracion ya aplicada no se edita nunca.** Supabase la registra en
+`supabase_migrations.schema_migrations` y no vuelve a ejecutarla, asi que editarla cambia lo
+que valida el CI (que aplica todo desde cero) pero no cambia nada en las bases reales. La
+divergencia aparece despues del merge, cuando ya es tarde.
+
+Para corregir una migracion aplicada se escribe una migracion nueva que corrija hacia adelante.
+`supabase/migrations/00005_corregir_schema_de_extensiones.sql` es el ejemplo a seguir.
+
+**Una migracion tampoco se aplica a mano.** Nadie corre `supabase db push` contra `ecopac-dev` ni
+`ecopac-prod` desde su maquina: se mergea el PR y la aplica el workflow. Si la base registra una
+migracion cuyo archivo no esta todavia en la rama, `db push` falla en **todos** los push a esa
+rama -traigan SQL o no- hasta que el PR entre, y el fallo le aparece a otra persona. Para probar
+antes de mergear esta el stack local (`supabase start` y `supabase db reset`), que es lo mismo que
+corre el CI. Detalle en `docs/CI-CD.md`.
+
+La regla la hace cumplir el job **Migraciones no editadas** del workflow de Supabase: falla el
+PR si modifica o borra un archivo de `supabase/migrations/` que ya existe en la rama base.
+Editar una migracion agregada en el mismo PR si esta permitido. La salida de emergencia es la
+etiqueta `migracion-editada-a-proposito` en el PR.
+
+### Como se numera una migracion nueva
+
+El nombre es `NNNNN_descripcion_en_snake_case.sql`, con **cinco digitos** y numeracion
+secuencial. No se usa el timestamp que genera `supabase migration new` por defecto.
+
+**El numero se elige al abrir la rama y se vuelve a verificar antes de mergear**, porque otra
+rama pudo tomarlo mientras tanto. Tiene que ser **mayor** que el ultimo de `develop`:
+
+- Repetir un numero rompe el despliegue. En `supabase_migrations.schema_migrations` la columna
+  `version` es el prefijo numerico solo y es clave primaria: `db push` aborta con SQLSTATE 23505
+  al llegar al segundo archivo, y no aplica ni esa migracion ni las siguientes.
+- Un numero por debajo del ultimo tampoco se aplica: `db push` se niega y exige `--include-all`.
+  La salida correcta es renumerar por encima con `git mv`.
+
+Lo comprueba el paso **Verificar la numeracion de las migraciones** del job "Migraciones no
+editadas".
+
+**Una issue nunca prescribe un numero de migracion.** Para cuando se trabaje, ese numero ya puede
+estar tomado. Se escribe "revisar que migracion corresponde", no "crear la 00067".
+
+Detalle completo en `docs/CI-CD.md`.
 
 ## Comandos
 
@@ -80,6 +160,7 @@ cp .env.example .env.development
 npm run dev:web        # web en http://localhost:5173
 npm run dev:mobile     # Expo, mobile en http://localhost:8081
 npm run lint
+npm test              # pruebas de todos los workspaces (vitest)
 npm run build
 ```
 
@@ -129,13 +210,35 @@ Commits (Conventional Commits):
 
 - Componentes en PascalCase; hooks con prefijo `use` en camelCase; carpetas en kebab-case.
 - Tablas y columnas en PostgreSQL en snake_case.
+- Nombres de columna por concepto (issue #412, revisado y unificado donde se pudo sin romper
+  cosas ya construidas):
+  - El actor de una accion lleva sufijo `_por`: `registrado_por`, `aprobado_por`,
+    `atendida_por`, `anulada_por`, `tomado_por`, `realizado_por`.
+  - Su marca de tiempo usa la misma raiz que el actor, con sufijo `_en`, nunca el prefijo
+    `fecha_`: `aprobado_en` (no `fecha_aprobacion`), `atendida_en`, `anulada_en`, `tomado_en`,
+    `realizado_en`.
+  - La persona responsable de una entidad completa (no de una accion puntual) es
+    `responsable_id`: `jornadas.responsable_id`, `proyectos.responsable_id`,
+    `gastos.responsable_id`.
+  - Cuando dos columnas nombran cosas distintas que solo _parecen_ el mismo concepto -describen
+    sujetos gramaticales distintos, o el mismo dato tiene un matiz real en una tabla que no
+    tiene en la otra (ver `tipo_proveedor`/`origen_lote` y `pacientes.telefono_contacto` en el
+    esquema)-, no se fuerza un nombre unico: se deja la diferencia y se documenta la razon con
+    `COMMENT ON` en la migracion.
 - ESLint + Prettier a nivel de monorepo.
 - No usar datos reales de pacientes en pruebas ni en logs (regla de confidencialidad).
 - No usar emojis en codigo, descripciones, mensajes de commit, issues ni PRs.
 
 ## Documentacion de referencia
 
+- `docs/PERMISOS.md` - **la matriz de permisos por rol**: que puede hacer cada rol en cada
+  modulo, que politica RLS lo implementa, y las divergencias abiertas. Es la fuente de verdad
+  del control de acceso.
 - `docs/README.md` - indice de documentacion.
+- `docs/MANUAL-TECNICO.md` - punto de entrada: herramientas, configuracion, claves, convenciones.
+- `docs/DICCIONARIO-DE-DATOS.md` y `docs/PANTALLAS.md` - generados (`npm run docs:diccionario`,
+  `npm run docs:pantallas`); no se editan a mano. Una tabla o columna nueva lleva su `COMMENT ON`
+  en la migracion (lo exige `supabase/tests/database/diccionario_de_datos.sql`).
 - `docs/QUICKSTART.md` - guia de inicio rapido.
 - `docs/CONTRIBUTING.md` - guia de contribucion.
 - `docs/entregables/` - PDFs de entregables del curso.

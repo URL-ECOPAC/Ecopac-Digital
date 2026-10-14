@@ -1,0 +1,354 @@
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { listarDonaciones, obtenerDonacion } from "./historial.api.js";
+import { obtenerSupabase } from "../api/cliente.js";
+import { ROLES } from "../usuarios/roles.js";
+
+vi.mock("../api/cliente.js", () => ({
+  obtenerSupabase: vi.fn(),
+}));
+
+describe("listarDonaciones (#193)", () => {
+  let mockSupabase;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockSupabase = {
+      from: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      neq: vi.fn().mockReturnThis(),
+      gte: vi.fn().mockReturnThis(),
+      lte: vi.fn().mockReturnThis(),
+      order: vi.fn().mockReturnThis(),
+      range: vi.fn().mockReturnThis(),
+    };
+    obtenerSupabase.mockReturnValue(mockSupabase);
+  });
+
+  /**
+   * `mockSupabase` es su propia cadena: eq/neq/gte/lte/order/range devuelven `this`
+   * (mockReturnThis), y aqui se le agrega `.then()` para que `await consulta` funcione. Como
+   * `listarDonaciones()` hace dos consultas seguidas (el listado y despues los totales),
+   * `.select()` recuerda cual de las dos se esta armando -por la forma de las columnas- para que
+   * `.then()` resuelva con la respuesta que corresponde.
+   */
+  function resolverConsultas({ listado, totales }) {
+    let modo = "listado";
+    mockSupabase.select.mockImplementation((columnas) => {
+      modo = typeof columnas === "string" && columnas.startsWith("tipo,") ? "totales" : "listado";
+      return mockSupabase;
+    });
+    mockSupabase.then = (resolve) => resolve(modo === "totales" ? totales : listado);
+  }
+
+  // ISSUE #864: leian tambien los dos roles consultivos. Se quedan con Reportes como unica
+  // pantalla y la 00141 les retira la politica de SELECT de donaciones (00083).
+  it("permite leer solo a administrador; deniega a los demas", async () => {
+    resolverConsultas({
+      listado: { data: [], error: null, count: 0 },
+      totales: { data: [], error: null },
+    });
+
+    const admin = await listarDonaciones({}, { rolUsuario: ROLES.ADMINISTRADOR });
+    const junta = await listarDonaciones({}, { rolUsuario: ROLES.JUNTA_DIRECTIVA });
+    const socio = await listarDonaciones({}, { rolUsuario: ROLES.SOCIO_FUNDADOR });
+    const otro = await listarDonaciones({}, { rolUsuario: ROLES.MEDICO });
+
+    expect(admin.error).toBeNull();
+    expect(junta.error.mensaje).toContain("permisos de lectura");
+    expect(socio.error.mensaje).toContain("permisos de lectura");
+    expect(otro.error.mensaje).toContain("permisos de lectura");
+  });
+
+  it("aplica cada filtro con el operador correcto", async () => {
+    resolverConsultas({
+      listado: { data: [], error: null, count: 0 },
+      totales: { data: [], error: null },
+    });
+
+    await listarDonaciones(
+      {
+        donanteId: "don-1",
+        tipo: "medicamentos",
+        proyectoId: "proy-1",
+        fechaInicio: "2026-01-01",
+        fechaFin: "2026-06-30",
+      },
+      { rolUsuario: ROLES.ADMINISTRADOR },
+    );
+
+    expect(mockSupabase.eq).toHaveBeenCalledWith("donante_id", "don-1");
+    expect(mockSupabase.eq).toHaveBeenCalledWith("tipo", "medicamentos");
+    expect(mockSupabase.eq).toHaveBeenCalledWith("proyecto_id", "proy-1");
+    expect(mockSupabase.gte).toHaveBeenCalledWith("fecha", "2026-01-01");
+    expect(mockSupabase.lte).toHaveBeenCalledWith("fecha", "2026-06-30");
+  });
+
+  it("sin estado explicito excluye las anuladas por defecto", async () => {
+    resolverConsultas({
+      listado: { data: [], error: null, count: 0 },
+      totales: { data: [], error: null },
+    });
+
+    await listarDonaciones({}, { rolUsuario: ROLES.ADMINISTRADOR });
+
+    expect(mockSupabase.neq).toHaveBeenCalledWith("estado", "anulada");
+  });
+
+  it("con estado 'anulada' filtra exactamente por ese valor, no excluye", async () => {
+    resolverConsultas({
+      listado: { data: [], error: null, count: 0 },
+      totales: { data: [], error: null },
+    });
+
+    await listarDonaciones({ estado: "anulada" }, { rolUsuario: ROLES.ADMINISTRADOR });
+
+    expect(mockSupabase.eq).toHaveBeenCalledWith("estado", "anulada");
+    expect(mockSupabase.neq).not.toHaveBeenCalledWith("estado", "anulada");
+  });
+
+  it("sin limite la lista no pagina ni pide count (el listado y los totales son consultas distintas)", async () => {
+    resolverConsultas({
+      listado: { data: [{ id: "d1" }], error: null },
+      totales: { data: [], error: null },
+    });
+
+    const { datos } = await listarDonaciones({}, { rolUsuario: ROLES.ADMINISTRADOR });
+
+    // calcularTotalesPorTipo() SI llama a .range() ahora (obtenerTodasLasFilas(), issue #773):
+    // sin eso, sus totales tambien se cortarian en max_rows pasadas las 1000 donaciones. Es una
+    // consulta distinta a la del listado, que sigue sin paginar cuando no se pide `limite`.
+    expect(mockSupabase.range).toHaveBeenCalledTimes(1);
+    expect(mockSupabase.range).toHaveBeenCalledWith(0, 999);
+    expect(mockSupabase.select.mock.calls[0][1]).toBeUndefined();
+    expect(datos.porPagina).toBeNull();
+    expect(datos.total).toBe(1);
+  });
+
+  it("con limite pide el rango de la pagina y el conteo exacto", async () => {
+    resolverConsultas({
+      listado: { data: [], error: null, count: 45 },
+      totales: { data: [], error: null },
+    });
+
+    const { datos } = await listarDonaciones(
+      { limite: 20, pagina: 2 },
+      { rolUsuario: ROLES.ADMINISTRADOR },
+    );
+
+    expect(mockSupabase.select.mock.calls[0][1]).toEqual({ count: "exact" });
+    expect(mockSupabase.range).toHaveBeenCalledWith(20, 39);
+    expect(datos.total).toBe(45);
+    expect(datos.pagina).toBe(2);
+  });
+
+  it("ordena por fecha descendente", async () => {
+    resolverConsultas({
+      listado: { data: [], error: null, count: 0 },
+      totales: { data: [], error: null },
+    });
+
+    await listarDonaciones({}, { rolUsuario: ROLES.ADMINISTRADOR });
+
+    expect(mockSupabase.order).toHaveBeenCalledWith("fecha", { ascending: false });
+  });
+
+  it("aplana el donante embebido a donanteNombre", async () => {
+    resolverConsultas({
+      listado: {
+        data: [{ id: "d1", donante: { nombre: "Fundacion Esperanza" } }],
+        error: null,
+        count: 1,
+      },
+      totales: { data: [], error: null },
+    });
+
+    const { datos } = await listarDonaciones({}, { rolUsuario: ROLES.ADMINISTRADOR });
+
+    expect(datos.donaciones[0].donanteNombre).toBe("Fundacion Esperanza");
+    expect(datos.donaciones[0].donante).toBeUndefined();
+  });
+
+  // Issue #756: ConstanciaDonacionPage.jsx leia donacion.proyecto_nombre, una clave que
+  // listarDonaciones() nunca devolvio -la constancia mostraba siempre "Fondo General".
+  it("aplana el proyecto embebido a proyectoNombre", async () => {
+    resolverConsultas({
+      listado: {
+        data: [{ id: "d1", proyecto: { nombre: "Jornadas Solola 2026" } }],
+        error: null,
+        count: 1,
+      },
+      totales: { data: [], error: null },
+    });
+
+    const { datos } = await listarDonaciones({}, { rolUsuario: ROLES.ADMINISTRADOR });
+
+    expect(datos.donaciones[0].proyectoNombre).toBe("Jornadas Solola 2026");
+  });
+
+  it("sin proyecto asociado, proyectoNombre es null", async () => {
+    resolverConsultas({
+      listado: { data: [{ id: "d1", proyecto: null }], error: null, count: 1 },
+      totales: { data: [], error: null },
+    });
+
+    const { datos } = await listarDonaciones({}, { rolUsuario: ROLES.ADMINISTRADOR });
+
+    expect(datos.donaciones[0].proyectoNombre).toBeNull();
+  });
+
+  // Issue #756: HistorialDonacionesPage.jsx mostraba anuladaPor como UUID crudo.
+  it("aplana quien anulo a anuladaPorNombre", async () => {
+    resolverConsultas({
+      listado: {
+        data: [{ id: "d1", anuladaPorPerfil: { nombres: "Ana", apellidos: "Lopez" } }],
+        error: null,
+        count: 1,
+      },
+      totales: { data: [], error: null },
+    });
+
+    const { datos } = await listarDonaciones({}, { rolUsuario: ROLES.ADMINISTRADOR });
+
+    expect(datos.donaciones[0].anuladaPorNombre).toBe("Ana Lopez");
+  });
+
+  it("calcula los totales por tipo: dinero suma monto, medicamentos/insumos suman cantidad, servicios cuenta donaciones", async () => {
+    resolverConsultas({
+      listado: { data: [], error: null, count: 0 },
+      totales: {
+        data: [
+          { tipo: "dinero", detalle: [{ monto: 100 }, { monto: 50 }] },
+          { tipo: "medicamentos", detalle: [{ cantidad: 30 }] },
+          { tipo: "insumos", detalle: [{ cantidad: 5 }, { cantidad: 2 }] },
+          { tipo: "servicios", detalle: [] },
+          { tipo: "servicios", detalle: [] },
+        ],
+        error: null,
+      },
+    });
+
+    const { datos } = await listarDonaciones({}, { rolUsuario: ROLES.ADMINISTRADOR });
+
+    expect(datos.totalesPorTipo).toEqual({
+      dinero: 150,
+      medicamentos: 30,
+      insumos: 7,
+      servicios: 2,
+    });
+  });
+
+  it("sin resultados devuelve listas vacias y totales en cero, sin reventar", async () => {
+    resolverConsultas({
+      listado: { data: [], error: null, count: 0 },
+      totales: { data: [], error: null },
+    });
+
+    const { datos, error } = await listarDonaciones({}, { rolUsuario: ROLES.ADMINISTRADOR });
+
+    expect(error).toBeNull();
+    expect(datos.donaciones).toEqual([]);
+    expect(datos.total).toBe(0);
+    expect(datos.totalesPorTipo).toEqual({ dinero: 0, medicamentos: 0, insumos: 0, servicios: 0 });
+  });
+
+  it("un rechazo de RLS en el listado se normaliza y no devuelve datos a medias", async () => {
+    resolverConsultas({
+      listado: { data: null, error: { code: "42501", message: "denegado" } },
+      totales: { data: [], error: null },
+    });
+
+    const { datos, error } = await listarDonaciones({}, { rolUsuario: ROLES.ADMINISTRADOR });
+
+    expect(datos).toBeNull();
+    expect(error).not.toBeNull();
+  });
+
+  it("un fallo al calcular los totales tambien se normaliza", async () => {
+    resolverConsultas({
+      listado: { data: [], error: null, count: 0 },
+      totales: { data: null, error: { code: "42501", message: "denegado" } },
+    });
+
+    const { datos, error } = await listarDonaciones({}, { rolUsuario: ROLES.ADMINISTRADOR });
+
+    expect(datos).toBeNull();
+    expect(error).not.toBeNull();
+  });
+});
+
+describe("obtenerDonacion (#199, lectura por id de la constancia)", () => {
+  let mockSupabase;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockSupabase = {
+      from: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      maybeSingle: vi.fn(),
+    };
+    obtenerSupabase.mockReturnValue(mockSupabase);
+  });
+
+  it("deniega a los roles que no leen donaciones, sin llegar a consultar", async () => {
+    const { datos, error } = await obtenerDonacion("don-1", { rolUsuario: ROLES.MEDICO });
+
+    expect(datos).toBeNull();
+    expect(error.mensaje).toContain("permisos de lectura");
+    expect(obtenerSupabase).not.toHaveBeenCalled();
+  });
+
+  it("devuelve la donacion con su donante y sus renglones aplanados", async () => {
+    mockSupabase.maybeSingle.mockResolvedValue({
+      data: {
+        id: "don-1",
+        fecha: "2026-03-01",
+        tipo: "medicamentos",
+        estado: "registrada",
+        donante: { nombre: "Farmacia Central" },
+        detalles: [{ id: "det-1", descripcion: "Amoxicilina", cantidad: 20, unidad: "cajas" }],
+      },
+      error: null,
+    });
+
+    const { datos, error } = await obtenerDonacion("don-1", { rolUsuario: ROLES.ADMINISTRADOR });
+
+    expect(error).toBeNull();
+    expect(mockSupabase.eq).toHaveBeenCalledWith("id", "don-1");
+    expect(datos.donanteNombre).toBe("Farmacia Central");
+    expect(datos.detalles).toHaveLength(1);
+    expect(datos.resumen).toBe("20 cajas de Amoxicilina");
+  });
+
+  it("una donacion que no existe es un error, no un objeto vacio", async () => {
+    mockSupabase.maybeSingle.mockResolvedValue({ data: null, error: null });
+
+    const { datos, error } = await obtenerDonacion("no-existe", {
+      rolUsuario: ROLES.ADMINISTRADOR,
+    });
+
+    expect(datos).toBeNull();
+    expect(error.mensaje).toContain("no existe");
+  });
+
+  it("sin id no consulta nada", async () => {
+    const { datos, error } = await obtenerDonacion("", { rolUsuario: ROLES.ADMINISTRADOR });
+
+    expect(datos).toBeNull();
+    expect(error.mensaje).toContain("identificador");
+    expect(obtenerSupabase).not.toHaveBeenCalled();
+  });
+
+  it("un rechazo de RLS se normaliza", async () => {
+    mockSupabase.maybeSingle.mockResolvedValue({
+      data: null,
+      error: { code: "42501", message: "denegado" },
+    });
+
+    const { datos, error } = await obtenerDonacion("don-1", { rolUsuario: ROLES.ADMINISTRADOR });
+
+    expect(datos).toBeNull();
+    expect(error).not.toBeNull();
+  });
+});

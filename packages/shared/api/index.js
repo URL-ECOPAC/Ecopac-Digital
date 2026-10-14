@@ -1,4 +1,25 @@
-// Cliente Supabase y queries reutilizables
-// - Inicialización con createClient()
-// - Queries: getPacientes(), getInventario(), createJornada(), etc.
-// - Autenticación y gestión de sesión
+// Acceso a Supabase.
+//
+// Este es el unico lugar del monorepo que importa @supabase/supabase-js. Ni apps/web ni
+// apps/mobile pueden hacerlo por su cuenta (regla de AGENTS.md): si lo hicieran, cada app
+// terminaria con su propia sesion y sus propias reglas.
+//
+// Aqui vive la infraestructura del cliente. Las consultas de cada modulo van en el api.js
+// de su carpeta (packages/shared/pacientes/api.js, etc.) y usan obtenerSupabase().
+
+export * from "./almacenamiento.js";
+export * from "./cliente.js";
+export * from "./errores.js";
+export * from "./errores-de-supabase.js";
+export * from "./paginacion.js";
+
+// Solo los puntos de entrada publicos: evaluarPerfilDeSesion() y requiereCerrarSesion()
+// son detalle interno que useSesion() consume por import directo a ./sesion.js, no algo que
+// las apps deban ver a traves de @ecopac/shared.
+export {
+  iniciarSesion,
+  cerrarSesion,
+  obtenerSesion,
+  establecerSesionDeRecuperacion,
+  intercambiarSesionDeRecuperacion,
+} from "./sesion.js";

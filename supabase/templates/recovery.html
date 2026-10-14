@@ -1,0 +1,114 @@
+<!--
+  Correo de "olvide mi contrasena" (issue #864).
+
+  Es la plantilla `recovery` de GoTrue. Hasta la #864 la compartian DOS flujos -- recuperar el
+  acceso y la invitacion a una cuenta nueva --, asi que no podia decir nada concreto: a quien
+  estrenaba su cuenta le llegaba un "restablece tu contrasena" de una contrasena que nunca tuvo.
+  Desde esa issue la invitacion manda su propio correo (supabase/functions/invitar-usuario, que
+  usa envolverEnPlantilla() de _shared/correo.ts), y esta plantilla queda dedicada a lo unico que
+  le corresponde.
+
+  El diseno es el mismo que el de aquel correo, escrito dos veces a proposito: una plantilla de
+  GoTrue es un archivo suelto que el servidor de Auth interpreta, sin forma de importar el helper
+  de Deno. Si se toca uno, se toca el otro.
+
+  Variables que sustituye GoTrue: {{ .ConfirmationURL }} es el enlace ya con su redirect_to, y
+  {{ .SiteURL }} la base de la web, de donde se sirve el logotipo.
+
+  OJO: este archivo gobierna el stack LOCAL y el CI, no los proyectos remotos. El despliegue solo
+  corre `supabase db push`, nunca `supabase config push`, asi que en ecopac-dev y ecopac-prod hay
+  que pegar este mismo contenido en Authentication > Emails > Reset Password. Mismo caso que
+  enable_signup y site_url, ver el comentario de [auth] en supabase/config.toml.
+-->
+<!doctype html>
+<html lang="es">
+  <body
+    style="margin:0;padding:24px 12px;background-color:#f7f8fa;font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#2d2d2d;"
+  >
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+      <tr>
+        <td align="center">
+          <table
+            role="presentation"
+            cellpadding="0"
+            cellspacing="0"
+            border="0"
+            width="600"
+            style="max-width:600px;width:100%;background-color:#ffffff;border:1px solid #e2e4e9;border-radius:12px;overflow:hidden;"
+          >
+            <tr>
+              <td style="padding:0;">
+                <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                  <tr style="height:4px;">
+                    <td style="background-color:#3db648;height:4px;font-size:0;line-height:0;">&nbsp;</td>
+                    <td style="background-color:#29abe2;height:4px;font-size:0;line-height:0;">&nbsp;</td>
+                    <td style="background-color:#f7941d;height:4px;font-size:0;line-height:0;">&nbsp;</td>
+                    <td style="background-color:#e91e8c;height:4px;font-size:0;line-height:0;">&nbsp;</td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+            <tr>
+              <td align="center" style="padding:32px 32px 8px;">
+                <img
+                  src="{{ .SiteURL }}/logo-ecopac.png"
+                  width="64"
+                  height="64"
+                  alt="Ecopac"
+                  style="display:block;border:0;width:64px;height:64px;"
+                />
+                <div style="margin-top:12px;font-size:18px;font-weight:700;color:#2d2d2d;letter-spacing:0.01em;">
+                  Ecopac Digital
+                </div>
+                <div style="margin-top:2px;font-size:12px;color:#7a7a8a;text-transform:uppercase;letter-spacing:0.08em;">
+                  Jornadas medicas
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:16px 32px 0;">
+                <h1 style="margin:0 0 16px;font-size:22px;line-height:1.3;color:#2d2d2d;">
+                  Restablece tu contrase&ntilde;a
+                </h1>
+                <p style="margin:0 0 12px;font-size:15px;line-height:1.6;">
+                  Pediste volver a entrar a Ecopac Digital y no recuerdas tu contrase&ntilde;a.
+                </p>
+                <p style="margin:0;font-size:15px;line-height:1.6;">
+                  Abre el bot&oacute;n de abajo y elige una nueva. Tu contrase&ntilde;a actual
+                  sigue funcionando hasta que lo hagas.
+                </p>
+              </td>
+            </tr>
+            <tr>
+              <td align="center" style="padding:24px 32px 8px;">
+                <a
+                  href="{{ .ConfirmationURL }}"
+                  style="background-color:#3db648;border-radius:999px;color:#ffffff;display:inline-block;font-size:15px;font-weight:600;padding:14px 32px;text-decoration:none;"
+                  >Elegir una contrase&ntilde;a nueva</a
+                >
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:8px 32px 28px;">
+                <p style="margin:16px 0 0;font-size:12px;line-height:1.6;color:#7a7a8a;">
+                  Si no fuiste t&uacute;, puedes ignorar este correo: nada cambia mientras no
+                  abras el enlace. El enlace caduca por seguridad; si ya no funciona, pide uno
+                  nuevo desde &laquo;&iquest;Olvidaste tu contrase&ntilde;a?&raquo; en la pantalla
+                  de inicio de sesi&oacute;n.
+                </p>
+                <p style="margin:12px 0 0;font-size:12px;line-height:1.6;color:#7a7a8a;">
+                  Si el bot&oacute;n no funciona, copia y pega esta direcci&oacute;n en tu
+                  navegador:<br />
+                  <span style="color:#29abe2;word-break:break-all;">{{ .ConfirmationURL }}</span>
+                </p>
+              </td>
+            </tr>
+          </table>
+          <div style="margin-top:16px;font-size:11px;color:#7a7a8a;">
+            Ecopac Guatemala &middot; Este es un correo automatico, no hace falta responderlo.
+          </div>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

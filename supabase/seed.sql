@@ -1,0 +1,40 @@
+-- Ecopac Digital - Semilla del stack local
+--
+-- Este archivo quedo sin sentencias: lo que cargaba ya vive en migraciones. Se conserva porque
+-- supabase/config.toml lo declara en [db.seed] y porque explica donde fue a parar cada cosa.
+--
+-- =============================================================================
+-- 1. CATALOGO GEOGRAFICO (departamentos y municipios)
+-- =============================================================================
+--
+-- Ya no va aqui: lo siembra supabase/migrations/00125_sembrar_catalogo_geografico.sql
+-- (issue #704), con los mismos ids y de forma idempotente.
+--
+-- El motivo del cambio: "supabase db push" -lo unico que corre contra ecopac-dev y
+-- ecopac-prod- nunca ejecuta seeds, asi que un catalogo que el sistema necesita para funcionar
+-- no puede llegar por aqui. Sin municipios no hay comunidades, y sin comunidades no se puede
+-- crear una jornada: un proyecto de Supabase recien creado nacia inutilizable.
+--
+-- NO se deja una copia a proposito. Con el dato en dos archivos las dos copias divergen sin que
+-- nadie lo note, y ademas la prueba supabase/tests/database/catalogo_geografico.sql dejaria de
+-- significar nada: comprueba que el catalogo esta ahi DESPUES de aplicar solo migraciones, y eso
+-- solo se puede afirmar si ninguna semilla lo carga.
+--
+-- =============================================================================
+-- 2. APROVISIONAMIENTO DEL ADMINISTRADOR INICIAL
+-- =============================================================================
+--
+-- Ya no va aqui: lo hace supabase/migrations/00063_aprovisionar_primer_admin.sql, que corre
+-- antes que este seed y es idempotente.
+--
+-- Estaba duplicado en los dos sitios (PR #446) y con la migracion corregida el seed chocaba
+-- contra el usuario que la migracion acababa de crear:
+--
+--   failed to send batch: ERROR: duplicate key value violates unique constraint
+--   "users_email_partial_key" (SQLSTATE 23505)
+--
+-- El bloque anterior ademas horneaba una contrasena fija en un repositorio publico y
+-- apagaba TODOS los triggers de usuario de perfiles con DISABLE TRIGGER USER, incluidos el de
+-- updated_at y el de auditoria de la 00026.
+--
+-- Ver docs/QUICKSTART.md para como se fija la contrasena del administrador.

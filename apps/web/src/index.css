@@ -1,21 +1,376 @@
+@import "bootstrap/dist/css/bootstrap.min.css";
+@import "./ui.css";
+
 :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  color-scheme: light dark;
-  line-height: 1.5;
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
+  --bs-primary: var(--color-primary);
+  --bs-secondary: var(--color-secondary);
+  --bs-danger: var(--color-danger);
+  --bs-warning: var(--color-warning);
+  --bs-success: var(--color-success);
+  --bs-info: var(--color-info);
+  --bs-body-bg: var(--color-background);
+  --bs-body-color: var(--color-text);
+  --bs-secondary-color: var(--color-text-muted);
+  --bs-border-color: var(--color-border);
+
+  --bs-font-sans-serif: var(--fuente-base);
+  --bs-body-font-family: var(--fuente-base);
+  --bs-font-monospace: var(--fuente-mono);
+
+  --bs-border-radius-sm: var(--radio-sm);
+  --bs-border-radius: var(--radio-md);
+  --bs-border-radius-lg: var(--radio-lg);
+  --bs-border-radius-xl: var(--radio-lg);
+  --bs-border-radius-pill: var(--radio-pill);
+  --bs-box-shadow-sm: var(--sombra-sm);
+  --bs-box-shadow: var(--sombra-md);
 }
 
-body {
-  margin: 0;
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background-color: #f5f5f5;
+.alert-danger {
+  --bs-alert-color: var(--color-danger);
+  --bs-alert-bg: color-mix(in srgb, var(--color-danger) 8%, white);
+  --bs-alert-border-color: color-mix(in srgb, var(--color-danger) 25%, white);
 }
 
-.app-shell {
-  text-align: center;
-  color: #1c1c1c;
+.alert-warning {
+  --bs-alert-color: var(--color-warning);
+  --bs-alert-bg: color-mix(in srgb, var(--color-warning) 12%, white);
+  --bs-alert-border-color: color-mix(in srgb, var(--color-warning) 30%, white);
+}
+
+.alert-success {
+  --bs-alert-color: var(--color-success);
+  --bs-alert-bg: color-mix(in srgb, var(--color-success) 8%, white);
+  --bs-alert-border-color: color-mix(in srgb, var(--color-success) 25%, white);
+}
+
+.alert-info {
+  --bs-alert-color: var(--color-info);
+  --bs-alert-bg: color-mix(in srgb, var(--color-info) 10%, white);
+  --bs-alert-border-color: color-mix(in srgb, var(--color-info) 28%, white);
+}
+
+.turnos-imprimible {
+  display: none;
+}
+
+.doc-imprimible {
+  display: none;
+}
+
+/* Reglas exclusivas para impresión */
+@media print {
+  /* EL MARGEN DEL PAPEL LO PONE EL DOCUMENTO, NO LA PAGINA. Las tres reglas @page dejan el margen
+     en cero y cada documento imprimible trae el suyo como padding (mas abajo). Antes el margen
+     vivia aqui (0.4in, 0.3in, y 15mm en reportes.css), y el navegador lo ignora en cuanto el
+     dialogo de impresion tiene "Margenes" en algo distinto de "Predeterminado" -un ajuste que
+     ademas recuerda de una impresion a la siguiente-: con "Ninguno" o "Minimo" todos los
+     reportes salian pegados al borde de la hoja. Un padding no depende de ese ajuste. */
+  @page {
+    margin: 0;
+  }
+
+  @page carta {
+    size: letter portrait;
+    margin: 0;
+  }
+
+  @page media-carta {
+    size: 5.5in 8.5in;
+    margin: 0;
+  }
+
+  .app-shell {
+    display: none !important;
+  }
+
+  html,
+  body {
+    background: transparent !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+
+  .doc-imprimible {
+    display: block !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    margin: 0 !important;
+    /* El margen del papel (ver @page, arriba). `clone` lo repite en cada hoja: sin el, un
+       documento de varias paginas solo tendria margen arriba de la primera y abajo de la ultima. */
+    box-sizing: border-box !important;
+    padding: 14mm 15mm !important;
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
+    page-break-before: avoid !important;
+    break-before: avoid !important;
+    page-break-after: avoid !important;
+    break-after: avoid !important;
+  }
+
+  .doc-imprimible--carta {
+    page: carta;
+  }
+
+  /* Media carta es una hoja de 5.5in de ancho: el margen de carta se comeria la receta. */
+  .doc-imprimible--media-carta {
+    page: media-carta;
+    padding: 8mm !important;
+  }
+
+  .doc-imprimible__encabezado {
+    align-items: center;
+    border-bottom: 1pt solid var(--color-text);
+    display: flex;
+    gap: 10pt;
+    margin-bottom: 10pt;
+    padding-bottom: 6pt;
+  }
+
+  .doc-imprimible__logo {
+    height: 38pt;
+    width: auto;
+  }
+
+  .doc-imprimible__identidad {
+    flex: 1;
+  }
+
+  .doc-imprimible__organizacion {
+    font-size: 13pt;
+    font-weight: 700;
+    margin: 0;
+  }
+
+  .doc-imprimible__pais,
+  .doc-imprimible__folio,
+  .doc-imprimible__fecha {
+    font-size: 9pt;
+    margin: 0;
+  }
+
+  .doc-imprimible__referencia {
+    text-align: right;
+  }
+
+  .doc-imprimible__folio {
+    font-family: var(--fuente-mono);
+    font-weight: 600;
+  }
+
+  .doc-imprimible__titulo {
+    font-size: 12pt;
+    font-weight: 700;
+    margin: 0 0 10pt;
+    text-align: center;
+    text-transform: uppercase;
+  }
+
+  .doc-imprimible__cuerpo p {
+    margin: 0 0 3pt;
+  }
+
+  .doc-imprimible__cuerpo table {
+    border-collapse: collapse;
+    width: 100%;
+  }
+
+  .doc-imprimible__cuerpo th,
+  .doc-imprimible__cuerpo td {
+    border: 0.5pt solid var(--color-text);
+    padding: 3pt 5pt;
+    text-align: left;
+  }
+
+  .doc-imprimible__periodo {
+    color: var(--color-text-muted);
+    font-size: 10pt;
+    margin: 0 0 6pt !important;
+  }
+
+  .doc-imprimible__kpis {
+    display: flex;
+    gap: 24pt;
+    margin-bottom: 10pt;
+  }
+
+  .doc-imprimible__kpi {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .doc-imprimible__kpi-etiqueta {
+    color: var(--color-text-muted);
+    font-size: 8pt;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .doc-imprimible__kpi-valor {
+    font-size: 14pt;
+    font-weight: 700;
+  }
+
+  .doc-imprimible__cuerpo table {
+    font-size: 8pt;
+  }
+
+  .doc-imprimible__cuerpo thead {
+    display: table-header-group;
+  }
+
+  .doc-imprimible__cuerpo tr {
+    break-inside: avoid;
+  }
+
+  .doc-imprimible__pie {
+    display: flex;
+    gap: 24pt;
+    justify-content: space-around;
+    margin-top: 24pt;
+  }
+
+  .doc-imprimible__firma {
+    flex: 1;
+    text-align: center;
+  }
+
+  .doc-imprimible__linea-firma {
+    border-top: 0.5pt solid var(--color-text);
+    display: block;
+    margin: 0 auto 2pt;
+    width: 80%;
+  }
+
+  .doc-imprimible__rotulo-firma {
+    font-size: 9pt;
+    margin: 0;
+  }
+
+  .receta-imprimible {
+    display: block;
+    font-size: 10pt;
+    line-height: 1.35;
+    page: media-carta;
+    page-break-before: avoid !important;
+    break-before: avoid !important;
+  }
+
+  .receta-imprimible__encabezado {
+    border-bottom: 1pt solid var(--color-text);
+    margin-bottom: 8pt;
+    padding-bottom: 4pt;
+    text-align: center;
+  }
+
+  .receta-imprimible__organizacion {
+    font-size: 13pt;
+    margin: 0;
+  }
+
+  .receta-imprimible__documento {
+    font-size: 11pt;
+    font-weight: 600;
+    margin: 0;
+  }
+
+  .receta-imprimible__folio,
+  .receta-imprimible__dato {
+    margin: 0 0 2pt;
+  }
+
+  .receta-imprimible__etiqueta {
+    font-weight: 600;
+  }
+
+  .receta-imprimible__bloque {
+    border-bottom: 0.5pt solid var(--color-text);
+    margin-bottom: 6pt;
+    padding-bottom: 6pt;
+  }
+
+  .receta-imprimible__titulo {
+    font-size: 11pt;
+    margin: 0 0 4pt;
+  }
+
+  .receta-imprimible__medicamentos {
+    margin: 0;
+    padding-left: 14pt;
+  }
+
+  .receta-imprimible__medicamentos li {
+    margin-bottom: 5pt;
+  }
+
+  .receta-imprimible__anulada {
+    border: 1pt solid var(--color-text);
+    font-weight: 700;
+    margin-bottom: 6pt;
+    padding: 3pt;
+    text-align: center;
+  }
+
+  .receta-imprimible__firma {
+    margin-top: 24pt;
+    text-align: center;
+  }
+
+  .receta-imprimible__linea {
+    border-top: 0.5pt solid var(--color-text);
+    display: block;
+    margin: 0 auto 2pt;
+    width: 60%;
+  }
+
+  .turnos-imprimible {
+    display: block;
+    font-size: 10pt;
+    line-height: 1.35;
+    /* Mismo margen de papel que .doc-imprimible: el cuadro de turnos no pasa por
+       DocumentoImprimible, pero sale en la misma hoja carta. */
+    padding: 14mm 15mm;
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
+    page-break-before: avoid !important;
+    break-before: avoid !important;
+  }
+
+  .turnos-imprimible__encabezado {
+    border-bottom: 1pt solid var(--color-text);
+    margin-bottom: 8pt;
+    padding-bottom: 4pt;
+    text-align: center;
+  }
+
+  .turnos-imprimible__organizacion {
+    font-size: 13pt;
+    margin: 0;
+  }
+
+  .turnos-imprimible__documento {
+    font-size: 11pt;
+    font-weight: 600;
+    margin: 0;
+  }
+
+  .turnos-imprimible__jornada {
+    margin: 0;
+  }
+
+  .turnos-imprimible__tabla {
+    border-collapse: collapse;
+    width: 100%;
+  }
+
+  .turnos-imprimible__tabla th,
+  .turnos-imprimible__tabla td {
+    border: 0.5pt solid var(--color-text);
+    padding: 3pt 5pt;
+    text-align: left;
+  }
 }

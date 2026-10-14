@@ -1,0 +1,66 @@
+// Modulo de reportes de la logica compartida.
+//
+// Estructura estandar de un modulo (ver docs/ARQUITECTURA-FRONTEND.md):
+//   api.js           llamadas a Supabase y normalizacion de errores
+//   validaciones.js  reglas de negocio
+//   campos.js        esquema declarativo de los formularios
+//   columnas.js      columnas de tabla y campos de tarjeta
+//   filtros.js       filtros de las pantallas de listado
+//   permisos.js      que puede hacer cada rol en el modulo
+//   use<Pantalla>.js view model de una pantalla: datos, estado y handlers
+//
+// Carpeta creada por el issue #278 para dejar montada la estructura del modulo. campos.js,
+// columnas.js y filtros.js son la issue #289 (ver packages/shared/pacientes/ como ejemplar de
+// referencia del patron).
+
+// Indicadores de impacto (issue #205). Este export faltaba: api.js existia desde el 25/08 pero
+// no salia por el barril, asi que ninguna de las dos apps podia importarlo.
+export * from "./api.js";
+export * from "./campos.js";
+export * from "./columnas.js";
+export * from "./filtros.js";
+export * from "./inventario.api.js";
+export * from "./vencimientos.api.js";
+export * from "./pacientes.api.js";
+export * from "./jornada.api.js";
+// Reporte de enfermedades (issue #916).
+export * from "./enfermedades.api.js";
+export * from "./enfermedades.js";
+export * from "./permisos.js";
+export * from "./useFiltrosReportes.js";
+
+// Los cuatro hooks de pantalla (issue #693). No salian por el barril, asi que las paginas los
+// importaban con rutas relativas del tipo "../../../../packages/shared/reportes/useX.js": eso
+// los dejaba fuera de lo que compila `vite build` y fuera de lo que ve
+// `verificar:shared-esquema`, y es parte de por que sus defectos no los detecto nadie.
+export * from "./useDashboardMetricas.js";
+export * from "./useReporteInventario.js";
+export * from "./useReporteJornada.js";
+export * from "./useReportePacientes.js";
+export * from "./useReporteEnfermedades.js";
+
+// Exportacion de reportes a CSV (issue #207). Funcion pura: no depende de Supabase ni de
+// ninguna API web-only, por eso vive junto al resto de utilidades de este modulo.
+export * from "./csv.js";
+
+// Los tres que ningun barril reexportaba (issue #700), por el mismo motivo que los de inventario:
+// sin esto, las pantallas de reportes los importaban por ruta relativa y `vite build` no los
+// compilaba.
+//
+// dashboard.campos.js no lo usa todavia ninguna pantalla -DashboardMetricasPage arma sus rotulos
+// a mano-, y precisamente por eso se exporta: mientras nadie lo alcance desde el barril, un error
+// suyo no aparece hasta que alguien lo conecte, que es el defecto que esta guarda vigila.
+export * from "./dashboard.campos.js";
+export * from "./useOrdenYPagina.js";
+export {
+  calcularAlerta,
+  conNivelDeAlerta,
+  useReporteMedicamentosPorVencer,
+} from "./useReporteMedicamentosPorVencer.js";
+
+// useExportarPDF ya no existe (issue #862). Devolvia siempre `columnas: []` y `totalizadores: {}`
+// escritos a mano, llamaba a construirDatosPDF() sin argumentos, y su exportar(generarPDF)
+// esperaba una funcion generadora que ninguna de las cuatro pantallas le pasaba: le llegaba el
+// evento del click. No habia ademas ninguna libreria de PDF en el repo. La exportacion a papel la
+// hace ahora ReporteImprimible en apps/web, sobre DocumentoImprimible y window.print(), que es el
+// mecanismo que la constancia de donacion ya usaba.

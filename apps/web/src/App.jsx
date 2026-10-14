@@ -1,10 +1,262 @@
-function App() {
+import {
+  BrowserRouter,
+  Navigate,
+  Routes,
+  Route,
+  useLocation,
+  useNavigate,
+  useParams,
+} from "react-router-dom";
+import { lazy, Suspense, useEffect, useState } from "react";
+import { obtenerDonacion } from "@ecopac/shared";
+import { labels } from "@ecopac/ui-tokens";
+import { SesionProvider, useSesionCompartida } from "./contexto/SesionProvider";
+import MainLayout from "./components/MainLayout";
+import RutaProtegida from "./components/RutaProtegida";
+import LoadingState from "./components/LoadingState";
+import LoginPage from "./pages/LoginPage";
+
+// El bundle se corta por ruta (issue #708).
+//
+// QUE PASABA. Las veinticinco paginas entraban por `import` estatico, asi que la web se servia en un
+// solo archivo de JavaScript -1.225,72 kB, gzip 335,47 kB, medido sobre 24f98cb- y abrir el login
+// descargaba la aplicacion entera: el modulo de presupuestos, los cuatro reportes y el catalogo de
+// colaboradores incluidos, para alguien que a lo mejor solo puede ver pacientes. Las jornadas se
+// ejecutan en comunidades rurales sobre datos moviles, y ahi eso se paga en segundos de espera.
+//
+// POR QUE ESTE CORTE Y NO OTRO. Cada grupo de rutas ya esta dentro de su
+// `<RutaProtegida modulo="..." />` (issue #820), asi que el corte cae justo donde
+// cae el permiso: una ruta que un rol no puede montar es un chunk que su navegador no pide. No hace
+// falta agrupar a mano.
+//
+// LoginPage NO va aqui, a proposito: es la primera pantalla de quien llega sin sesion, y hacerla
+// dinamica anade un viaje de red justo en el peor momento. Las otras dos publicas si, porque a
+// restablecer la contrasena se llega desde el login, ya con la aplicacion cargada.
+const RestablecerContrasenaPage = lazy(() => import("./pages/RestablecerContrasenaPage"));
+const NuevaContrasenaPage = lazy(() => import("./pages/NuevaContrasenaPage"));
+const HomePage = lazy(() => import("./pages/HomePage"));
+const PacientesPage = lazy(() => import("./pages/PacientesPage"));
+const FichaPacientePage = lazy(() => import("./pages/FichaPacientePage"));
+const PacientesCronicosPage = lazy(() => import("./pages/PacientesCronicosPage"));
+const CatalogoDiagnosticosPage = lazy(() => import("./pages/CatalogoDiagnosticosPage"));
+const CatalogoCondicionesPage = lazy(() => import("./pages/CatalogoCondicionesPage"));
+const CatalogoComunidadesPage = lazy(() => import("./pages/CatalogoComunidadesPage"));
+const CatalogoAreasPage = lazy(() => import("./pages/CatalogoAreasPage"));
+const CatalogoClinicasPage = lazy(() => import("./pages/CatalogoClinicasPage"));
+const AgendaCitasPage = lazy(() => import("./pages/AgendaCitasPage"));
+const PosiblesDuplicadosPage = lazy(() => import("./pages/PosiblesDuplicadosPage"));
+const DonacionesPage = lazy(() => import("./pages/DonacionesPage"));
+const DonantesPage = lazy(() => import("./pages/DonantesPage"));
+const RegistroDonacionPage = lazy(() => import("./pages/RegistroDonacionPage"));
+const HistorialDonacionesPage = lazy(() => import("./pages/HistorialDonacionesPage"));
+const ConstanciaDonacionPage = lazy(() => import("./pages/ConstanciaDonacionPage"));
+const InventarioPage = lazy(() => import("./pages/InventarioPage"));
+const AvisosVencimientoPage = lazy(() => import("./pages/AvisosVencimientoPage"));
+const PresupuestosPage = lazy(() => import("./pages/PresupuestosPage"));
+const ProyectosSocialesPage = lazy(() => import("./pages/ProyectosSocialesPage"));
+const SeguimientoProyectoPage = lazy(() => import("./pages/SeguimientoProyectoPage"));
+const ReportesPage = lazy(() => import("./pages/ReportesPage"));
+const JornadasPage = lazy(() => import("./pages/JornadasPage"));
+const DetalleJornadaPage = lazy(() => import("./pages/DetalleJornadaPage"));
+const ColaboradoresPage = lazy(() => import("./pages/ColaboradoresPage"));
+const MatrizPermisosPorRolPage = lazy(() => import("./pages/MatrizPermisosPorRolPage"));
+const BitacoraAuditoriaPage = lazy(() => import("./pages/BitacoraAuditoriaPage"));
+const PerfilPage = lazy(() => import("./pages/PerfilPage"));
+const NotificacionesPage = lazy(() => import("./pages/NotificacionesPage"));
+const NotFoundPage = lazy(() => import("./pages/NotFoundPage"));
+const ReporteJornada = lazy(() => import("./pages/ReporteJornada"));
+
+// Quien entra a cada grupo de rutas lo decide puedeVerModulo() de @ecopac/shared, con el id del
+// modulo -"pacientes", "inicio"-: la misma entrada de MODULOS que arma el menu. Hasta la #820 este
+// archivo tenia su propia copia de los roles, y hasta la 00148 el guard comparaba una lista fija de
+// roles, asi que un modulo abierto por la matriz aparecia en el menu y la ruta lo negaba.
+
+// Las pantallas de donaciones y proyectos reciben el rol por prop en vez de leerlo ellas
+// mismas. Este envoltorio se lo saca a la sesion compartida para no repetir el mismo
+// useSesionCompartida() en cada una. No decide nada: quien autoriza es RutaProtegida con los
+// roles de MODULOS, y quien protege de verdad es RLS.
+// `nombre` se pasa a mano desde la #708: lo que devuelve lazy() es un objeto, no una funcion, asi
+// que `Pagina.name` es undefined y el displayName quedaba en "conRolDeSesion(undefined)".
+function conRolDeSesion(Pagina, nombre) {
+  function PaginaConRol(props) {
+    const { perfil } = useSesionCompartida();
+    return <Pagina usuarioRol={perfil?.rol} {...props} />;
+  }
+  PaginaConRol.displayName = `conRolDeSesion(${nombre})`;
+  return PaginaConRol;
+}
+
+const DonantesConSesion = conRolDeSesion(DonantesPage, "DonantesPage");
+const RegistroDonacionConSesion = conRolDeSesion(RegistroDonacionPage, "RegistroDonacionPage");
+const HistorialDonacionesConSesion = conRolDeSesion(
+  HistorialDonacionesPage,
+  "HistorialDonacionesPage",
+);
+const ProyectosSocialesConSesion = conRolDeSesion(ProyectosSocialesPage, "ProyectosSocialesPage");
+
+// La constancia se identifica por la donacion en la URL y ConstanciaDonacionPage recibe la
+// donacion entera por prop. Si se llega desde el historial, la fila viene en el state de
+// navegacion y no hace falta volver a consultar; si se entra escribiendo la direccion o se
+// recarga la pagina, la resuelve obtenerDonacion(id).
+function ConstanciaDonacionEnrutada() {
+  const { perfil } = useSesionCompartida();
+  const { id } = useParams();
+  const { state } = useLocation();
+  // El :id de la URL siempre es string; el de la fila puede venir como numero desde la base.
+  const desdeElHistorial = String(state?.donacion?.id) === id ? state.donacion : null;
+
+  const [donacion, setDonacion] = useState(desdeElHistorial);
+  // Mientras se consulta, la pagina muestra la carga: sin esto, "No se ha seleccionado ninguna
+  // donacion" se asomaba un instante al abrir la constancia desde el resumen, que no manda la fila.
+  const [buscando, setBuscando] = useState(!desdeElHistorial);
+
+  useEffect(() => {
+    if (desdeElHistorial || !id || !perfil?.rol) return undefined;
+
+    let vigente = true;
+    setBuscando(true);
+    obtenerDonacion(id, { rolUsuario: perfil.rol }).then(({ datos }) => {
+      if (!vigente) return;
+      setDonacion(datos);
+      setBuscando(false);
+    });
+    return () => {
+      vigente = false;
+    };
+  }, [id, perfil?.rol, desdeElHistorial]);
+
   return (
-    <main className="app-shell">
-      <h1>Ecopac Digital</h1>
-      <p>Plataforma web de administracion. Esqueleto listo para desarrollo.</p>
-    </main>
+    <ConstanciaDonacionPage usuarioRol={perfil?.rol} donacion={donacion} cargando={buscando} />
   );
 }
 
-export default App;
+// useSeguimientoProyecto ahora resuelve el :id el mismo (issue #756): antes solo recibia lo que
+// location.state trajera del listado (el proyecto, sin hitos ni bitacora), asi que entrar por un
+// enlace directo o refrescar la pagina dejaba la ficha vacia. proyectoInicial se conserva como
+// adelanto: pinta el encabezado antes de que termine la primera consulta.
+function SeguimientoProyectoEnrutado() {
+  const { id } = useParams();
+  const { state } = useLocation();
+  const { perfil } = useSesionCompartida();
+  const navigate = useNavigate();
+  const proyectoInicial = String(state?.proyecto?.id) === id ? state.proyecto : null;
+  return (
+    <SeguimientoProyectoPage
+      proyectoId={id}
+      proyectoInicial={proyectoInicial}
+      rol={perfil?.rol}
+      onVolver={() => navigate("/proyectos")}
+    />
+  );
+}
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <SesionProvider>
+        {/* El respaldo de las rutas publicas, que no pasan por MainLayout. Las autenticadas tienen
+            el suyo alrededor del <Outlet /> del layout, para que al cambiar de modulo no se
+            desmonten el sidebar ni la cabecera (issue #708). */}
+        <Suspense fallback={<LoadingState message={labels.cargandoPantalla} />}>
+          <Routes>
+            {/* Rutas publicas */}
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/restablecer-contrasena" element={<RestablecerContrasenaPage />} />
+            <Route path="/nueva-contrasena" element={<NuevaContrasenaPage />} />
+
+            {/* Rutas autenticadas */}
+            <Route element={<RutaProtegida />}>
+              <Route element={<MainLayout />}>
+                <Route element={<RutaProtegida modulo="inicio" />}>
+                  <Route path="/" element={<HomePage />} />
+                </Route>
+                <Route element={<RutaProtegida modulo="pacientes" />}>
+                  <Route path="/pacientes" element={<PacientesPage />} />
+                  <Route path="/pacientes/cronicos" element={<PacientesCronicosPage />} />
+                  <Route path="/pacientes/diagnosticos" element={<CatalogoDiagnosticosPage />} />
+                  <Route path="/pacientes/condiciones" element={<CatalogoCondicionesPage />} />
+                  <Route path="/pacientes/comunidades" element={<CatalogoComunidadesPage />} />
+                  <Route path="/pacientes/areas" element={<CatalogoAreasPage />} />
+                  <Route path="/pacientes/clinicas" element={<CatalogoClinicasPage />} />
+                  <Route path="/pacientes/citas" element={<AgendaCitasPage />} />
+                  <Route path="/pacientes/duplicados" element={<PosiblesDuplicadosPage />} />
+                  <Route path="/pacientes/:id" element={<FichaPacientePage />} />
+                </Route>
+                <Route element={<RutaProtegida modulo="donaciones" />}>
+                  <Route path="/donaciones" element={<DonacionesPage />} />
+                  <Route path="/donaciones/registro" element={<RegistroDonacionConSesion />} />
+                  <Route path="/donaciones/historial" element={<HistorialDonacionesConSesion />} />
+                  <Route
+                    path="/donaciones/:id/constancia"
+                    element={<ConstanciaDonacionEnrutada />}
+                  />
+                  <Route path="/donantes" element={<DonantesConSesion />} />
+                </Route>
+                <Route element={<RutaProtegida modulo="inventario" />}>
+                  <Route path="/inventario" element={<InventarioPage />} />
+                  {/* Solo administracion (la pagina lo comprueba, como /pacientes/duplicados):
+                  antelaciones de los avisos de vencimiento, issue #899. */}
+                  <Route
+                    path="/inventario/avisos-vencimiento"
+                    element={<AvisosVencimientoPage />}
+                  />
+                </Route>
+                <Route element={<RutaProtegida modulo="presupuestos" />}>
+                  <Route path="/presupuestos" element={<PresupuestosPage />} />
+                </Route>
+                <Route element={<RutaProtegida modulo="proyectos" />}>
+                  {/*  Ruta principal — muestra el contenido */}
+                  <Route path="/proyectos" element={<ProyectosSocialesConSesion />} />
+
+                  {/*  Ruta antigua — REDIRIGE a la principal (lo que pide el test) */}
+                  <Route path="/proyectos/sociales" element={<ProyectosSocialesConSesion />} />
+
+                  <Route
+                    path="/proyectos/:id/seguimiento"
+                    element={<SeguimientoProyectoEnrutado />}
+                  />
+                </Route>
+                <Route element={<RutaProtegida modulo="reportes" />}>
+                  {/* Las pestanas del hub son rutas: todas montan ReportesPage, que elige la
+                  pestana por la direccion. Antes "pacientes atendidos" montaba su reporte suelto,
+                  sin las pestanas, y desde ahi no habia forma de volver a las demas. */}
+                  <Route path="/reportes" element={<ReportesPage />} />
+                  <Route path="/reportes/dashboard" element={<ReportesPage />} />
+                  <Route path="/reportes/medicamentos-por-vencer" element={<ReportesPage />} />
+                  <Route path="/reportes/pacientes-atendidos" element={<ReportesPage />} />
+                  <Route path="/reportes/inventario-actual" element={<ReportesPage />} />
+                  <Route path="/reportes/enfermedades" element={<ReportesPage />} />
+                  <Route path="/reportes/jornada/:id" element={<ReporteJornada />} />
+                </Route>
+                <Route element={<RutaProtegida modulo="jornadas" />}>
+                  <Route path="/jornadas" element={<JornadasPage />} />
+                  <Route path="/jornadas/:id" element={<DetalleJornadaPage />} />
+                </Route>
+                <Route element={<RutaProtegida modulo="colaboradores" />}>
+                  {/* Listado y ficha fusionados en una sola pantalla de tarjetas expandibles
+                  (arreglo de diseno de 2026-08-30): ya no hay una ruta /colaboradores/:id propia.
+                  Ver eme.md para el estado anterior (dos rutas separadas) si hay que revertir. */}
+                  <Route path="/colaboradores" element={<ColaboradoresPage />} />
+                </Route>
+                <Route element={<RutaProtegida modulo="matriz-permisos" />}>
+                  <Route path="/matriz-permisos" element={<MatrizPermisosPorRolPage />} />
+                </Route>
+                <Route element={<RutaProtegida modulo="bitacora-auditoria" />}>
+                  <Route path="/bitacora-auditoria" element={<BitacoraAuditoriaPage />} />
+                </Route>
+
+                {/* Fuera de cualquier grupo de modulo a proposito: el perfil propio no es un
+                  modulo con roles permitidos, cualquier rol autenticado tiene el suyo. */}
+                <Route path="/perfil" element={<PerfilPage />} />
+                {/* Igual que /perfil: las notificaciones son de cada perfil, no de un modulo
+                  (issue #755). A quien le llega que lo decide la base. */}
+                <Route path="/notificaciones" element={<NotificacionesPage />} />
+                <Route path="*" element={<NotFoundPage />} />
+              </Route>
+            </Route>
+          </Routes>
+        </Suspense>
+      </SesionProvider>
+    </BrowserRouter>
+  );
+}

@@ -8,14 +8,62 @@ configuracion de GitHub (plantillas de issues, PR y los workflows de CI/CD) esta
 
 | Documento                            | Para que sirve                                                          |
 | ------------------------------------ | ----------------------------------------------------------------------- |
+| [MANUAL-TECNICO.md](./MANUAL-TECNICO.md) | **Empezar aqui**: herramientas, requisitos, puesta en marcha, configuracion y claves, arquitectura, buenas practicas, base de datos y pantallas, con enlaces al detalle |
+| [ARQUITECTURA.md](./ARQUITECTURA.md) | Que construye el sistema, en que piezas se divide y por que |
 | [QUICKSTART.md](./QUICKSTART.md)     | Guia de inicio rapido: instalar y correr el proyecto (con y sin Docker) |
 | [CONTRIBUTING.md](./CONTRIBUTING.md) | Como contribuir: ramas, commits, PRs, issues y el tablero               |
+| [DISENO.md](./DISENO.md)             | Referencia de diseno: pantallas, navegacion y trazabilidad con issues  |
+| [DISENO-MOVIL.md](./DISENO-MOVIL.md) | Criterio de diseno de la app movil: reglas, fuentes y donde se aplicaron |
+| [CI-CD.md](./CI-CD.md)               | Que valida y despliega cada workflow, y que hacer cuando falla         |
+| [SEGURIDAD.md](./SEGURIDAD.md)       | Politica de contrasenas, expiracion de sesion, credenciales y observabilidad (errores, fallos de red, bitacora, respaldos) |
+| [RESPALDO-Y-RECUPERACION.md](./RESPALDO-Y-RECUPERACION.md) | Plan de respaldo y recuperacion de la base de produccion: que se respalda, cada cuanto, quien puede abrirlo y como se restaura paso a paso (issue #914). Version formal en PDF: [formal/plan-de-respaldo-y-recuperacion.pdf](./formal/plan-de-respaldo-y-recuperacion.pdf) |
+| [CONFIGURACION-SUPABASE.md](./CONFIGURACION-SUPABASE.md) | Lista de verificacion de lo que se configura a mano en el Dashboard de cada ambiente |
+| [PROTECCION-DE-DATOS.md](./PROTECCION-DE-DATOS.md) | Logs, almacenamiento movil, cifrado de columnas y secretos (OWASP A02) |
+| [MARCO-LEGAL.md](./MARCO-LEGAL.md) | Marco jurídico guatemalteco aplicable: obligaciones, riesgos, licencia, consentimiento, transferencia internacional y delimitación de responsabilidad del equipo de desarrollo |
+| [manual/](./manual/README.md) | Manual de usuario y material de capacitacion (issue #251): indice de las piezas, formato comun y el [plan de capacitaciones](./manual/PLAN-DE-CAPACITACIONES.md) ([PDF](./formal/plan-de-capacitaciones.pdf)) |
+| [formal/documentacion-tecnica.docx](./formal/documentacion-tecnica.docx) | Documento formal para quien no tiene acceso al repositorio (issue #867): permisos, modelo de datos, pantallas, conexion con Supabase, configuracion y herramientas, consolidados de los `.md` de esta carpeta |
+
+## Manuales de usuario
+
+Cada tarea paso a paso, con la
+pantalla de cada paso en la web y en la aplicacion movil, los mensajes de error y que hacer. Las
+pantallas usan los datos de demostracion.
+
+| Documento                                                                 | Para quien                                                                 |
+| ------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| [formal/manual-del-administrador.pdf](./formal/manual-del-administrador.pdf) | Rol administrador. Es tambien el manual de administracion: usuarios, catalogos, aprobaciones, jornadas, inventario, presupuestos, proyectos, donaciones y reportes |
+| [formal/manual-del-medico.pdf](./formal/manual-del-medico.pdf)               | Rol medico: expedientes, consulta, receta, entrega de medicamentos, citas, jornadas e inventario |
+| [formal/manual-del-voluntario.pdf](./formal/manual-del-voluntario.pdf)       | Rol voluntario general (Colaborador): proyectos, jornadas, presupuestos, inventario y pacientes. Solo la web |
+| [formal/manual-de-junta-directiva-y-socio-fundador.pdf](./formal/manual-de-junta-directiva-y-socio-fundador.pdf) | Roles junta directiva y socio fundador, en un solo manual: los reportes |
+| [formal/guia-rapida-voluntario.pdf](./formal/guia-rapida-voluntario.pdf)     | Guia rapida imprimible para voluntarios |
+| [formal/guia-rapida-junta-directiva-y-socio-fundador.pdf](./formal/guia-rapida-junta-directiva-y-socio-fundador.pdf) | Guia rapida imprimible para junta directiva y socio fundador |
+| [Videos V-01 a V-07](./manual/README.md#videos)                              | Videos cortos con subtitulos de los flujos clave, en la computadora y en el telefono, con datos de demostracion |
+
+## Referencia tecnica
+
+| Documento                                              | Para que sirve                                                        |
+| ------------------------------------------------------ | --------------------------------------------------------------------- |
+| [DICCIONARIO-DE-DATOS.md](./DICCIONARIO-DE-DATOS.md)   | **Generado** (`npm run docs:diccionario`). Cada tabla con todos sus campos, tipos, llaves, restricciones, relaciones, politicas y triggers; diagramas entidad-relacion por modulo; vistas, enums y funciones |
+| [PANTALLAS.md](./PANTALLAS.md)                         | **Generado** (`npm run docs:pantallas`). Las pantallas de la web y del movil y que tablas, vistas y funciones usa cada una |
+| [MODELO-DE-DATOS.md](./MODELO-DE-DATOS.md)             | El porque del modelo: tablas, enums, funciones, vistas y politicas RLS |
+| [MODULOS.md](./MODULOS.md)                             | Que pantalla existe, en que app, servida por que hook y en que estado |
+| [API-SHARED.md](./API-SHARED.md)                       | Que exporta cada modulo de `packages/shared`                          |
+| [ARQUITECTURA-FRONTEND.md](./ARQUITECTURA-FRONTEND.md) | Como se comparte el frontend entre web y movil                        |
+| [PERMISOS.md](./PERMISOS.md)                           | Quien puede hacer que en cada modulo, y donde esta escrito            |
+| [SUPABASE.md](./SUPABASE.md)                           | Supabase en la nube contra el stack local, y como se sincronizan      |
+| [DATOS-DEMO.md](./DATOS-DEMO.md)                       | Datos de prueba para desarrollo                                       |
+| [PLAN-DE-PRUEBAS.md](./PLAN-DE-PRUEBAS.md)             | Los ocho tipos de prueba con su criterio de aprobacion, que mide la cobertura, politica de evidencias y riesgos al ejecutarlo |
+| [CASOS-DE-PRUEBA.md](./CASOS-DE-PRUEBA.md)             | Cada caso de prueba vinculado a su requerimiento, y los requerimientos que no tienen ninguno |
+| [CUMPLIMIENTO-DE-REQUERIMIENTOS.md](./CUMPLIMIENTO-DE-REQUERIMIENTOS.md) | Los 34 RF y 15 RNF: donde esta cada uno, que issues lo cubren, su evidencia y su estado (issue #253) |
+| [evidencias/](./evidencias/)                           | Registro de cada ejecucion completa del plan, con fecha y commit      |
+| [DESPLIEGUE_BASE_DE_DATOS.md](./DESPLIEGUE_BASE_DE_DATOS.md) | Guía de orden de migraciones, catálogos sembrados, usuario admin y despliegue en producción |
 
 ## Dependencias y Herramientas
 
-| Documento                            | Para que sirve                                                    |
-| ------------------------------------ | ----------------------------------------------------------------- |
-| [DEPENDENCIES.md](./DEPENDENCIES.md) | Estrategia de versionado de paquetes, cuando actualizar y por que |
+| Documento                                    | Para que sirve                                                    |
+| -------------------------------------------- | ----------------------------------------------------------------- |
+| [DEPENDENCIES.md](./DEPENDENCIES.md)         | Estrategia de versionado de paquetes, cuando actualizar y por que |
+| [COSTOS-Y-LIMITES.md](./COSTOS-Y-LIMITES.md) | Limites de las capas gratuitas, que se agota primero y que cuesta el siguiente escalon |
 
 ## Contexto para asistentes de IA
 
@@ -39,3 +87,6 @@ Done, con vistas Backlog, Team items, Roadmap y My items. El flujo esperado esta
 Todo lo que no es JSX/CSS vive en `packages/shared` (llamadas a Supabase, validaciones,
 reglas de negocio). Las apps `web` y `mobile` solo importan esa logica y la envuelven en
 componentes visuales. Asi se evita duplicar codigo entre plataformas.
+
+La vision completa esta en [ARQUITECTURA.md](./ARQUITECTURA.md); el detalle de la frontera, en
+[ARQUITECTURA-FRONTEND.md](./ARQUITECTURA-FRONTEND.md).

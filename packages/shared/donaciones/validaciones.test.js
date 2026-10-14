@@ -1,0 +1,305 @@
+// Pruebas de las reglas de negocio de donantes y donaciones (issue #189).
+//
+// Reemplazan a validaciones.test.ts. Aquella version pasaba en verde validando valores que la base
+// rechaza ('DINERO', 'MEDICAMENTOS'), que es justo lo que estas pruebas ahora impiden: cada caso
+// usa los valores del enum de 00022_donantes_donaciones.sql.
+
+import { describe, expect, it } from "vitest";
+
+import { TIPOS_DE_DONACION } from "../enums.js";
+import { TIPOS_DE_DONANTE } from "../enums.js";
+import { validarDonacion, validarDonante } from "./validaciones.js";
+
+function hoy() {
+  return new Date().toISOString();
+}
+
+function enDias(dias) {
+  const fecha = new Date();
+  fecha.setDate(fecha.getDate() + dias);
+  return fecha.toISOString();
+}
+
+/** "AAAA-MM-DD" local de manana: lo que realmente manda un <input type="date"> (donaciones.fecha
+ * es DATE, 00022), a diferencia de enDias()/hoy() de arriba, que devuelven una marca de tiempo
+ * completa y no ejercitan el desfase de zona horaria que describe la issue #694. */
+function mananaComoFechaLocal() {
+  const fecha = new Date();
+  fecha.setDate(fecha.getDate() + 1);
+  return `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, "0")}-${String(fecha.getDate()).padStart(2, "0")}`;
+}
+
+describe("validarDonante", () => {
+  it("exige nombre, tipo y algun dato de contacto", () => {
+    const errores = validarDonante({});
+
+    expect(errores.nombre).toBeDefined();
+    expect(errores.tipo).toBeDefined();
+    expect(errores.contacto).toBeDefined();
+  });
+
+  it("acepta un donante con telefono como unico contacto", () => {
+    const errores = validarDonante({
+      nombre: "Fundacion Esperanza",
+      tipo: TIPOS_DE_DONANTE.ORGANIZACION,
+      telefono: "12345678",
+    });
+
+    expect(errores).toEqual({});
+  });
+
+  it("acepta un donante con correo como unico contacto", () => {
+    const errores = validarDonante({
+      nombre: "Ana Perez",
+      tipo: TIPOS_DE_DONANTE.PERSONA,
+      email: "ana@example.org",
+    });
+
+    expect(errores).toEqual({});
+  });
+
+  it("rechaza un tipo que no esta en el enum tipo_donante", () => {
+    const errores = validarDonante({
+      nombre: "Ana Perez",
+      tipo: "INDIVIDUAL",
+      telefono: "12345678",
+    });
+
+    expect(errores.tipo).toBe("El tipo de donante seleccionado no es valido.");
+  });
+});
+
+describe("validarDonacion", () => {
+  it("rechaza una fecha futura", () => {
+    const errores = validarDonacion({
+      donanteId: "uuid-1",
+      tipo: TIPOS_DE_DONACION.DINERO,
+      fecha: enDias(5),
+      detalles: [{ descripcion: "Aporte mensual", monto: 100 }],
+    });
+
+    expect(errores.fecha).toBe("La fecha de la donación no puede ser futura.");
+  });
+
+  it("rechaza una fecha de manana dada como AAAA-MM-DD (issue #694: antes pasaba por el desfase de zona horaria)", () => {
+    const errores = validarDonacion({
+      donanteId: "uuid-1",
+      tipo: TIPOS_DE_DONACION.DINERO,
+      fecha: mananaComoFechaLocal(),
+      detalles: [{ descripcion: "Aporte mensual", monto: 100 }],
+    });
+
+    expect(errores.fecha).toBe("La fecha de la donación no puede ser futura.");
+  });
+
+  it("acepta una donacion registrada hoy", () => {
+    const errores = validarDonacion({
+      donanteId: "uuid-1",
+      tipo: TIPOS_DE_DONACION.DINERO,
+      fecha: hoy(),
+      detalles: [{ descripcion: "Aporte mensual", monto: 100 }],
+    });
+
+    expect(errores).toEqual({});
+  });
+
+  it("exige un importe mayor a cero si la donacion es en dinero", () => {
+    const errores = validarDonacion({
+      donanteId: "uuid-1",
+      tipo: TIPOS_DE_DONACION.DINERO,
+      fecha: hoy(),
+      detalles: [{ descripcion: "Aporte mensual" }],
+    });
+
+    expect(errores.monto).toBe("Una donación en dinero exige un monto mayor a cero.");
+  });
+
+  // Issue #925: el monto de cada renglon en dinero esta marcado como obligatorio, y solo se pedia
+  // que la suma fuera mayor a cero.
+  it("en dinero, cada renglon necesita su propio monto", () => {
+    const errores = validarDonacion({
+      donanteId: "uuid-1",
+      tipo: TIPOS_DE_DONACION.DINERO,
+      fecha: hoy(),
+      detalles: [{ descripcion: "Aporte mensual", monto: 100 }, { descripcion: "Aporte extra" }],
+    });
+
+    expect(errores.monto).toBeUndefined();
+    expect(errores.detalles_1_monto).toBe("El renglón 2 necesita un monto mayor a cero.");
+  });
+
+  it("el error de la descripcion nombra el campo como lo ve la persona", () => {
+    const errores = validarDonacion({
+      donanteId: "uuid-1",
+      tipo: TIPOS_DE_DONACION.DINERO,
+      fecha: hoy(),
+      detalles: [{ monto: 100 }],
+    });
+
+    expect(errores.detalles_0_descripcion).toBe("El renglón 1 necesita el concepto.");
+  });
+
+  it("exige al menos un renglon de detalle", () => {
+    const errores = validarDonacion({
+      donanteId: "uuid-1",
+      tipo: TIPOS_DE_DONACION.MEDICAMENTOS,
+      fecha: hoy(),
+      detalles: [],
+    });
+
+    expect(errores.detalles).toBeDefined();
+  });
+
+  it("exige cantidad en cada renglon de medicamentos", () => {
+    const errores = validarDonacion({
+      donanteId: "uuid-1",
+      tipo: TIPOS_DE_DONACION.MEDICAMENTOS,
+      fecha: hoy(),
+      detalles: [{ descripcion: "Amoxicilina 500mg" }],
+    });
+
+    expect(errores.detalles_0_cantidad).toBeDefined();
+  });
+
+  it("acepta una donacion de medicamentos completa", () => {
+    // Sin fechaVencimiento: no es una columna de donacion_detalle (00022), y desde la issue
+    // #756 el vencimiento real se pide al generar el ingreso de inventario, no aqui.
+    const errores = validarDonacion({
+      donanteId: "uuid-1",
+      tipo: TIPOS_DE_DONACION.MEDICAMENTOS,
+      fecha: hoy(),
+      // Desde la #840 el renglon elige un medicamento del catalogo: sin descripcion ni unidad,
+      // que las pone fn_registrar_donacion desde el catalogo (00135).
+      detalles: [{ medicamentoId: "med-1", cantidad: 120 }],
+    });
+
+    expect(errores).toEqual({});
+  });
+
+  // 00170: el renglon de insumos elige un insumo del catalogo, como el de medicamentos.
+  it("un renglon de insumos tiene que elegir un insumo del catalogo", () => {
+    const errores = validarDonacion({
+      donanteId: "uuid-1",
+      tipo: TIPOS_DE_DONACION.INSUMOS,
+      fecha: hoy(),
+      detalles: [{ descripcion: "Guantes de latex", cantidad: 5 }],
+    });
+
+    expect(errores.detalles_0_medicamentoId).toContain("insumo");
+  });
+
+  it("rechaza un renglon de medicamentos escrito como texto libre", () => {
+    const errores = validarDonacion({
+      donanteId: "uuid-1",
+      tipo: TIPOS_DE_DONACION.MEDICAMENTOS,
+      fecha: hoy(),
+      detalles: [{ descripcion: "Amoxicilina 500mg", cantidad: 120, unidad: "tabletas" }],
+    });
+
+    expect(errores.detalles_0_medicamentoId).toBeTruthy();
+  });
+
+  it("acepta insumos, que la version anterior no contemplaba", () => {
+    const errores = validarDonacion({
+      donanteId: "uuid-1",
+      tipo: TIPOS_DE_DONACION.INSUMOS,
+      fecha: hoy(),
+      detalles: [{ medicamentoId: "insumo-1", cantidad: 500 }],
+    });
+
+    expect(errores).toEqual({});
+  });
+
+  it("acepta servicios sin cantidad", () => {
+    const errores = validarDonacion({
+      donanteId: "uuid-1",
+      tipo: TIPOS_DE_DONACION.SERVICIOS,
+      fecha: hoy(),
+      detalles: [{ descripcion: "Transporte de brigada" }],
+    });
+
+    expect(errores).toEqual({});
+  });
+
+  it("rechaza un tipo que no esta en el enum tipo_donacion", () => {
+    const errores = validarDonacion({
+      donanteId: "uuid-1",
+      tipo: "EQUIPO",
+      fecha: hoy(),
+      detalles: [{ descripcion: "Camilla" }],
+    });
+
+    expect(errores.tipo).toBe("El tipo de donación seleccionado no es válido.");
+  });
+
+  // Los casos de abajo son las reglas que la medicion de cobertura (issue #219) encontro sin
+  // ejercer: existian en el codigo y ninguna prueba entraba en ellas.
+
+  it("una donacion vacia reporta los tres campos obligatorios a la vez", () => {
+    const errores = validarDonacion({});
+
+    expect(errores.donanteId).toBeDefined();
+    expect(errores.tipo).toBeDefined();
+    expect(errores.fecha).toBeDefined();
+    expect(errores.detalles).toBeDefined();
+  });
+
+  it("distingue la fecha ilegible de la fecha ausente", () => {
+    // Son dos mensajes distintos a proposito: "falta la fecha" y "esa fecha no se entiende" le
+    // piden cosas distintas a quien llena el formulario.
+    expect(validarDonacion({ fecha: "" }).fecha).toBe("La fecha de la donación es obligatoria.");
+    expect(validarDonacion({ fecha: "31/02/2026" }).fecha).toBe(
+      "La fecha proporcionada no es válida.",
+    );
+  });
+
+  it("exige descripcion en cada renglon, y dice cual", () => {
+    const errores = validarDonacion({
+      donanteId: "uuid-1",
+      tipo: TIPOS_DE_DONACION.SERVICIOS,
+      fecha: hoy(),
+      detalles: [{ descripcion: "Traslado" }, {}],
+    });
+
+    expect(errores.detalles_0_descripcion).toBeUndefined();
+    expect(errores.detalles_1_descripcion).toContain("2");
+  });
+
+  it("fuera de medicamentos e insumos la cantidad es opcional, pero si viene debe ser positiva", () => {
+    // La rama del `else if`: servicios no exige cantidad, y aun asi un cero la invalida, porque
+    // es lo que rechaza el CHECK de la tabla.
+    const sinCantidad = validarDonacion({
+      donanteId: "uuid-1",
+      tipo: TIPOS_DE_DONACION.SERVICIOS,
+      fecha: hoy(),
+      detalles: [{ descripcion: "Traslado de pacientes" }],
+    });
+    expect(sinCantidad).toEqual({});
+
+    const conCero = validarDonacion({
+      donanteId: "uuid-1",
+      tipo: TIPOS_DE_DONACION.SERVICIOS,
+      fecha: hoy(),
+      detalles: [{ descripcion: "Traslado de pacientes", cantidad: 0 }],
+    });
+    expect(conCero.detalles_0_cantidad).toContain("mayor a cero");
+  });
+
+  it("un monto negativo se rechaza; el cero no es negativo", () => {
+    const negativo = validarDonacion({
+      donanteId: "uuid-1",
+      tipo: TIPOS_DE_DONACION.SERVICIOS,
+      fecha: hoy(),
+      detalles: [{ descripcion: "Traslado", monto: -1 }],
+    });
+    expect(negativo.detalles_0_monto).toContain("no puede ser negativo");
+
+    const cero = validarDonacion({
+      donanteId: "uuid-1",
+      tipo: TIPOS_DE_DONACION.SERVICIOS,
+      fecha: hoy(),
+      detalles: [{ descripcion: "Traslado", monto: 0 }],
+    });
+    expect(cero.detalles_0_monto).toBeUndefined();
+  });
+});
