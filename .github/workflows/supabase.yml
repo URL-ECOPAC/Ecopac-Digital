@@ -50,7 +50,7 @@ jobs:
       supabase: ${{ steps.detectar.outputs.supabase }}
     steps:
       - name: Descargar el codigo
-        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
 
@@ -85,7 +85,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Descargar el codigo
-        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
 
@@ -276,7 +276,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Descargar el codigo
-        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Sin cambios en supabase/
         if: needs.cambios.outputs.supabase != 'true'
@@ -413,7 +413,7 @@ jobs:
       SUPABASE_PROJECT_REF_DEV: ${{ secrets.SUPABASE_PROJECT_REF_DEV }}
     steps:
       - name: Descargar el codigo
-        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Verificar secrets
         id: check
@@ -601,7 +601,7 @@ jobs:
       SUPABASE_PROJECT_REF_PROD: ${{ secrets.SUPABASE_PROJECT_REF_PROD }}
     steps:
       - name: Descargar el codigo
-        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       # Version fija: ver el comentario del job "Validar migraciones y funciones" (issue #422).
       # Este es el paso donde el rate limit tumbo el despliegue del 25 de agosto.
