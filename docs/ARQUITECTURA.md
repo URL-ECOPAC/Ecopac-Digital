@@ -216,7 +216,7 @@ tabla `triajes`, calculada por Postgres. El cliente no puede mentir sobre el IMC
 
 ### 6.1 La seguridad vive en la base de datos, no en el cliente
 
-Las **130 politicas RLS** son la frontera real. El cliente esconde botones; la base niega filas.
+Las **157 politicas RLS** son la frontera real. El cliente esconde botones; la base niega filas.
 
 La postura de partida es **denegacion por defecto** (migracion `00030`): una tabla sin politica no
 devuelve nada a nadie. Encima de eso:
@@ -233,7 +233,7 @@ devuelve nada a nadie. Encima de eso:
 - `anon` no tiene privilegios (`00049`, `00056`), y el registro publico de cuentas esta cerrado
   (`00074`): las cuentas se crean por invitacion.
 
-Se comprueba con **48 archivos de pruebas pgTAP** (754 pruebas) en `supabase/tests/database/`,
+Se comprueba con **77 archivos de pruebas pgTAP** (1212 pruebas) en `supabase/tests/database/`,
 que corren en CI.
 
 La matriz completa esta en [PERMISOS.md](./PERMISOS.md).
@@ -320,23 +320,46 @@ puede verse igual que algo que si**. Por eso un error se pinta en la pantalla qu
 se sustituye por una lista vacia, y nunca se reporta en un dialogo que se cierra y no deja rastro.
 Estado y lo que falta: [SEGURIDAD.md, "Observabilidad"](./SEGURIDAD.md).
 
+### 6.8 Tiempo real: la base avisa, la pantalla vuelve a leer
+
+Hasta la `00163` cada pantalla leia sus datos al abrirse y no volvia a mirar: un gasto aprobado
+en otra pestana seguia viendose pendiente hasta recargar el navegador. Desde esa migracion las
+tablas de negocio estan en la publicacion `supabase_realtime` (27 hoy) y los hooks de listas,
+tableros, detalles y reportes se suscriben con `useCambiosEnTiempoReal`
+(`packages/shared/hooks/`).
+
+La decision es **que hace el cliente con el aviso: nada mas que volver a leer**. No usa su
+contenido; espera un momento para juntar una racha de cambios en una sola recarga y llama a la
+consulta de siempre del hook. Asi lo que se ve sale siempre de la misma consulta, con el mismo
+RLS, y no existe una segunda forma de armar los datos que pueda divergir de la primera. Realtime
+aplica ademas el RLS de cada persona: nadie recibe aviso de una fila que no puede leer.
+
+El costo es una consulta de mas por racha de cambios, y que una tabla nueva no se actualiza sola
+mientras no entre a la publicacion con una migracion. Funciona igual en la web y en el movil:
+`supabase-js` abre un solo socket por cliente.
+
 ---
 
 ## 7. Que hay construido hoy
 
-Estado sobre `develop`, 24 de septiembre de 2026. El esquema se cuenta en el catalogo de Postgres
+Estado sobre `develop`, 13 de octubre de 2026. El esquema se cuenta en el catalogo de Postgres
 despues de un `supabase db reset`, no contando archivos (ver [MODELO-DE-DATOS.md](./MODELO-DE-DATOS.md)).
+Cada cifra dice con que se midio, para poder repetirla.
 
-| Area                       | Tamano                                                                  |
-| -------------------------- | ----------------------------------------------------------------------- |
-| Migraciones                | 139 archivos, numerados hasta la `00147`                                |
-| Esquema                    | 49 tablas, 23 enums, 76 funciones, 7 vistas, 130 politicas RLS, 68 triggers |
-| `packages/shared`          | 20 carpetas (dominio e infraestructura), 419 archivos versionados       |
-| `apps/web`                 | 86 paginas, 42 componentes, 35 rutas                                    |
-| `apps/mobile`              | 43 pantallas, 40 componentes, 5 tabs (cuatro modulos y Ajustes)         |
-| Edge Functions             | 3 (`invitar-usuario`, `alertas-vencimiento`, `enviar-notificaciones`)  |
-| Pruebas                    | 240 archivos de prueba (vitest y jest) + 48 de pgTAP (754 pruebas)      |
-| Workflows de CI/CD         | 5                                                                       |
+| Area               | Tamano | Como se midio |
+| ------------------ | ------ | ------------- |
+| Migraciones        | 180 archivos, numerados hasta la `00188` (la numeracion tiene huecos) | `ls supabase/migrations/*.sql` |
+| Esquema            | 60 tablas, 23 enums, 9 vistas, 157 politicas RLS, 154 triggers y 145 funciones (78 de negocio o de autorizacion y 67 de trigger) | Resumen de [DICCIONARIO-DE-DATOS.md](./DICCIONARIO-DE-DATOS.md), generado con `npm run docs:diccionario` |
+| `packages/shared`  | 21 carpetas (dominio e infraestructura), 498 archivos versionados | `git ls-files packages/shared`, y sus carpetas de primer nivel |
+| `apps/web`         | 40 rutas; 106 archivos `.jsx` en `src/pages` sin contar pruebas, de ellos 44 paginas (`*Page.jsx`) y 35 modales (`Modal*.jsx`); 51 componentes | Rutas: resumen de [PANTALLAS.md](./PANTALLAS.md). Archivos: `git ls-files apps/web/src/pages` y `apps/web/src/components`, `.jsx` sin `.test.` |
+| `apps/mobile`      | 31 pantallas con ruta; 37 archivos `*Screen.js` (53 `.js` en `src/screens` contando secciones y modales); 46 componentes; 5 tabs (cuatro modulos y Ajustes) | Rutas: resumen de [PANTALLAS.md](./PANTALLAS.md). Archivos: `git ls-files apps/mobile/src/screens` y `apps/mobile/src/components`, `.js` sin pruebas |
+| Edge Functions     | 3 (`invitar-usuario`, `alertas-vencimiento`, `enviar-notificaciones`) | Carpetas de `supabase/functions`, sin `_shared` |
+| Pruebas            | 286 archivos de prueba de vitest y jest (182 en shared, 47 en web, 49 en movil, 1 en ui-tokens y 7 de flujos criticos en `pruebas/e2e`) + 77 archivos de pgTAP (1212 pruebas) | `git ls-files` con `.test.js` o `.test.jsx`; `ls supabase/tests/database/*.sql` y la suma de sus `SELECT plan(N)` |
+| Workflows de CI/CD | 6 | `ls .github/workflows/*.yml` |
+
+Las cifras de archivos de las dos apps cuentan archivos, no pantallas: una pagina con sus modales
+y secciones son varios archivos y una sola ruta. La cifra que dice cuantas pantallas hay es la de
+rutas, que sale del generador.
 
 Los once modulos del sistema, definidos una sola vez en `packages/shared/navegacion.js`:
 
@@ -346,9 +369,9 @@ Los once modulos del sistema, definidos una sola vez en `packages/shared/navegac
 | Pacientes             | Si  | Tab   | Administrador, medico, voluntario   |
 | Inventario            | Si  | Tab   | Administrador, medico, voluntario   |
 | Jornadas              | Si  | Tab   | Administrador, medico, voluntario   |
-| Proyectos             | Si  | No    | Administrador y medico (solo los de sus jornadas, sin editar) |
+| Proyectos             | Si  | Pantalla dentro de la tab Jornadas | Administrador; medico y voluntario solo los de sus jornadas, sin editar |
 | Donaciones            | Si  | No    | Solo administrador                  |
-| Presupuestos          | Si  | No    | Solo administrador                  |
+| Presupuestos          | Si  | No    | Administrador; medico y voluntario lo de sus jornadas, sin aprobar |
 | Colaboradores         | Si  | No    | Solo administrador                  |
 | Matriz de permisos    | Si  | No    | Solo administrador                  |
 | Bitacora de auditoria | Si  | No    | Solo administrador                  |
