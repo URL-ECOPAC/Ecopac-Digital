@@ -29,6 +29,13 @@ dashboard. El despliegue nunca corre `supabase config push`, asi que `config.tom
 alcanza. La lista completa, con como se comprueba cada cosa y una columna por ambiente, esta en
 [CONFIGURACION-SUPABASE.md](./CONFIGURACION-SUPABASE.md).
 
+**Realtime si viaja con el repositorio.** Las pantallas se actualizan solas porque las tablas de
+negocio estan en la publicacion `supabase_realtime`, y eso lo hace una migracion (`00163`), no el
+dashboard: una tabla nueva que deba refrescarse sola entra a la publicacion con otra migracion. El
+aviso respeta el RLS de cada persona y el cliente solo lo usa para volver a leer
+(`useCambiosEnTiempoReal`, ver [ARQUITECTURA.md](./ARQUITECTURA.md), seccion 6.8). Funciona igual
+en el stack local.
+
 ### 2. El stack local (`supabase start`)
 
 `supabase/config.toml` es la configuracion para correr una copia completa de Supabase
@@ -153,7 +160,9 @@ POST /rest/v1/rpc/fn_generar_alertas_caducidad  -> 1  (se ejecuto y escribio una
 
 `fn_generar_alertas_caducidad()` (`00088`) es `SECURITY DEFINER` y ya traia su propio
 `REVOKE ALL ... FROM PUBLIC`. La `00102` (issue #511) ya habia hecho lo mismo, funcion por
-funcion, para las 25 funciones invocables del esquema. **Ninguno de los dos cerro nada en el
+funcion, para las 25 funciones invocables que tenia el esquema entonces (al 13 de octubre de 2026
+son 70 las que `authenticated` puede ejecutar y ninguna para `anon`, contadas en el stack local
+con `has_function_privilege`). **Ninguno de los dos cerro nada en el
 proyecto real.** La razon: un `REVOKE ... FROM PUBLIC` retira el privilegio implicito que
 Postgres concede por defecto a cualquier funcion sin ACL propio -que es como nace una funcion en
 el stack local, CLI 2.115.0-, pero el bootstrap de un proyecto creado desde el Dashboard (el

@@ -7,20 +7,21 @@ hace cumplir la base de datos por si misma, y donde esta escrito cada cosa.
 coincidan, manda el SQL. Cada tabla indica entre corchetes la migracion que la creo, y cada
 columna anadida despues indica la migracion que la agrego.
 
-Estado al 28 de septiembre de 2026, sobre `develop`, hasta la migracion `00156`. Las cifras salen
+Estado al 13 de octubre de 2026, sobre `develop`, hasta la migracion `00188`. Las cifras salen
 del catalogo de Postgres (`pg_tables`, `pg_type`, `pg_proc`, `pg_views`, `pg_policies`,
 `pg_trigger`) despues de un `supabase db reset` local, no de contar archivos, porque varias
-migraciones borran o reemplazan lo que crearon otras.
+migraciones borran o reemplazan lo que crearon otras. Son las del resumen de
+[DICCIONARIO-DE-DATOS.md](DICCIONARIO-DE-DATOS.md).
 
 | Elemento          | Cantidad |
 | ----------------- | -------- |
-| Migraciones       | 148 (numeradas hasta `00156`; la numeracion tiene huecos) |
-| Tablas            | 52       |
+| Migraciones       | 180 (numeradas hasta `00188`; la numeracion tiene huecos) |
+| Tablas            | 60 (las 60 con RLS activo) |
 | Tipos enumerados  | 23       |
-| Funciones         | 90 (49 de negocio o de autorizacion y 41 de trigger) |
-| Vistas            | 8        |
-| Politicas RLS     | 138      |
-| Triggers          | 114 (41 de auditoria) |
+| Funciones         | 78 de negocio o de autorizacion y 67 de trigger |
+| Vistas            | 9        |
+| Politicas RLS     | 157      |
+| Triggers          | 154 (47 de auditoria) |
 
 **La referencia exhaustiva -cada columna con su tipo, nulo, valor por defecto, llaves,
 restricciones, politicas y triggers, con diagramas por modulo- es
@@ -101,6 +102,7 @@ graph TB
         jornadas
     end
     subgraph CLIN["Atencion clinica"]
+        citas
         atenciones
         triajes
         consultas
@@ -125,6 +127,9 @@ graph TB
     pacientes --> expedientes
     pacientes --> atenciones
     jornadas --> atenciones
+    pacientes --> citas
+    jornadas --> citas
+    citas --> consultas
     atenciones --> triajes
     atenciones --> consultas
     consultas --> recetas
@@ -148,7 +153,8 @@ Los tres ejes del sistema:
   `donaciones`.
 
 Los tres se cruzan en la **jornada**: es la unidad de operacion. Casi todo lo clinico exige una
-jornada `en curso` para poder escribirse.
+jornada `en curso` para poder escribirse. Desde la `00169` toda jornada pertenece a un proyecto, y
+desde la `00178` toda jornada tiene una bodega de la que salen sus entregas.
 
 ---
 
@@ -293,6 +299,8 @@ erDiagram
     pacientes ||--o{ padecimientos_cronicos : padece
     condiciones_cronicas ||--o{ padecimientos_cronicos : "de tipo"
     pacientes ||--o{ fusiones_pacientes : "absorbido/sobreviviente"
+    pacientes ||--o{ paciente_area : "esta en"
+    areas_atencion ||--o{ paciente_area : "agrupa"
 ```
 
 ### `pacientes` [00009]
@@ -344,6 +352,21 @@ Registro de deduplicacion. `paciente_absorbido_id` (UNIQUE: no se absorbe dos ve
 `paciente_sobreviviente_id`, `realizada_por`, `realizada_en`. La fusion la ejecuta
 `fn_fusionar_pacientes()`; los candidatos los propone `fn_detectar_pacientes_duplicados()`.
 
+### `areas_atencion` [00182] y `paciente_area` [00182]
+
+`areas_atencion` es el catalogo de areas en las que se atiende (Odontologia, Psicologia, Medicina
+General...): `nombre` (unico sin distinguir mayusculas ni acentos, indice
+`idx_areas_atencion_nombre_normalizado`), `descripcion` y `es_vigente` (BOOLEAN NOT NULL DEFAULT
+TRUE). Un area no se borra: se retira con `es_vigente`, y solo la administradora la retira
+(`impedir_retirar_sin_ser_administrador`, el mismo trigger de `condiciones_cronicas` y
+`comunidades`). La conservan los pacientes, citas y consultas que ya la tienen.
+
+`paciente_area` dice en que areas esta cada paciente: `paciente_id` + `area_id` (clave primaria
+compuesta, las dos `ON DELETE RESTRICT`) y `created_at`. Un paciente puede estar en varias. Un area
+retirada no se asigna de nuevo (`fn_paciente_area_area_vigente`), pero la conserva quien ya la
+tenia. `fn_buscar_pacientes()` filtra por area (`p_area_id`), y el area es tambien la de las citas
+y las consultas (`citas.area_id`, `consultas.area_id`).
+
 ---
 
 ## 6. Jornadas
@@ -361,14 +384,43 @@ Registro de deduplicacion. `paciente_absorbido_id` (UNIQUE: no se absorbe dos ve
 | `estado`               | `estado_jornada` NOT NULL   | `planificada`/`en curso`/`finalizada`/`cancelada` |
 | `presupuesto_asignado` | NUMERIC(12,2) NOT NULL      | Suma de `jornada_presupuesto_origen` [00135]; no se escribe a mano |
 | `codigo`               | VARCHAR(30) UNIQUE          | [+00036]                                  |
-| `fecha_inicio_real`    | TIMESTAMPTZ                 | [+00036] Cuando de verdad empezo          |
-| `fecha_fin_real`       | TIMESTAMPTZ                 | [+00036]                                  |
+| `fecha_inicio_real`    | TIMESTAMPTZ                 | [+00036] Cuando de verdad empezo. Desde la [00174] la fija un trigger al pasarla a `en curso` |
+| `fecha_fin_real`       | TIMESTAMPTZ                 | [+00036] Desde la [00174] la fija un trigger al finalizarla; reabrirla la borra |
 | `cupo_estimado`        | INT                         | [+00036]                                  |
-| `botiquin_bodega_id`   | UUID                        | [+00036] Bodega movil que viaja           |
+| `botiquin_bodega_id`   | UUID                        | [+00036] Bodega de la que salen las entregas de la jornada: una movil o la principal [00181]. Obligatoria al crear y no se quita [00178]; solo las jornadas anteriores pueden no tenerla. FK RESTRICT |
 
 El estado no cambia libremente: `fn_validar_transicion_estado_jornada()` (`00051`) hace cumplir la
 maquina de estados, y `fn_contar_atenciones_incompletas()` impide finalizar una jornada con
 atenciones abiertas. Cada cambio queda en `jornada_estado_historial`.
+
+**Inicio y cierre reales (`00174`).** `fecha_inicio_real` y `fecha_fin_real` existian desde la
+`00036` pero nadie las escribia. Las llena `fn_fechas_reales_de_jornada()`, no el cliente: el cambio
+de estado llega por mas de un camino (kanban, detalle, movil) y la hora tiene que ser la del
+servidor. Pasar a `en curso` fija el inicio si todavia no lo tiene; reabrir una finalizada no lo
+mueve. Pasar a `finalizada` fija el cierre, y reabrirla lo borra. Las jornadas anteriores se
+rellenaron con la hora de `jornada_estado_historial`.
+
+**La bodega de la jornada (`00176`, `00178`, `00179`, `00181`, `00186`).** Lo que se receta en una
+jornada sale de su bodega (`fn_bodega_de_entrega_de_consulta`): la de `botiquin_bodega_id` o, en
+las jornadas anteriores que no la tienen, la principal (`bodegas.es_principal`).
+
+- Toda jornada nueva lleva bodega, y tiene que ser movil o la principal
+  (`fn_jornada_exige_bodega_movil`).
+- Una bodega movil no esta en dos jornadas `en curso` a la vez (`fn_jornada_bodega_movil_libre`);
+  la principal no tiene esa restriccion.
+- La bodega movil se **carga** desde la pestana Insumos (`fn_cargar_insumo_a_bodega_de_jornada`) y
+  lo que sobra se **devuelve** a una bodega fija (`fn_devolver_de_bodega_de_jornada`). La principal
+  entrega directo: no se carga ni se devuelve.
+- La bodega de una jornada no se cambia mientras le quede inventario cargado
+  (`fn_jornada_sin_inventario_cargado_al_cambiar_bodega`).
+- Desde la `00186` el inventario de una bodega movil se cuenta **por jornada**: lo cargado, lo
+  entregado en sus recetas y lo devuelto (`fn_consumo_de_insumos_de_jornada`,
+  `fn_queda_de_jornada_en_lote`). Al iniciar una jornada, lo que hubiera en la bodega y no fuera
+  suyo pasa a su cuenta (`fn_traspasar_sobrante_al_iniciar_jornada`); el inventario fisico no
+  cambia.
+
+Al cancelar o finalizar una jornada se cancelan sus citas creadas o en atencion
+(`fn_jornada_cancela_citas_pendientes`, `00184`).
 
 ### `jornada_personal` [00012]
 
@@ -400,11 +452,16 @@ erDiagram
     recetas ||--o{ receta_detalle : contiene
     medicamentos ||--o{ receta_detalle : "se receta"
     lotes ||--o{ receta_detalle : "se entrega de"
+    pacientes ||--o{ citas : "tiene"
+    jornadas ||--o{ citas : "se atiende en"
+    clinicas ||--o{ citas : "donde"
+    areas_atencion ||--o{ citas : "de que area"
+    citas ||--o| consultas : "consulta agendada"
 ```
 
 Este es el flujo de la jornada, en orden: **atencion** (el paciente entra a la cola) -> **triaje**
 (signos vitales) -> **consulta** (el medico) -> **receta** (que se lleva) -> descuento del
-inventario.
+inventario. Desde la `00184` una consulta puede ademas salir de una **cita** agendada.
 
 ### `atenciones` [00013]
 
@@ -420,8 +477,8 @@ Una fila por atencion (`atencion_id` UNIQUE).
 
 | Columna                                    | Tipo               | Notas                                            |
 | ------------------------------------------ | ------------------ | ------------------------------------------------ |
-| `presion_sistolica`, `presion_diastolica`  | SMALLINT NOT NULL  |                                                  |
-| `frecuencia_cardiaca`                      | SMALLINT NOT NULL  |                                                  |
+| `presion_sistolica`, `presion_diastolica`  | SMALLINT           | Opcionales desde [00136]; van las dos juntas o ninguna |
+| `frecuencia_cardiaca`                      | SMALLINT           | Opcional desde [00136]                           |
 | `glucosa`                                  | SMALLINT           | Opcional                                         |
 | `peso`, `talla`                            | NUMERIC(5,2)       | Opcionales                                       |
 | `temperatura`                              | NUMERIC(4,1)       | Opcional                                         |
@@ -439,6 +496,49 @@ Postgres hace cumplir. El IMC lo calcula la base, no el cliente.
 
 Exige jornada `en curso` (`validar_jornada_en_curso`, `00018`). El medico que la creo es el unico
 que la edita, aparte del administrador.
+
+Desde la `00184` lleva dos columnas mas, las dos opcionales: `cita_id` (UNIQUE: una consulta por
+cita; es lo que la marca como agendada) y `area_id` (el area de atencion; con cita, la de la cita).
+Las consultas anteriores quedan con las dos en NULL.
+
+### `clinicas` [00183]
+
+Catalogo de clinicas donde se atienden las citas: `nombre` (unico sin distinguir mayusculas ni
+acentos), `salas_disponibles` (INT > 0: cuantas citas se atienden a la vez) y `es_vigente`. Una
+clinica con citas no se borra: `fn_eliminar_clinica()` la borra si nunca tuvo citas y, si las tuvo,
+la retira (`es_vigente = FALSE`). `salas_disponibles` no baja de lo que ya hay agendado en algun
+horario futuro (`fn_clinica_salas_cubren_lo_agendado`).
+
+### `citas` [00184]
+
+La agenda: un paciente, en una jornada, una clinica y un area, a una hora. No se borran: se
+cancelan.
+
+| Columna               | Tipo                    | Notas                                                    |
+| --------------------- | ----------------------- | -------------------------------------------------------- |
+| `paciente_id`         | UUID NOT NULL           | No se agenda a un paciente dado de baja                  |
+| `jornada_id`          | UUID NOT NULL           | Planificada o en curso para agendar; en curso para atender |
+| `clinica_id`          | UUID NOT NULL           | Su cupo es `clinicas.salas_disponibles`                  |
+| `area_id`             | UUID NOT NULL           | Pasa a la consulta (`consultas.area_id`)                 |
+| `profesional_id`      | UUID                    | Un medico del cuadro de turnos de la jornada, sin dos citas traslapadas. Opcional al agendar |
+| `inicia_en`, `termina_en` | TIMESTAMPTZ NOT NULL | `termina_en` por defecto 30 minutos despues; CHECK `termina_en > inicia_en` |
+| `estado`              | `estado_cita` NOT NULL  | `creada` / `en_atencion` / `atendida` / `cancelada`      |
+| `notas`               | TEXT                    | Lo unico que se edita en una cita atendida o cancelada   |
+| `registrada_por`      | UUID                    | Por defecto `auth.uid()`                                 |
+| `cancelada_por`, `cancelada_en`, `motivo_cancelacion` | UUID / TIMESTAMPTZ / TEXT | `cancelada_en` presente si y solo si el estado es `cancelada` (CHECK) |
+
+Todas las llaves foraneas a paciente, jornada, clinica y area son `ON DELETE RESTRICT`.
+
+Las reglas las hace cumplir `fn_validar_cita()`: cupo de la clinica, traslapes de paciente y de
+profesional, que el profesional este en el cuadro de turnos, estado de la jornada, fecha, clinica y
+area vigentes, y las transiciones de estado. Guardar una consulta con `cita_id` exige que la cita
+este en atencion y sea del mismo paciente y jornada (`fn_consulta_de_cita_antes`), y la deja
+`atendida` (`fn_consulta_de_cita_despues`).
+
+Agendar es un permiso fino (`citas.agendar`, `00185`): sin el, y sin ser administracion ni tener
+`jornadas.gestionar`, una cita solo cambia entre `creada` y `en_atencion`
+(`fn_cita_exige_permiso_de_agenda`). Quien ve y quien agenda esta en
+[PERMISOS.md](./PERMISOS.md).
 
 ### `diagnosticos` [00018] y `consulta_diagnostico` [00018]
 
@@ -498,7 +598,11 @@ erDiagram
     bodegas ||--o{ movimientos_inventario : "desde/hacia"
     lotes ||--o{ alertas_caducidad : "por vencer"
     alertas_caducidad ||--o{ alerta_caducidad_detalle : "se resuelve con"
+    alertas_caducidad ||--o{ avisos_caducidad : "avisa en cada etapa"
     presentaciones ||--o{ medicamentos : "se presenta como"
+    donantes ||--o| proveedores : "es tambien"
+    jornadas |o--o{ movimientos_inventario : "carga y consumo"
+    recetas |o--o{ movimientos_inventario : "entrega"
 ```
 
 **Un modelo, no dos.** El esquema llego a tener dos modelos de stock en paralelo (`lotes` +
@@ -540,8 +644,22 @@ las etiquetas en espanol, incluidos los dos valores que el enum tenia en ingles 
 
 ### `proveedores` [00017] y `bodegas` [00017]
 
-- `proveedores`: `nombre` unico, `contacto`, `tipo` (`tipo_proveedor`: `comercial`/`donante`).
-- `bodegas`: `nombre` unico, `ubicacion`, `es_movil` (el botiquin que viaja a la jornada).
+- `proveedores`: `nombre` unico, `contacto`, `tipo` (`tipo_proveedor`: `comercial`/`donante`) y
+  `donante_id` ([+00175], UNIQUE, FK RESTRICT a `donantes`; solo en un proveedor de tipo `donante`,
+  CHECK `chk_proveedores_donante_solo_en_tipo_donante`).
+- `bodegas`: `nombre` unico, `ubicacion`, `es_movil` (el botiquin que viaja a la jornada) y
+  `es_principal` ([+00176], BOOLEAN NOT NULL DEFAULT FALSE; hay una sola).
+
+**Cada donante tiene su proveedor, y es el mismo (`00175`).** `donantes` y `proveedores` eran dos
+catalogos sin relacion: el ingreso de una donacion buscaba un proveedor de tipo donante con el
+mismo nombre y, si no lo habia, lo creaba, asi que los "donantes" de inventario y los de Donaciones
+no coincidian. Desde la `00175` el donante manda y el proveedor lo sigue: el trigger
+`fn_proveedor_sigue_al_donante` crea o actualiza el proveedor al registrar el donante o al cambiar
+su nombre o su contacto. El nombre y el contacto se editan en el donante, no en el proveedor.
+
+**La bodega principal (`00176`, `00181`).** De ella sale lo que se receta en una jornada que no
+tiene bodega propia, y desde la `00181` tambien puede ser la bodega de una jornada. Ver
+[Jornadas](#6-jornadas).
 
 ### `lotes` [00019, ampliada en 00020, 00107 y 00121]
 
@@ -595,6 +713,8 @@ trigger de `movimientos_inventario`.
 | `aprobado_en`           | TIMESTAMPTZ                   | Antes `fecha_aprobacion` [renombrada 00094] |
 | `aprobacion_automatica` | BOOLEAN NOT NULL              | [+00028] TRUE si lo registro un administrador |
 | `motivo_rechazo`        | TEXT                          | [+00084]                                 |
+| `jornada_id`            | UUID                          | [+00178] Jornada para la que se movio el inventario (la carga de su bodega movil). NULL en cualquier otro movimiento. FK RESTRICT |
+| `receta_id`             | UUID                          | [+00186] Receta de la que sale el movimiento: la entrega, su ajuste y la devolucion al anularla. NULL en cualquier otro. FK SET NULL |
 
 El flujo es de **aprobacion en dos pasos**: medico o voluntario registran el movimiento en estado
 `pendiente`, y el administrador aprueba o rechaza. Solo al aprobar se toca `existencias`. Si el que
@@ -604,16 +724,36 @@ marca `aprobacion_automatica`.
 Un movimiento ya decidido no se vuelve a tocar (`fn_bloquear_movimiento_finalizado`), y quien lo
 registro no puede decidir sobre el suyo (`fn_proteger_decision_de_movimiento`, `00106`).
 
+**Traslados entre bodegas (`00179`).** `fn_trasladar_entre_bodegas()` mueve una cantidad de un lote
+de una bodega a otra: un ingreso en la de destino y la salida de la de origen, aprobados y en una
+sola transaccion. Solo la administradora. La carga de la bodega movil de una jornada
+(`fn_cargar_insumo_a_bodega_de_jornada`, `00178`) y su devolucion
+(`fn_devolver_de_bodega_de_jornada`, `00179`) son traslados marcados con la jornada.
+
+**Lo pendiente ya esta comprometido (`00186`).** Una salida pendiente de aprobar sigue en
+`existencias`, pero ya no se puede entregar. `fn_cantidad_comprometida(lote, bodega)` la cuenta y
+`fn_disponible_neto(lote, bodega)` es la existencia menos lo comprometido: es lo que se puede
+recetar, cargar, devolver o trasladar, y lo que muestra `vista_lotes_disponibles`. Anular una
+receta rechaza sus movimientos pendientes y devuelve a la bodega lo ya descontado
+(`fn_devolver_inventario_de_receta_anulada`). La entrega de una receta se decide entera: aprobar una
+de sus salidas aprueba las demas (`fn_aprobar_entrega_completa_de_receta`) y rechazarla anula la
+receta (`fn_anular_receta_al_rechazar_su_entrega`).
+
 ### `alertas_caducidad` [00021]
 
 `lote_id`, `estado` (`pendiente`/`atendida`), `cantidad_afectada`, `accion`
 (`donado`/`reubicado`/`descartado`), `atendida_por`, `atendida_en`.
 
-Las genera `fn_generar_alertas_caducidad()` (`00088`, redefinida por la `00129`) para lotes con
-existencia positiva que vencen en 30 dias o menos, o que ya vencieron, sin duplicar las que ya
-existen ni volver a alertar un lote ya atendido en la misma etapa -por vencer o vencido- (`00138`).
-La dispara diariamente un workflow de GitHub Actions, no `pg_cron`. Cada alerta nueva notifica a la
-administracion (`notificaciones`, `00138`). Se atiende con `fn_atender_alerta_caducidad` (`00138`,
+Las genera `fn_generar_alertas_caducidad()` (`00088`, redefinida por la `00129` y por la `00162`)
+para lotes con existencia positiva que vencen dentro de la antelacion mas larga de
+`configuracion_alertas_caducidad`, o que ya vencieron, sin duplicar las que ya existen ni volver a
+alertar un lote ya atendido en la misma etapa (`00138`). Hasta la `00162` la ventana era fija, de
+30 dias. Usa la fecha de Guatemala, no la del servidor. Un lote de insumo sin fecha de vencimiento
+(`00171`) no vence y no genera alerta.
+La dispara diariamente un workflow de GitHub Actions, no `pg_cron`. Cada vez que una alerta
+pendiente llega a una etapa mas cercana -cada antelacion configurada y el dia del vencimiento- se
+registra un aviso (`avisos_caducidad`), que es lo que notifica a la administracion
+(`notificaciones`). Se atiende con `fn_atender_alerta_caducidad` (`00138`,
 redefinida en la `00143`), que descuenta o traslada el stock del lote; nadie la cierra con un
 `UPDATE` directo.
 
@@ -629,6 +769,24 @@ una unica accion; con varias queda en NULL y el desglose vive en `alerta_caducid
 cualquier sesion; nadie tiene `GRANT` de escritura: solo la escribe `fn_atender_alerta_caducidad`,
 que es `SECURITY DEFINER`.
 
+### `configuracion_alertas_caducidad` [00162]
+
+Con cuanta antelacion se avisa que un lote va a vencer (issue #899). **Una sola fila**: la columna
+`unica` (siempre TRUE, con UNIQUE y CHECK) lo garantiza. `umbrales_dias` es un `INTEGER[]` con los
+dias antes del vencimiento en que se avisa, de mayor a menor: de 0 a 4 valores distintos entre 1 y
+365 (`fn_umbrales_caducidad_validos`), por defecto `{90}`. La mayor es la ventana: un lote mas
+lejos no genera alerta. Vacio significa que solo se avisa el dia del vencimiento, que no se
+configura y siempre se envia. `actualizado_por` lo fija un trigger. La cambia la administracion o
+quien tenga `inventario.configurar_alertas`, desde la web.
+
+### `avisos_caducidad` [00162]
+
+Cada aviso de vencimiento enviado: uno por alerta y por etapa. `alerta_id` (CASCADE), `umbral_dias`
+(la antelacion, o 0 para el dia del vencimiento), `dias_restantes` (negativo si ya habia vencido),
+`cantidad_en_existencia` (> 0) y `created_at`. UNIQUE (`alerta_id`, `umbral_dias`): una etapa no se
+avisa dos veces. Su INSERT genera la notificacion (`fn_notificar_aviso_caducidad`). Solo lectura
+desde el cliente: la escribe `fn_generar_alertas_caducidad`.
+
 ### `notificaciones` [00138]
 
 `perfil_id`, `categoria` (`caducidad`/`stock`/`validacion`/`presupuestos`), `titulo`, `cuerpo`,
@@ -636,7 +794,8 @@ que es `SECURITY DEFINER`.
 tablas distintas), `leida_en`, `correo_enviado_en`, `correo_intentado_en`, `correo_error`.
 
 El buzon interno de cada perfil y, a la vez, la bandeja de salida del correo (issue #755). Una fila
-por incidencia y por administrador activo, escrita por triggers: alerta de caducidad nueva,
+por incidencia y por administrador activo, escrita por triggers: aviso de vencimiento (uno por
+etapa desde la `00162`; antes, alerta de caducidad nueva),
 movimiento de inventario por validar, gasto por aprobar y medicamento que se queda sin existencia
 (la transicion a cero, no el estado). `uq_notificaciones_incidencia` impide repetir la misma
 incidencia salvo "sin stock", que puede volver a ocurrir despues de reponer.
@@ -650,6 +809,9 @@ incidencia salvo "sin stock", que puede volver a ocurrir despues de reponer.
 `nombre` (unico), `tipo` (`persona`/`organizacion`), `contacto`, `telefono`, `email` (citext),
 `direccion`, `activo`.
 
+Desde la `00175` cada donante tiene su proveedor en inventario (`proveedores.donante_id`), que un
+trigger crea y mantiene: ver [Inventario](#8-inventario).
+
 ### `donaciones` [00022]
 
 | Columna             | Tipo                        | Notas                                    |
@@ -657,14 +819,22 @@ incidencia salvo "sin stock", que puede volver a ocurrir despues de reponer.
 | `donante_id`        | UUID NOT NULL               |                                          |
 | `fecha`             | DATE NOT NULL               |                                          |
 | `tipo`              | `tipo_donacion` NOT NULL    | `medicamentos`/`insumos`/`dinero`/`servicios` |
-| `estado`            | `estado_donacion` NOT NULL  | `registrada` / `anulada`                 |
+| `estado`            | `estado_donacion` NOT NULL  | `registrada` / `anulada`. Desde la [00173] ya no se anula: `anulada` solo queda en donaciones anteriores |
 | `observaciones`     | TEXT                        |                                          |
-| `motivo_anulacion`  | TEXT                        |                                          |
-| `anulada_por`       | UUID                        |                                          |
-| `anulada_en`        | TIMESTAMPTZ                 |                                          |
+| `motivo_anulacion`  | TEXT                        | Solo en las anuladas antes de la [00173] |
+| `anulada_por`       | UUID                        | Idem                                     |
+| `anulada_en`        | TIMESTAMPTZ                 | Idem                                     |
 | `registrado_por`    | UUID                        | Antes `registrada_por` [renombrada 00091] |
 | `proyecto_id`       | UUID                        | [+00097] A que proyecto se destina       |
-| `jornada_id`        | UUID                        | [+00153] Para que jornada se recibio (SET NULL). Si esta puesta, `proyecto_id` lo fija el trigger `fn_proyecto_de_la_jornada_de_la_donacion` desde la jornada |
+| `jornada_id`        | UUID                        | [+00153] Para que jornada se recibio (SET NULL). Si esta puesta, `proyecto_id` lo fija el trigger `fn_proyecto_de_la_jornada_de_la_donacion` desde la jornada. [00187] Si la donacion es de dinero y la jornada esta planificada o en curso, entra sola a su presupuesto (ver `jornada_presupuesto_origen`) |
+
+**Una donacion ya no se anula (`00173`).** Desde la `00083` la administradora podia anularla, y la
+`00114` le dio `fn_anular_donacion`. Pero no hay proceso para devolver lo donado: anularla solo la
+sacaba de los totales mientras lo recibido seguia en caja, en bodega o ya entregado. La `00173`
+quita las dos puertas, la politica de UPDATE y la funcion: sin politica de UPDATE, RLS rechaza
+cualquier cambio a una fila de `donaciones`, para todos los roles. El enum `estado_donacion`, las
+tres columnas de anulacion y el CHECK `chk_donaciones_anulacion_coherente` **no se tocaron**, para
+no reescribir la historia: las donaciones anuladas antes conservan su estado.
 
 ### `jornada_presupuesto_origen` [00135]
 
@@ -736,7 +906,8 @@ inventario desde la donacion ya no vuelve a preguntar el medicamento.
 Un renglon ya insertado **solo** admite `UPDATE` de `lote_id` (el enlace con el lote que se creo al
 ingresarlo). La `00135` lo pretendia con un `GRANT` de columna, pero la tabla conservaba el `UPDATE`
 completo que Supabase concede por defecto; la `00145` revoca el de tabla y vuelve a conceder solo
-el de columna. Lo que esta mal en un renglon se corrige anulando la donacion completa.
+el de columna. Hasta la `00173` lo que estaba mal en un renglon se corregia anulando la donacion
+completa; desde entonces una donacion registrada no se anula ni se corrige.
 
 ---
 
@@ -764,6 +935,11 @@ erDiagram
 manual en el kanban) y la 00149 se lo retiro: ninguna pantalla reordenaba a mano. Las transiciones
 de estado las valida `fn_validar_transicion_estado_proyecto()`, y quedan en
 `proyecto_estado_historial`. En la web el estado se cambia desde el seguimiento del proyecto.
+
+`finalizado` y `cancelado` son terminales y dejan el proyecto **en solo consulta**: la base rechaza
+cualquier UPDATE del proyecto y cualquier escritura de lo que cuelga de el (hitos, seguimiento,
+equipo, insumos previstos y asociarle o sacarle una jornada). Para el cancelado lo hace la `00154`;
+la `00172` extiende los mismos dos triggers al finalizado.
 
 ### `proyecto_hitos` [00053]
 
@@ -869,7 +1045,7 @@ nombre (`ON UPDATE CASCADE`). Sin UPDATE ni DELETE.
 | `accion_alerta`            | donado, reubicado, descartado                                                  | 00021     |
 | `tipo_donante`             | persona, organizacion                                                          | 00022     |
 | `tipo_donacion`            | medicamentos, insumos, dinero, servicios                                       | 00022     |
-| `estado_donacion`          | registrada, anulada                                                            | 00022     |
+| `estado_donacion`          | registrada, anulada (`anulada` ya no se asigna desde la 00173)                 | 00022     |
 | `tipo_movimiento`          | ingreso, salida                                                                | 00023     |
 | `estado_movimiento`        | pendiente, aprobado, rechazado                                                 | 00023     |
 | `operacion_auditoria`      | insercion, actualizacion, baja, eliminacion                                    | 00026     |
@@ -878,15 +1054,17 @@ nombre (`ON UPDATE CASCADE`). Sin UPDATE ni DELETE.
 | `estado_receta`            | emitida, anulada                                                               | 00066     |
 | `estado_gasto`             | pendiente, aprobado, rechazado                                                 | 00089     |
 | `moneda_lote`              | GTQ                                                                            | 00121     |
-| `origen_de_presupuesto`    | donacion, fondos_propios, aporte_externo, sin_clasificar                       | 00135     |
+| `origen_de_presupuesto`    | donacion, fondos_propios, aporte_externo, sin_clasificar, caja (00167)         | 00135     |
 | `categoria_notificacion`   | caducidad, stock, validacion, presupuestos                                     | 00138     |
 | `tipo_articulo`            | medicamento, insumo                                                            | 00142     |
+| `estado_cita`              | creada, en_atencion, atendida, cancelada                                       | 00184     |
 
 Tres notas:
 
-- Dos enums de la `00001` ya no existen: `idioma_preferido` lo borro la `00110`, cuando
-  `pacientes.idioma` paso al catalogo `idiomas`, y `presentacion_medicamento` la `00144`, cuando la
-  presentacion paso al catalogo `presentaciones`. Si aparecen en codigo, es codigo muerto.
+- Tres enums ya no existen: `idioma_preferido` lo borro la `00110`, cuando
+  `pacientes.idioma` paso al catalogo `idiomas`; `presentacion_medicamento` la `00144`, cuando la
+  presentacion paso al catalogo `presentaciones`; y `categoria_gasto` la `00158`, cuando la
+  categoria paso al catalogo `categorias_de_gasto`. Si aparecen en codigo, es codigo muerto.
 - `moneda_lote` tiene un solo valor a proposito: el sistema no opera en mas de una moneda, y el
   enum deja escrito en que moneda esta `lotes.costo_unitario`.
 - `tipo_proveedor` y `origen_lote` tienen valores parecidos y son cosas distintas a proposito: uno
@@ -900,6 +1078,10 @@ Del lado del cliente, estos valores nacen una sola vez en `packages/shared/enums
 
 ## 12. Funciones
 
+Las tablas de esta seccion recogen las funciones que explican una regla; la lista completa -las 78
+de negocio o de autorizacion y las 67 de trigger, con su firma y su descripcion- esta en
+[DICCIONARIO-DE-DATOS.md](DICCIONARIO-DE-DATOS.md), seccion "Funciones".
+
 ### Autorizacion (las usan las politicas RLS)
 
 | Funcion                                          | Devuelve      | Que responde                                       |
@@ -910,6 +1092,10 @@ Del lado del cliente, estos valores nacen una sola vez en `packages/shared/enums
 | `tiene_permiso(codigo)`                          | BOOLEAN       | Rol + excepciones de `usuario_permiso`             |
 | `participa_en_jornada(jornada_id)`               | BOOLEAN       | Si esta en el cuadro de turnos de esa jornada      |
 | `pertenece_a_jornada(jornada_id)`                | BOOLEAN       | [00141] La jornada es suya: esta en el cuadro de turnos **o** es su `responsable_id`. La usan las politicas de "esta jornada es mia" (leer la jornada y su equipo) |
+| `pertenece_a_proyecto(proyecto_id)`              | BOOLEAN       | [00148] Esta en el equipo del proyecto o participa en alguna de sus jornadas |
+| `es_personal_de_campo()`                         | BOOLEAN       | Medico o voluntario general, con la cuenta activa  |
+| `accede_a_modulo_por_matriz(modulo)`             | BOOLEAN       | [00148] La matriz de acceso le abrio ese modulo al rol. Solo en politicas de lectura |
+| `puede_consultar_reportes()`                     | BOOLEAN       | Administradora, consultivos, quien tiene `reportes.exportar` o el rol al que la matriz le abrio Reportes |
 | `personal_registro_atenciones(jornada, perfil)`  | BOOLEAN       |                                                    |
 | `alta_de_cuenta_permitida(usuario, app_meta)`    | BOOLEAN       | Cierra el registro publico (`00074`)               |
 
@@ -918,7 +1104,7 @@ Del lado del cliente, estos valores nacen una sola vez en `packages/shared/enums
 | Funcion                                 | Que hace                                                          |
 | --------------------------------------- | ----------------------------------------------------------------- |
 | `fn_registrar_paciente(...)`            | Crea paciente y expediente en una transaccion                     |
-| `fn_buscar_pacientes(...)`              | Busqueda paginada con filtros (termino, comunidad, sexo, edad, condicion) |
+| `fn_buscar_pacientes(...)`              | Busqueda paginada con filtros (termino, comunidad, sexo, edad, condicion y, desde la `00182`, area de atencion) |
 | `fn_detectar_pacientes_duplicados()`    | Propone candidatos a fusion                                       |
 | `fn_fusionar_pacientes(sobrevive, absorbido)` | Ejecuta la fusion y la registra                             |
 | `fn_registrar_medicamento(...)`         | Alta de medicamento o insumo con sus principios activos. Desde la `00144` recibe `p_presentacion_id` (UUID) y desde la `00142` `p_tipo_articulo` |
@@ -930,8 +1116,9 @@ Del lado del cliente, estos valores nacen una sola vez en `packages/shared/enums
 | `fn_valor_de_inventario_disponible(...)` | [00122] Valoriza el stock por bodega, medicamento y origen; declara aparte lo que no tiene `costo_unitario` |
 | `fn_aplicar_ajuste_existencias(...)`    | Suma o resta stock por (lote, bodega); lanza error si no alcanza   |
 | `fn_registrar_donacion(...)`            | [00114] Crea la donacion y su detalle en una transaccion. Devuelve JSONB, no la fila: quien llama necesita el id real de cada renglon para poder generar despues el ingreso de inventario. [00153] Recibe `p_jornada_id`. [00170] Insumos tambien eligen del catalogo, y el articulo debe ser del tipo de la donacion |
-| `fn_anular_donacion(donacion, motivo)`  | [00114] Anula y sella `anulada_por` / `anulada_en`                 |
-| `fn_generar_alertas_caducidad()`        | Genera alertas de lo que vence en 30 dias o ya vencio (00129)     |
+| `fn_anular_donacion(donacion, motivo)`  | **Ya no existe.** La creo la `00114` y la elimino la `00173`: una donacion ya no se anula |
+| `fn_sincronizar_proveedor_de_donante(donante)` | [00175] Crea o actualiza el proveedor de tipo donante de un donante. La llama el trigger de `donantes` |
+| `fn_generar_alertas_caducidad()`        | Genera alertas de lo que vence dentro de la antelacion configurada o ya vencio, y registra un aviso por etapa (00129, 00162) |
 | `fn_sincronizar_alertas_caducidad()`    | [00129] Corre el generador a peticion de la administradora, sin esperar a la rutina diaria |
 | `fn_atender_alerta_caducidad(alerta, acciones)` | [00138, contrato nuevo en 00143] Cierra la alerta repartiendo el stock vivo del lote entre una o varias acciones (descartado/donado/reubicado); la suma tiene que ser exacta. Todo en una transaccion |
 | `fn_notificar_administradores(...)`     | [00138] Una notificacion por administrador activo; la usan los triggers |
@@ -946,6 +1133,24 @@ Del lado del cliente, estos valores nacen una sola vez en `packages/shared/enums
 | `fn_atenciones_de_persona_por_jornada(perfil)` | Cuantas atendio cada quien                                 |
 | `fn_contar_atenciones_incompletas(jornada)` | Bloquea el cierre de jornada                                  |
 | `f_unaccent(texto)`                     | Normaliza acentos para busqueda                                   |
+| `fn_hoy_guatemala(instante)`            | Fecha calendario de Guatemala. La base corre en UTC, y `CURRENT_DATE` se adelanta un dia desde las 18:00 de Guatemala |
+| `fn_cambiar_principio_de_medicamento(medicamento, principio)` | [00166] Deja al medicamento con ese principio activo y ningun otro, en una transaccion |
+| `comprometido_de_jornada(jornada, sin_gasto)` | [00159] Suma de los gastos pendientes y aprobados de una jornada |
+| `sobrante_de_jornada(jornada)`          | [00160] Por cada aporte: lo que cuenta, lo usado y lo que sobra    |
+| `fn_liquidar_sobrante_de_jornada(jornada, decisiones)` | [00160] Devuelve a su origen o traspasa a otra jornada el sobrante de una jornada finalizada |
+| `saldo_de_caja()`                       | [00168] Entradas menos salidas de la caja. NULL para quien no ve los aportes |
+| `fn_bodega_de_entrega_de_consulta(consulta)` | [00176] La bodega de la que sale lo que se receta: la de la jornada o, si no tiene, la principal |
+| `fn_cargar_insumo_a_bodega_de_jornada(jornada, lote, bodega_origen, cantidad)` | [00178] Traslada a la bodega movil de la jornada, marcado con la jornada. Solo la administradora |
+| `fn_trasladar_entre_bodegas(lote, origen, destino, cantidad, motivo, jornada)` | [00179] Ingreso en la destino y salida del origen, aprobados y en una transaccion. Solo la administradora. Desde la `00186` compara con lo disponible neto |
+| `fn_devolver_de_bodega_de_jornada(jornada, lote, bodega_destino, cantidad)` | [00179] Devuelve de la bodega movil de la jornada a una bodega fija |
+| `fn_consumo_de_insumos_de_jornada(jornada)` | [00178] Por lote: cargado, entregado, devuelto, lo que hay en la bodega y, desde la `00186`, lo pendiente y lo que le queda a la jornada |
+| `fn_insumos_de_proyecto(proyecto)`      | [00186] Lo que les queda a las jornadas del proyecto en sus bodegas moviles, por jornada y lote |
+| `fn_cantidad_comprometida(lote, bodega)` / `fn_disponible_neto(lote, bodega)` | [00186] Lo que tiene una salida pendiente de aprobar, y la existencia menos eso |
+| `fn_reporte_jornada(jornada)`           | Reporte de resultados de una jornada, ya agregado y sin filas de paciente. Desde la `00186` lo entregado es lo de las recetas emitidas, con la cantidad ajustada si la hay |
+| `fn_reporte_enfermedades(...)`          | [00177] Casos por diagnostico, agrupados por jornada, comunidad o mes, con desglose por sexo y edad. Solo conteos agregados; desde la `00180` siempre con su numero real, sin supresion |
+| `fn_opciones_reporte_enfermedades()`    | [00177] Jornadas, diagnosticos y proyectos para los selectores del reporte: los roles consultivos no leen esas tablas |
+| `fn_eliminar_clinica(clinica)`          | [00183] Borra una clinica que nunca tuvo citas; si las tuvo, la retira. Solo la administradora |
+| `mis_accesos()`                         | [00148] Modulos abiertos por la matriz al rol de la sesion y sus permisos finos efectivos |
 
 ### Triggers
 
@@ -974,17 +1179,36 @@ Del lado del cliente, estos valores nacen una sola vez en `packages/shared/enums
 | `impedir_permiso_escritura_a_consultivo`   | `usuario_permiso`           |                                                |
 | `registrar_evento_auditoria`               | todas las tablas de negocio | Escribe en `eventos_auditoria`. Desde la `00152` cubre todas las tablas que escribe la aplicacion; las de clave compuesta pasan la columna que identifica la fila como argumento (`medicamento_principio`, `perfil_especialidad`). Quedan fuera las derivadas y las del sistema: `existencias`, historiales de estado, `notificaciones`, `alerta_caducidad_detalle`, `limites_de_uso`, catalogos fijos |
 | `fn_proyecto_de_la_jornada_de_la_donacion` | `donaciones`                | [00153] El proyecto de una donacion para una jornada es el de la jornada |
+| `fn_aportar_donacion_a_su_jornada`         | `donacion_detalle`          | [00187] DEFINER. Una donacion de dinero para una jornada planificada o en curso crea sola su aporte en `jornada_presupuesto_origen` |
 | `registrar_evento_auditoria_usuario_permiso` | `usuario_permiso`         |                                                |
 | `registrar_evento_auditoria_rol_permiso`   | `rol_permiso`               | [00139] Audita la matriz de permisos por rol   |
 | `impedir_baja_de_paciente_sin_ser_administrador` | `pacientes`           | [00148] La baja (`fecha_baja`) es de la administradora |
 | `impedir_desactivar_sin_ser_administrador` | `diagnosticos`, `medicamentos` | [00148] Desactivar es de la administradora |
-| `impedir_retirar_sin_ser_administrador`    | `condiciones_cronicas`, `comunidades` | [00148] Retirar (`es_vigente`) es de la administradora |
-| `fn_proyecto_cancelado_no_se_modifica`     | `proyectos`                 | [00154] Un proyecto cancelado ya no se modifica |
-| `fn_proyecto_de_la_fila_no_esta_cancelado` | `proyecto_hitos`, `proyecto_seguimiento`, `proyecto_personal`, `proyecto_insumos`, `jornadas` (solo `proyecto_id`) | [00154] DEFINER. Rechaza escribir lo que cuelga de un proyecto cancelado, y asociarle o sacarle una jornada |
+| `impedir_retirar_sin_ser_administrador`    | `condiciones_cronicas`, `comunidades`, `areas_atencion` [00182], `clinicas` [00183] | [00148] Retirar (`es_vigente`) es de la administradora |
+| `fn_proyecto_cancelado_no_se_modifica`     | `proyectos`                 | [00154] Un proyecto cancelado ya no se modifica. [00172] Tampoco uno finalizado (el nombre de la funcion no cambio) |
+| `fn_proyecto_de_la_fila_no_esta_cancelado` | `proyecto_hitos`, `proyecto_seguimiento`, `proyecto_personal`, `proyecto_insumos`, `jornadas` (solo `proyecto_id`) | [00154] DEFINER. Rechaza escribir lo que cuelga de un proyecto cancelado, y asociarle o sacarle una jornada. [00172] Igual con uno finalizado |
 | `fn_jornada_exige_proyecto`                | `jornadas`                  | [00169] Toda jornada nueva lleva proyecto, y a ninguna se le quita (23502) |
+| `fn_fechas_reales_de_jornada`              | `jornadas`                  | [00174] Fija `fecha_inicio_real` y `fecha_fin_real` al cambiar de estado |
+| `fn_jornada_exige_bodega_movil`            | `jornadas`                  | [00178] Toda jornada nueva lleva bodega, movil o (00181) la principal, y a ninguna se le quita |
+| `fn_jornada_bodega_movil_libre`            | `jornadas`                  | [00179] Una bodega movil no esta en dos jornadas en curso |
+| `fn_jornada_sin_inventario_cargado_al_cambiar_bodega` | `jornadas`       | [00181] No se cambia la bodega de una jornada con inventario cargado |
+| `fn_traspasar_sobrante_al_iniciar_jornada` | `jornadas`                  | [00186] Al iniciar, lo que hay en la bodega movil pasa a la cuenta de la jornada |
+| `fn_jornada_cancela_citas_pendientes`      | `jornadas`                  | [00184] Cancelar o finalizar la jornada cancela sus citas abiertas |
+| `fn_validar_cita`                          | `citas`                     | [00184] Cupo, traslapes, profesional, estado de la jornada y transiciones |
+| `fn_cita_exige_permiso_de_agenda`          | `citas`                     | [00185] Sin `citas.agendar` solo se atiende o se regresa a creada |
+| `fn_consulta_de_cita_antes` / `_despues`   | `consultas`                 | [00184] La consulta de una cita la valida y la deja atendida |
+| `fn_paciente_area_area_vigente`            | `paciente_area`             | [00182] No se asigna un area retirada          |
+| `fn_proveedor_sigue_al_donante`            | `donantes`                  | [00175] Crea o actualiza el proveedor del donante |
+| `fn_lote_de_medicamento_tiene_vencimiento` | `lotes`                     | [00171] Un lote de medicamento lleva fecha de vencimiento; uno de insumo puede no tenerla |
+| `fn_devolver_inventario_de_receta_anulada` | `recetas`                   | [00186] Anular una receta rechaza sus salidas pendientes y devuelve lo descontado |
+| `fn_aprobar_entrega_completa_de_receta`    | `movimientos_inventario`    | [00186] DEFINER. Aprobar una salida de la entrega de una receta aprueba las demas: se valida completa o nada |
+| `fn_anular_receta_al_rechazar_su_entrega`  | `movimientos_inventario`    | [00186] DEFINER. Rechazar la salida que entrega una receta la anula entera |
+| `fn_validar_gasto_contra_presupuesto`      | `gastos`                    | [00159] Un gasto no deja lo comprometido por encima del presupuesto de su jornada |
+| `fn_notificar_aviso_caducidad`             | `avisos_caducidad`          | [00162] Cada aviso de vencimiento notifica a la administracion |
 
-La tabla recoge los triggers que explican una regla de negocio; hay 114 en total en `public`, 41 de
-ellos de auditoria. Los de
+La tabla recoge los triggers que explican una regla de negocio; hay 154 en total en `public`, 47 de
+ellos de auditoria (los que ejecutan `registrar_evento_auditoria` o una de sus dos variantes,
+contados en el diccionario). Los de
 notificaciones (`fn_notificar_*`, `00138`), los de presupuesto por origen (`00135`) y los de
 `updated_at` de cada tabla nueva siguen el mismo patron y se listan con
 `SELECT tgname, tgrelid::regclass FROM pg_trigger WHERE NOT tgisinternal`.
@@ -999,7 +1223,7 @@ notificaciones (`fn_notificar_*`, `00138`), los de presupuesto por origen (`0013
 | `vista_reporte_impacto_por_comunidad` | [00155] Los mismos indicadores con grano (jornada, comunidad de origen del paciente); la de la jornada si el paciente no tiene. La lee el panel de impacto |
 | `pacientes_reporte`      | Agregados de pacientes **sin filas identificables**, para roles consultivos |
 | `vista_cola_jornada`     | Quien esta esperando en la jornada y desde hace cuanto                    |
-| `vista_lotes_disponibles`| Lotes entregables (no vencidos, con existencia), por lote y bodega        |
+| `vista_lotes_disponibles`| Lotes entregables (no vencidos o sin fecha [00171], con existencia), por lote y bodega. Desde la `00186` `cantidad_disponible` es lo neto: la existencia menos lo comprometido en salidas pendientes |
 | `perfiles_directorio`    | Directorio de personal sin exponer la tabla completa                      |
 | `nombres_de_perfiles`    | [00161] Solo el nombre de cada persona (id, nombres, apellidos, activo), para toda persona activa |
 | `tablas_sin_rls`         | **Verificacion**: lista tablas sin RLS. Debe estar vacia                  |
@@ -1023,7 +1247,17 @@ de que la interfaz se comporte bien**:
 | No se registra atencion ni consulta fuera de jornada en curso       | Triggers `00055` y `00018`                        |
 | Una jornada no se finaliza con atenciones abiertas                  | `fn_contar_atenciones_incompletas`                |
 | Los estados de jornada y proyecto siguen su maquina de estados      | Triggers de validacion `00051` y `00029`          |
-| Un proyecto cancelado no se modifica: ni sus datos ni lo que cuelga de el | Triggers de la `00154`                      |
+| Un proyecto cancelado o finalizado no se modifica: ni sus datos ni lo que cuelga de el | Triggers de la `00154`, extendidos por la `00172` |
+| Toda jornada pertenece a un proyecto y tiene una bodega             | `fn_jornada_exige_proyecto` (`00169`), `fn_jornada_exige_bodega_movil` (`00178`) |
+| Una bodega movil no esta en dos jornadas en curso                   | `fn_jornada_bodega_movil_libre` (`00179`)         |
+| El inicio y el cierre reales de una jornada los pone el servidor    | `fn_fechas_reales_de_jornada` (`00174`)           |
+| Una donacion registrada no se anula ni se corrige                   | Sin politica de UPDATE desde la `00173`           |
+| Un gasto no pasa del presupuesto de su jornada                      | `fn_validar_gasto_contra_presupuesto` (`00159`)   |
+| Una donacion de dinero para una jornada activa entra sola a su presupuesto | `fn_aportar_donacion_a_su_jornada` (`00187`) |
+| La entrega de una receta se aprueba o se rechaza entera             | `fn_aprobar_entrega_completa_de_receta`, `fn_anular_receta_al_rechazar_su_entrega` (`00186`) |
+| Lo que espera aprobacion de salida no se entrega dos veces          | `fn_disponible_neto` y `vista_lotes_disponibles` (`00186`) |
+| Una cita no pasa del cupo de su clinica ni se traslapa              | `fn_validar_cita` (`00184`)                       |
+| Un lote de medicamento siempre tiene fecha de vencimiento           | `fn_lote_de_medicamento_tiene_vencimiento` (`00171`) |
 | No se entrega medicamento vencido                                   | `00024` y `vista_lotes_disponibles`               |
 | El stock nunca queda negativo                                       | `fn_aplicar_ajuste_existencias` lanza "Existencia insuficiente" |
 | Quien registra un movimiento no lo aprueba                          | `fn_proteger_decision_de_movimiento` (`00106`)    |
@@ -1044,7 +1278,7 @@ de que la interfaz se comporte bien**:
 **Denegacion por defecto** (`00030`): una tabla sin politica no devuelve nada a nadie. La vista
 `tablas_sin_rls` existe para comprobarlo.
 
-Las 138 politicas vigentes siguen cuatro patrones:
+Las 157 politicas vigentes siguen cuatro patrones:
 
 | Patron                    | Ejemplo                                                        | Se lee como                                    |
 | ------------------------- | -------------------------------------------------------------- | ---------------------------------------------- |
@@ -1057,10 +1291,10 @@ Politicas por tabla (numero de politicas vigentes, sacado de `pg_policies`):
 
 | Pol. | Tablas |
 | ---- | ------ |
-| 4    | `jornada_insumos`, `jornada_personal`, `jornada_presupuesto_origen`, `padecimientos_cronicos`, `presentaciones`, `principios_activos`, `proyecto_hitos`, `proyecto_insumos`, `proyecto_personal`, `usuario_permiso` |
-| 3    | `atenciones`, `bodegas`, `comunidades`, `condiciones_cronicas`, `consulta_diagnostico`, `consultas`, `diagnosticos`, `donacion_detalle`, `donaciones`, `donantes`, `existencias`, `expedientes`, `gastos`, `jornadas`, `lotes`, `medicamento_principio`, `medicamentos`, `movimientos_inventario`, `notificaciones`, `pacientes`, `perfil_especialidad`, `perfiles`, `proveedores`, `proyectos`, `recetas`, `rol_modulo`, `triajes` |
-| 2    | `alertas_caducidad`, `fuentes_de_presupuesto`, `proyecto_seguimiento`, `receta_detalle` |
-| 1    | `alerta_caducidad_detalle`, `departamentos`, `eventos_auditoria`, `fusiones_pacientes`, `idiomas`, `jornada_estado_historial`, `movimientos_de_caja`, `municipios`, `permisos`, `proyecto_estado_historial`, `rol_permiso` |
+| 4    | `clinicas`, `jornada_insumos`, `jornada_personal`, `jornada_presupuesto_origen`, `padecimientos_cronicos`, `presentaciones`, `principios_activos`, `proyecto_hitos`, `proyecto_insumos`, `proyecto_personal`, `usuario_permiso` |
+| 3    | `areas_atencion`, `atenciones`, `bodegas`, `citas`, `comunidades`, `condiciones_cronicas`, `consulta_diagnostico`, `consultas`, `diagnosticos`, `donacion_detalle`, `donantes`, `existencias`, `expedientes`, `gastos`, `jornadas`, `lotes`, `medicamento_principio`, `medicamentos`, `movimientos_inventario`, `notificaciones`, `paciente_area`, `pacientes`, `perfil_especialidad`, `perfiles`, `proveedores`, `proyectos`, `recetas`, `rol_modulo`, `triajes` |
+| 2    | `alertas_caducidad`, `categorias_de_gasto`, `configuracion_alertas_caducidad`, `donaciones` (sin UPDATE desde la `00173`), `fuentes_de_presupuesto`, `proyecto_seguimiento`, `receta_detalle` |
+| 1    | `alerta_caducidad_detalle`, `avisos_caducidad`, `departamentos`, `eventos_auditoria`, `fusiones_pacientes`, `idiomas`, `jornada_estado_historial`, `movimientos_de_caja`, `municipios`, `permisos`, `proyecto_estado_historial`, `rol_permiso` |
 | 0    | `limites_de_uso`: RLS activo y ninguna politica, a proposito. Solo la tocan funciones `SECURITY DEFINER` |
 
 Una tabla con **una** politica es de solo lectura desde el cliente: la escribe un trigger o una
@@ -1070,10 +1304,15 @@ funcion `SECURITY DEFINER` (historiales, auditoria, detalle de alertas) o es un 
 fuente de verdad del control de acceso, y un PR que cambia una politica o un GRANT lo actualiza en
 el mismo PR.
 
-Las politicas se comprueban con 55 archivos pgTAP en `supabase/tests/database/`, que corren en CI
+Las politicas se comprueban con 76 archivos pgTAP en `supabase/tests/database/`, que corren en CI
 sobre una base creada desde cero.
 
 ## 16. Auditoria campo-a-vista (issue #756)
+
+> **Registro fechado.** Esta seccion describe el esquema y las pantallas como estaban cuando se
+> hizo la auditoria (issue #756, con la revision posterior de la `00149`). No se actualiza con cada
+> migracion: lo que cambio despues -por ejemplo, que una donacion ya no se anula (`00173`) o que las
+> fechas reales de una jornada las llena un trigger (`00174`)- esta en las secciones 3 a 15.
 
 Para las 42 tablas y 7 vistas que tenia el esquema cuando se hizo (las siete tablas posteriores, de
 la `00134` a la `00147`, no entraron en esta auditoria), tres preguntas por columna: se **muestra** en alguna
@@ -1702,6 +1941,9 @@ bitacora-), `limites_de_uso`, `lotes.confirmado`, `principios_activos.nombre_nor
 tarea de la administradora.
 
 ## 17. Auditoria de esquema (issue #840, bloque E)
+
+> **Registro fechado.** Describe el esquema como estaba cuando se hizo (135 migraciones). No se
+> actualiza con cada migracion.
 
 Pedido: "revisa que todas las tablas/modelos/migraciones esten y que todos los campos tambien".
 La seccion 16 fue la auditoria campo-a-vista; esta pasa las migraciones contra `packages/shared`
