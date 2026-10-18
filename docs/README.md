@@ -60,6 +60,7 @@ pantallas usan los datos de demostracion.
 | [formal/manual-del-voluntario.pdf](./formal/manual-del-voluntario.pdf)       | Rol voluntario general (Colaborador): proyectos, jornadas, presupuestos, inventario y pacientes. Solo la web |
 | [formal/manual-de-junta-directiva-y-socio-fundador.pdf](./formal/manual-de-junta-directiva-y-socio-fundador.pdf) | Roles junta directiva y socio fundador, en un solo manual: los reportes |
 | [formal/guia-rapida-voluntario.pdf](./formal/guia-rapida-voluntario.pdf)     | Guia rapida imprimible para voluntarios |
+| [formal/guia-rapida-medico.pdf](./formal/guia-rapida-medico.pdf)             | Guia rapida imprimible para medicos |
 | [formal/guia-rapida-junta-directiva-y-socio-fundador.pdf](./formal/guia-rapida-junta-directiva-y-socio-fundador.pdf) | Guia rapida imprimible para junta directiva y socio fundador |
 | [Videos V-01 a V-07](./manual/README.md#videos)                              | Videos cortos con subtitulos de los flujos clave, en la computadora y en el telefono, con datos de demostracion |
 

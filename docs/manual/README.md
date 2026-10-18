@@ -12,6 +12,7 @@
 | M-VOL | Manual del voluntario (rol Colaborador) | [PDF](../formal/manual-del-voluntario.pdf) | Escrito, solo en PDF. Computadora y teléfono |
 | M-JD | Manual de junta directiva y socio fundador, uno solo para los dos roles porque tienen los mismos permisos | [PDF](../formal/manual-de-junta-directiva-y-socio-fundador.pdf) | Escrito, solo en PDF |
 | G-VOL | Guía rápida del voluntario, imprimible | [PDF](../formal/guia-rapida-voluntario.pdf) | Escrita, solo en PDF |
+| G-MED | Guía rápida del médico, imprimible | [PDF](../formal/guia-rapida-medico.pdf) | Escrita, solo en PDF |
 | G-JD | Guía rápida de junta directiva y socio fundador, imprimible | [PDF](../formal/guia-rapida-junta-directiva-y-socio-fundador.pdf) | Escrita, solo en PDF |
 | V-01 a V-07 | Videos cortos de los flujos clave | Enlaces en la [tabla de videos](#videos), abajo | Publicados en YouTube |
 

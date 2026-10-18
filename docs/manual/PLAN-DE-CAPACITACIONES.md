@@ -4,7 +4,7 @@ Cuántas sesiones hacen falta para que el personal de Ecopac Guatemala use el si
 
 | | |
 | --- | --- |
-| Versión | 1.3 |
+| Versión | 1.4 |
 | Fecha | 18 de octubre de 2026 (1.1: 13 de octubre de 2026) |
 | Dirigido a | Dirección de Ecopac Guatemala y quien imparta las capacitaciones |
 | Material de apoyo | Manuales de usuario por rol, guías rápidas y videos cortos |
@@ -22,6 +22,7 @@ Cada tema de este plan dice qué sección de qué manual y qué video lo respald
 | M-VOL | [Manual del voluntario](../formal/manual-del-voluntario.pdf) | Publicado. Computadora y teléfono |
 | M-JD | [Manual de junta directiva y socio fundador](../formal/manual-de-junta-directiva-y-socio-fundador.pdf), uno solo para los dos roles | Publicado. Solo computadora, que es donde trabajan estos roles |
 | G-VOL | [Guía rápida del voluntario](../formal/guia-rapida-voluntario.pdf) | Publicada |
+| G-MED | [Guía rápida del médico](../formal/guia-rapida-medico.pdf) | Publicada |
 | G-JD | [Guía rápida de junta directiva y socio fundador](../formal/guia-rapida-junta-directiva-y-socio-fundador.pdf) | Publicada |
 | V-01 a V-07 | Videos cortos de los flujos clave | Publicados en YouTube. Enlaces en la sección 8 |
 | - | Aplicación instalable en los teléfonos | Disponible: APK de producción para Android ([plan de implementación](../PLAN-DE-IMPLEMENTACION.md), sección 7) |
@@ -42,7 +43,7 @@ Cada persona se capacita solo en lo que su rol puede hacer. Nadie recibe una ses
 | Rol | Qué hace en el sistema | Dónde trabaja | Manual |
 | --- | --- | --- | --- |
 | Administradora | Todo: planifica jornadas y proyectos, administra el inventario y aprueba sus movimientos, lleva presupuestos y donaciones, gestiona a las personas y sus permisos | Web y móvil | M-ADM |
-| Médico | Atiende en la jornada: consulta, diagnóstico y receta. Registra pacientes, triaje y movimientos de inventario | Web y móvil | M-MED |
+| Médico | Atiende en la jornada: consulta, diagnóstico y receta. Registra pacientes, triaje y movimientos de inventario | Web y móvil | M-MED y G-MED |
 | Colaborador (voluntario general) | Apoya en la jornada: recibe y registra pacientes, toma los signos vitales, apoya en inventario | Web y móvil | M-VOL y G-VOL |
 | Junta directiva | Consulta los reportes | Solo web | M-JD y G-JD |
 | Socio fundador | Consulta los reportes. Tiene los mismos permisos que junta directiva | Solo web | M-JD y G-JD |
@@ -125,8 +126,8 @@ Qué se enseña, en orden:
 | Tema | Manual | Video |
 | --- | --- | --- |
 | Qué es Ecopac Digital y qué puede hacer cada rol | M-ADM 1.1 y 1.2; M-MED 1.1 y 1.2; M-VOL 1.1 y 1.2; M-JD 1.1 y 1.2; G-VOL 3; G-JD 2 | - |
-| Reglas de confidencialidad: no tomar capturas, no compartir la cuenta, no hablar de pacientes fuera de la jornada | M-ADM 1.5; M-MED 1.5; M-VOL 1.5; M-JD 1.5; G-VOL 4; G-JD 4 | - |
-| Primer ingreso: el correo de bienvenida y la creación de la contraseña | M-ADM 2.1; M-MED 2.1; M-VOL 2.1; M-JD 2.1; G-VOL 1; G-JD 1 | V-01 |
+| Reglas de confidencialidad: no tomar capturas, no compartir la cuenta, no hablar de pacientes fuera de la jornada | M-ADM 1.5; M-MED 1.5; M-VOL 1.5; M-JD 1.5; G-VOL 4; G-MED 4; G-JD 4 | - |
+| Primer ingreso: el correo de bienvenida y la creación de la contraseña | M-ADM 2.1; M-MED 2.1; M-VOL 2.1; M-JD 2.1; G-VOL 1; G-MED 1; G-JD 1 | V-01 |
 | Iniciar y cerrar sesión, en la web y en el teléfono | M-ADM 2.2 y 2.4; M-MED 2.2 y 2.4; M-VOL 2.2 y 2.5; M-JD 2.2 y 2.4; G-VOL 1; G-JD 1 | V-01 |
 | Qué hacer si se olvida la contraseña | M-ADM 2.3; M-MED 2.3; M-VOL 2.3; M-JD 2.3 | V-01 |
 | La pantalla de inicio y el menú: qué módulos ve cada rol y por qué no todos ven lo mismo | M-ADM 3.1; M-MED 3.1; M-VOL 3.1; M-JD 3; G-VOL 3; G-JD 2 | - |
@@ -361,7 +362,7 @@ Comprobación: la jornada queda cerrada, con al menos cinco pacientes atendidos 
 | Usuarios de práctica, uno por rol y por persona | Los prepara la administradora antes de la sesión 1 | Todas |
 | Ambiente de práctica con los datos de demostración | Uno, distinto del sistema real | Todas |
 | Manual impreso o en PDF del rol de cada persona | Uno por persona | Todas |
-| Guía rápida de su rol, impresa | Una por colaborador, miembro de junta directiva y socio fundador | 1, 2, 7 y 8 |
+| Guía rápida de su rol, impresa | Una por colaborador, médico, miembro de junta directiva y socio fundador | 1, 2, 3, 7 y 8 |
 | Hoja de datos ficticios para los ejercicios | Una por persona | 2, 3, 4, 5 y 6 |
 | Lista de comprobación de la sesión | Una por persona | Todas |
 
@@ -385,6 +386,7 @@ Manuales y guías, todos en PDF:
 | M-VOL | [Manual del voluntario](../formal/manual-del-voluntario.pdf) | 11 capítulos, numerados 1 a 11 |
 | M-JD | [Manual de junta directiva y socio fundador](../formal/manual-de-junta-directiva-y-socio-fundador.pdf) | 6 capítulos, numerados 1 a 6 |
 | G-VOL | [Guía rápida del voluntario](../formal/guia-rapida-voluntario.pdf) | 6 secciones |
+| G-MED | [Guía rápida del médico](../formal/guia-rapida-medico.pdf) | 6 secciones |
 | G-JD | [Guía rápida de junta directiva y socio fundador](../formal/guia-rapida-junta-directiva-y-socio-fundador.pdf) | 5 secciones |
 
 "M-MED 7.3" es la sección 7.3 del manual del médico. El índice de cada PDF lleva a la página.
