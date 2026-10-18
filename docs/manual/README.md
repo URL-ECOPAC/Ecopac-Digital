@@ -9,15 +9,15 @@
 | - | Plan de capacitaciones | [PLAN-DE-CAPACITACIONES.md](./PLAN-DE-CAPACITACIONES.md) y [PDF](../formal/plan-de-capacitaciones.pdf) | Escrito |
 | M-ADM | Manual de la administradora (es también el manual de administración) | [PDF](../formal/manual-del-administrador.pdf) | Escrito, solo en PDF |
 | M-MED | Manual del médico | [PDF](../formal/manual-del-medico.pdf) | Escrito, solo en PDF |
-| M-VOL | Manual del voluntario (rol Colaborador) | [PDF](../formal/manual-del-voluntario.pdf) | Escrito, solo en PDF. Solo computadora y con numeración propia |
-| M-JD | Manual de junta directiva y socio fundador, uno solo para los dos roles porque tienen los mismos permisos | [PDF](../formal/manual-de-junta-directiva-y-socio-fundador.pdf) | Escrito, solo en PDF. Con numeración propia |
+| M-VOL | Manual del voluntario (rol Colaborador) | [PDF](../formal/manual-del-voluntario.pdf) | Escrito, solo en PDF. Computadora y teléfono |
+| M-JD | Manual de junta directiva y socio fundador, uno solo para los dos roles porque tienen los mismos permisos | [PDF](../formal/manual-de-junta-directiva-y-socio-fundador.pdf) | Escrito, solo en PDF |
 | G-VOL | Guía rápida del voluntario, imprimible | [PDF](../formal/guia-rapida-voluntario.pdf) | Escrita, solo en PDF |
 | G-JD | Guía rápida de junta directiva y socio fundador, imprimible | [PDF](../formal/guia-rapida-junta-directiva-y-socio-fundador.pdf) | Escrita, solo en PDF |
 | V-01 a V-07 | Videos cortos de los flujos clave | Enlaces en la [tabla de videos](#videos), abajo | Publicados en YouTube |
 
 Cuando una pieza se publica, se cambia su estado aquí y se pone el enlace. El plan de capacitaciones cita cada manual por código y número de sección ("M-MED 7.3"): si un manual cambia su numeración, hay que revisar el plan.
 
-M-VOL y M-JD se escribieron antes de que existiera el formato común de abajo y no lo siguen (capítulos, flujos en el teléfono, "Estados y mensajes", "Ayuda"). Lo que les falta frente a ese formato y a la issue #251 está anotado en la propia issue.
+Desde su versión 2.0 (octubre de 2026), M-VOL y M-JD siguen el formato común de abajo: "Antes de empezar", flujos en la computadora y en el teléfono, "Estados y mensajes" y "Ayuda". M-JD solo muestra la computadora, que es donde trabajan esos roles.
 
 ## Formato común
 
@@ -65,7 +65,7 @@ Todos los manuales llevan estos capítulos, **con estos nombres exactos** y en e
 
 M-MED y M-VOL muestran Proyectos y Presupuestos dentro del capítulo "Jornadas", porque el personal de campo solo los consulta.
 
-La guía rápida (G-VOL) no sigue estos capítulos: son pocas páginas, con estas secciones: "Cómo entrar la primera vez", "Qué hace un voluntario en la jornada", "Reglas de confidencialidad", "Si algo falla" y "A quién preguntar".
+La guía rápida (G-VOL) no sigue estos capítulos: son pocas páginas, con estas secciones: "Entrar la primera vez", "Su trabajo en la jornada, en orden", "Lo que puede usar", "Reglas de confidencialidad", "Si algo falla" y "A quién preguntar".
 
 ### Cómo se escribe un flujo
 

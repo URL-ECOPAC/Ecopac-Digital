@@ -529,20 +529,9 @@ Se llena al ejecutar.
 
 ### Lo que queda pendiente
 
-La issue #252 del curso se cerro el 14-10-2026 con el aprovisionamiento hecho. Lo que sigue en esta
-tabla quedo fuera de ella a proposito: el respaldo se lleva en la #914 y la entrega se hace aparte.
-Las pruebas posteriores (seccion 8) y el APK en telefono se completaron el 17-10-2026.
-
 | Que | Bloquea | Paso |
 | --- | --- | --- |
-| Secrets `RESPALDO_*` y reactivar `respaldo-base.yml`. Se lleva en la issue #914 del curso | La carga de datos reales | 11 |
-| Primer respaldo de produccion en verde. Issue #914 del curso | La carga de datos reales | 11 |
-| Restauracion del primer respaldo bajado de Drive. Issue #914 del curso | La carga de datos reales | 11 |
-| Que la organizacion inicie sesion y cambie la contrasena temporal | La apertura | 10 |
-| Respaldar la llave de firma del APK (`eas credentials`) | Actualizar la app sin desinstalarla, si la llave se pierde | Seccion 7 |
-| Sentry (opcional) | Nada | - |
-| Congelar el repositorio del curso y pausar sus proyectos | Nada | 14 |
-| Revocar los tokens del aprovisionamiento y rotar llaves | La entrega | 14 |
+| Respaldo: secrets `RESPALDO_*`, reactivar `respaldo-base.yml`, primer respaldo en verde y su restauracion desde Drive | La carga de datos reales | 11 |
 
 ## 11. Riesgos y plan de reversa
 
@@ -566,7 +555,7 @@ Todas a la vez:
 3. Un respaldo de produccion restaurado con exito.
 4. La organizacion inicio sesion con su cuenta de administradora y cambio las contrasenas de todas
    las cuentas (seccion 13).
-5. El marco legal revisado y el [acta de implementacion](./ACTA-DE-IMPLEMENTACION.md) firmada.
+5. El marco legal revisado y el acta de implementacion firmada.
 
 ## 13. Comunicacion con la organizacion
 
@@ -586,7 +575,7 @@ Lo que se le entrega a la organizacion, y como:
 | Repositorio | Ya es suyo: vive en su cuenta de GitHub |
 | Base de datos y scripts | `supabase/migrations/` (el esquema completo), `supabase/esquema-final.sql` (el esquema consolidado, de lectura), `docs/DESPLIEGUE_BASE_DE_DATOS.md`, `docs/DICCIONARIO-DE-DATOS.md`, `docs/MODELO-DE-DATOS.md`, `scripts/respaldo-base.sh` y `scripts/comprobar-restauracion.sh` |
 | Documentacion | `docs/` (incluidos los manuales de `docs/formal/` y `docs/manual/`) |
-| Acta de implementacion | `docs/ACTA-DE-IMPLEMENTACION.md` y `docs/formal/acta-de-implementacion.pdf`, firmada en dos copias |
+| Acta de implementacion | Impresa y firmada en dos copias, una para la organizacion y otra para el equipo |
 | Credenciales de las cuentas | En persona o por un gestor de contrasenas. **Nunca** por WhatsApp ni correo en texto plano |
 | Lista de secrets | La tabla del paso 5: nombres y de donde sale cada valor, nunca los valores |
 | APK | La carpeta de Drive de la seccion 7 |

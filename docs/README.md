@@ -13,11 +13,10 @@ Donde esta cada pieza de la entrega. Los documentos formales (PDF) viven en [for
 | Plan de implementacion | [PLAN-DE-IMPLEMENTACION.md](./PLAN-DE-IMPLEMENTACION.md) | [PDF](./formal/plan-de-implementacion.pdf) |
 | Sistema desplegado y ambiente de produccion | [PLAN-DE-IMPLEMENTACION.md](./PLAN-DE-IMPLEMENTACION.md), secciones 9 y 10; [MANUAL-DE-INSTALACION.md](./MANUAL-DE-INSTALACION.md), anexo 13 | - |
 | Pruebas posteriores a la implementacion | [evidencias/2026-10-17.md](./evidencias/2026-10-17.md) | - |
-| Acta de implementacion | [ACTA-DE-IMPLEMENTACION.md](./ACTA-DE-IMPLEMENTACION.md) | [PDF](./formal/acta-de-implementacion.pdf) |
 | Manuales de usuario | Uno por rol, en la seccion "Manuales de usuario" | PDF |
 | Manual de administracion | El manual del administrador | [PDF](./formal/manual-del-administrador.pdf) |
 | Material de capacitacion | [manual/PLAN-DE-CAPACITACIONES.md](./manual/PLAN-DE-CAPACITACIONES.md), guias rapidas y [videos](./manual/README.md#videos) | [PDF](./formal/plan-de-capacitaciones.pdf) |
-| Lista de asistencia y evidencia de capacitacion | [LISTA-DE-ASISTENCIA-CAPACITACIONES.md](./LISTA-DE-ASISTENCIA-CAPACITACIONES.md); el registro, en la seccion 10 del plan de capacitaciones | [PDF](./formal/lista-de-asistencia-capacitaciones.pdf) |
+| Lista de asistencia de la capacitacion | Hoja general para imprimir y firmar; el registro, en la seccion 10 del plan de capacitaciones | [PDF](./formal/lista-de-asistencia-capacitaciones.pdf) |
 | Scripts de base de datos (departamentos, municipios, administrador inicial) | [DESPLIEGUE_BASE_DE_DATOS.md](./DESPLIEGUE_BASE_DE_DATOS.md), [`supabase/migrations/`](../supabase/migrations/) y [`supabase/esquema-final.sql`](../supabase/esquema-final.sql) | - |
 | Diccionario de datos | [DICCIONARIO-DE-DATOS.md](./DICCIONARIO-DE-DATOS.md) | - |
 | Manual tecnico | [MANUAL-TECNICO.md](./MANUAL-TECNICO.md) | [PDF](./formal/documentacion-tecnica.pdf) |
@@ -43,10 +42,9 @@ Donde esta cada pieza de la entrega. Los documentos formales (PDF) viven en [for
 | [CONFIGURACION-SUPABASE.md](./CONFIGURACION-SUPABASE.md) | Lista de verificacion de lo que se configura a mano en el Dashboard de cada ambiente |
 | [MANUAL-DE-INSTALACION.md](./MANUAL-DE-INSTALACION.md) | **Instalar el sistema completo desde cero** en cuentas nuevas: cuentas, Supabase, secrets, Vercel, APK, respaldos, verificacion y problemas comunes (issue #919). Version formal en PDF: [formal/manual-de-instalacion-y-configuracion.pdf](./formal/manual-de-instalacion-y-configuracion.pdf) |
 | [PLAN-DE-IMPLEMENTACION.md](./PLAN-DE-IMPLEMENTACION.md) | Salida a produccion a nombre de la organizacion (issue #252): decisiones, pasos en orden, secrets, app movil por APK, riesgos, pruebas posteriores en produccion y lo que quedo creado. Version formal en PDF: [formal/plan-de-implementacion.pdf](./formal/plan-de-implementacion.pdf) |
-| [ACTA-DE-IMPLEMENTACION.md](./ACTA-DE-IMPLEMENTACION.md) | Acta de implementacion para firmar con la organizacion: que se instalo, la configuracion de produccion, las pruebas, la documentacion entregada, los pendientes y las responsabilidades desde la firma. Version formal en PDF: [formal/acta-de-implementacion.pdf](./formal/acta-de-implementacion.pdf) |
 | [PROTECCION-DE-DATOS.md](./PROTECCION-DE-DATOS.md) | Logs, almacenamiento movil, cifrado de columnas y secretos (OWASP A02) |
 | [MARCO-LEGAL.md](./MARCO-LEGAL.md) | Marco jurídico guatemalteco aplicable: obligaciones, riesgos, licencia, consentimiento, transferencia internacional y delimitación de responsabilidad del equipo de desarrollo |
-| [manual/](./manual/README.md) | Manual de usuario y material de capacitacion (issue #251): indice de las piezas, formato comun y el [plan de capacitaciones](./manual/PLAN-DE-CAPACITACIONES.md) ([PDF](./formal/plan-de-capacitaciones.pdf)) y la [lista de asistencia](./LISTA-DE-ASISTENCIA-CAPACITACIONES.md) ([PDF](./formal/lista-de-asistencia-capacitaciones.pdf)) |
+| [manual/](./manual/README.md) | Manual de usuario y material de capacitacion (issue #251): indice de las piezas, formato comun y el [plan de capacitaciones](./manual/PLAN-DE-CAPACITACIONES.md) ([PDF](./formal/plan-de-capacitaciones.pdf)) y la [lista de asistencia](./formal/lista-de-asistencia-capacitaciones.pdf) |
 | [formal/documentacion-tecnica.pdf](./formal/documentacion-tecnica.pdf) | Documento formal para quien no tiene acceso al repositorio (issue #867): permisos, modelo de datos, pantallas, conexion con Supabase, configuracion y herramientas, consolidados de los `.md` de esta carpeta |
 
 ## Manuales de usuario
