@@ -10,7 +10,7 @@
 // pacientes/ no se toca en este issue.
 //
 // departamentos.id y municipios.id son INT (00006_departamentos_municipios.sql), no UUID: son
-// el catalogo geografico oficial de Guatemala, con ids ya fijados por seed.sql, no una tabla
+// el catalogo geografico oficial de Guatemala, con ids ya fijados por la migracion 00125, no una tabla
 // nueva del proyecto. comunidades.id si es UUID (00008_ajustes_departamentos_municipios.sql).
 //
 // La migracion 00073 completo el GRANT SELECT que le faltaba a departamentos y municipios para
@@ -63,7 +63,7 @@ const COLUMNAS_COMUNIDAD_CATALOGO = [
 ].join(", ");
 
 /**
- * Lista los departamentos de Guatemala (22 filas en `seed.sql`).
+ * Lista los departamentos de Guatemala (22 filas, sembradas por la migracion 00125).
  *
  * @returns {Promise<{ departamentos: object[], error: object|null }>}
  */

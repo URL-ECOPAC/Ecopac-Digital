@@ -114,18 +114,18 @@ La CLI de Supabase no se instala aparte: se usa con `npx supabase`.
 
 | Servicio | Para qué | Quién necesita acceso |
 | --- | --- | --- |
-| GitHub (`URL-ECOPAC/Ecopac-Digital`) | Código, PRs, secrets de los workflows | Todo el equipo; secrets solo quien administra |
+| GitHub (cuenta de la organizacion, repositorio publico `ecopacdigital/Ecopac-Digital`) | Código, PRs, secrets de los workflows | Quien la organizacion autorice; secrets solo quien administra |
 | Supabase: proyectos `ecopac-dev` y `ecopac-prod` | Base de datos, Auth, Edge Functions | Quien administra; el resto trabaja en local |
 | Vercel | Despliegue de la web (preview por PR, producción desde `main`) | Quien administra |
 | Sentry | Errores de web, móvil y Edge Functions | Quien da soporte |
 | Proveedor SMTP | Correo de invitaciones y notificaciones | Quien administra |
-| Expo (EAS) | Compilar la app móvil para tiendas o APK | Quien publica la app |
+| Expo (EAS), cuenta `ecopacdigitals-team` | Compilar el APK de la app móvil (ver sección 12) | Quien publique la app |
 
 ## 4. Puesta en marcha en local, paso a paso
 
 ```bash
 # 1. Código y dependencias
-git clone https://github.com/URL-ECOPAC/Ecopac-Digital.git
+git clone https://github.com/ecopacdigital/Ecopac-Digital.git
 cd Ecopac-Digital
 git checkout develop
 npm install
@@ -151,7 +151,7 @@ npx supabase functions serve --env-file supabase/functions/.env
 ```
 
 - **Usuarios de prueba**: los crea el seed de demostración; los correos, contraseñas y roles están en
-  [DATOS-DEMO.md](DATOS-DEMO.md). Son datos inventados: nunca se usan datos reales de pacientes.
+  [DATOS-DE-PRUEBA.md](DATOS-DE-PRUEBA.md). Son datos inventados: nunca se usan datos reales de pacientes.
 - **Studio** (el panel de la base local): <http://localhost:54423>. La API local queda en el
   puerto 54421 (los puertos están en `supabase/config.toml`).
 - **Correo local**: todo lo que "se envía" en local cae en Mailpit, <http://localhost:54424>.
@@ -160,6 +160,9 @@ npx supabase functions serve --env-file supabase/functions/.env
 La guía corta equivalente es [QUICKSTART.md](QUICKSTART.md).
 
 ## 5. Configuración y claves de acceso
+
+> **Para instalar el sistema desde cero** en cuentas nuevas, el recorrido completo y en orden está
+> en [MANUAL-DE-INSTALACION.md](MANUAL-DE-INSTALACION.md). Esta sección resume qué clave va dónde.
 
 > **Regla:** ninguna llave real se sube al repositorio. `.env.development`, `.env.production` y
 > `supabase/functions/.env` están en `.gitignore`. Los nombres de las variables sí están
@@ -189,8 +192,10 @@ Se configuran en Supabase (Dashboard > Edge Functions > Secrets) en cada ambient
 | --- | --- |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM` | Servidor de correo para invitaciones y notificaciones (en local, Mailpit: `inbucket:1025`) |
 | `WEB_URL` | URL pública de la web; con ella se arman los enlaces de los correos y el destino de la invitación (`/nueva-contrasena`) |
+| `ALLOWED_ORIGINS` | Los orígenes de la web del ambiente, separados por comas. **Obligatorio**: sin él las funciones no aceptan ninguna llamada desde el navegador (`_shared/cors.ts` falla cerrado a propósito) y, por ejemplo, invitar a un colaborador da error de conexión |
 | `SENTRY_DSN` | DSN de Sentry de las funciones (opcional) |
-| `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` | Los inyecta Supabase solo; no se configuran a mano |
+| `AMBIENTE` | Etiqueta de ambiente de los errores que reporta una función (opcional) |
+| `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` | Los inyecta Supabase solo; no se configuran a mano |
 
 Las Edge Functions son tres: `invitar-usuario` (alta de colaboradores),
 `enviar-notificaciones` (correo de las notificaciones internas) y `alertas-vencimiento` (rutina
@@ -198,17 +203,21 @@ diaria de lotes por vencer).
 
 ### 5.3 Secrets de GitHub Actions
 
-GitHub > Settings > Secrets and variables > Actions. Mientras falten, los workflows de Supabase
-avisan en el resumen de la corrida sin fallar.
+GitHub > Settings > Secrets and variables > Actions. Mientras falten, los workflows avisan en el
+resumen de la corrida sin fallar; la excepción es el respaldo de la base, que falla en rojo.
 
 | Secret | Lo usa | Qué es |
 | --- | --- | --- |
-| `SUPABASE_ACCESS_TOKEN` | workflow Supabase | Token personal de la CLI para aplicar migraciones |
-| `SUPABASE_DB_PASSWORD` | workflow Supabase | Contraseña de la base remota |
-| `SUPABASE_PROJECT_REF_DEV`, `SUPABASE_PROJECT_REF_PROD` | workflow Supabase | Identificador de cada proyecto |
-| `SUPABASE_URL_DEV`, `SUPABASE_SERVICE_ROLE_KEY_DEV` | alertas de vencimiento, verificar despliegue | Para correr la rutina diaria contra `ecopac-dev` |
-| `VITE_SUPABASE_URL_DEV`, `VITE_SUPABASE_ANON_KEY_DEV` | CI, mantener activo | URL y llave anónima de `ecopac-dev` |
-| `VITE_SUPABASE_URL_PROD`, `VITE_SUPABASE_ANON_KEY_PROD` | CI, mantener activo | URL y llave anónima de `ecopac-prod` |
+| `SUPABASE_ACCESS_TOKEN` | Supabase, verificar despliegue, respaldo | Token de la cuenta de Supabase de la organización, dedicado al CI, para vincular con el proyecto remoto |
+| `SUPABASE_DB_PASSWORD_DEV`, `SUPABASE_DB_PASSWORD_PROD` | Supabase (el de producción, también el respaldo) | Contraseña de cada base, distintas entre sí |
+| `SUPABASE_PROJECT_REF_DEV`, `SUPABASE_PROJECT_REF_PROD` | Supabase (el de producción, también el respaldo) | Identificador de cada proyecto |
+| `SUPABASE_URL_DEV`, `SUPABASE_URL_PROD`, `SUPABASE_SERVICE_ROLE_KEY_DEV`, `SUPABASE_SERVICE_ROLE_KEY_PROD` | Alertas de vencimiento y mantener activo | Para correr la rutina diaria y la consulta de mantenimiento contra cada ambiente |
+| `VITE_SUPABASE_URL_DEV`, `VITE_SUPABASE_ANON_KEY_DEV` | CI (compilar la web en `develop`) | URL y llave anónima de `ecopac-dev` |
+| `VITE_SUPABASE_URL_PROD`, `VITE_SUPABASE_ANON_KEY_PROD` | CI, al compilar la web en `main` | URL y llave anónima de `ecopac-prod` |
+| `RESPALDO_GPG_CLAVE_PUBLICA`, `RESPALDO_DRIVE_CLIENT_ID`, `RESPALDO_DRIVE_CLIENT_SECRET`, `RESPALDO_DRIVE_TOKEN` | Respaldo de la base | Llave pública con la que se cifra el respaldo y credencial de la cuenta de Drive de la organización |
+
+Son diecisiete, todos configurados desde el 14-10-2026 salvo los cuatro `RESPALDO_*`, que van con
+la issue #914 ([PLAN-DE-IMPLEMENTACION.md](PLAN-DE-IMPLEMENTACION.md), paso 5).
 
 El detalle de cada workflow y de cada secret está en [CI-CD.md](CI-CD.md).
 
@@ -287,9 +296,13 @@ Lo que se prohíbe, y lo comprueban ESLint y las guardas de CI:
 3. La función usa el cliente de Supabase (`obtenerSupabase()`), que lleva la sesión del usuario.
 4. PostgREST aplica **RLS**: la base decide qué filas ve y qué puede escribir esa persona.
 5. Los triggers de la base validan reglas de negocio (transiciones de estado, inventario,
-   proyectos cancelados, auditoría) y pueden rechazar la escritura.
+   presupuesto, cupo de la agenda, proyectos cancelados o finalizados, auditoría) y pueden
+   rechazar la escritura.
 6. El error, si lo hay, se normaliza en shared (`errores-de-supabase.js`) a un mensaje para la
    persona y un detalle saneado para el registro (sin datos de pacientes).
+7. Si la escritura pasó, la base avisa por Realtime a las pantallas abiertas que muestran esa
+   tabla, y cada una vuelve a leer con su consulta de siempre (`useCambiosEnTiempoReal`, migración
+   `00163`). Nadie tiene que recargar para ver lo que otra persona acaba de cambiar.
 
 ## 7. Código compartido entre web y móvil
 
@@ -298,16 +311,20 @@ Lo que se prohíbe, y lo comprueban ESLint y las guardas de CI:
 | Carpeta | Contenido |
 | --- | --- |
 | `api/` | Cliente de Supabase, sesión, paginación, errores |
-| `pacientes/` | Pacientes, expediente, triaje, consultas, recetas, condiciones crónicas, duplicados |
+| `entorno/` | Variables de entorno validadas al arrancar; rechaza una llave de servicio en el cliente |
+| `hooks/` | Hooks transversales: sesión, búsqueda de pacientes, expiración por inactividad, panel de inicio, tiempo real |
+| `observabilidad/` | Reporte de errores por un solo punto, sin datos de paciente |
+| `pacientes/` | Pacientes, expediente, áreas de atención, triaje, consultas, recetas, condiciones crónicas, duplicados |
+| `citas/` | Catálogo de clínicas y agenda de citas por jornada |
 | `atenciones/` | Cola de la jornada y cierre de atenciones |
-| `jornadas/` | Jornadas, equipo, insumos previstos, kanban, cierre |
-| `inventario/` | Catálogo, lotes, existencias, movimientos, alertas de vencimiento, bodegas |
-| `presupuestos/` | Presupuestos, orígenes del presupuesto, gastos y su aprobación |
+| `jornadas/` | Jornadas, equipo, insumos previstos, bodega de la jornada (carga, devolución y consumo), kanban, cierre |
+| `inventario/` | Catálogo, lotes, existencias, movimientos, traslados entre bodegas, alertas y avisos de vencimiento, bodegas |
+| `presupuestos/` | Presupuestos, orígenes del presupuesto, gastos y su aprobación, sobrante de la jornada y caja |
 | `proyectos/` | Proyectos sociales, equipo, hitos, seguimiento, insumos |
 | `donaciones/` | Donantes, donaciones, constancias |
-| `reportes/` | Indicadores de impacto, pacientes atendidos, inventario, vencimientos, jornada |
+| `reportes/` | Indicadores de impacto, pacientes atendidos, inventario, vencimientos, enfermedades, jornada |
 | `usuarios/` | Roles, permisos, acceso por módulo, perfil, inicio de sesión |
-| `notificaciones/`, `auditoria/`, `territorio/` | Buzón, bitácora, departamentos/municipios/comunidades |
+| `notificaciones/`, `auditoria/`, `territorio/` | Buzón y envíos de correo, bitácora, departamentos/municipios/comunidades |
 | `formato/`, `validations/` | Fechas en hora de Guatemala, moneda, opciones, tipo de acción de un botón; validadores |
 | `navegacion.js`, `enums.js` | Módulos de la navegación por rol; valores y etiquetas de los enums |
 
@@ -425,10 +442,13 @@ La paleta y el porqué de cada color: [DISENO.md](DISENO.md).
 
 ### 9.1 En números
 
-Al cierre de este documento (migración `00156`): **52 tablas, 8 vistas, 23 tipos enumerados,
-472 columnas, 90 llaves foráneas, 138 políticas RLS, 114 triggers y 90 funciones.** Todas las
-tablas tienen RLS activo y todas las tablas, columnas, vistas, enums y funciones tienen descripción
-(lo exige la prueba `diccionario_de_datos.sql`).
+Al cierre de este documento (13 de octubre de 2026, migración `00188`; 180 archivos de migración):
+**60 tablas, 9 vistas, 23 tipos enumerados, 545 columnas, 113 llaves foráneas, 70 restricciones
+CHECK, 157 políticas RLS, 154 triggers (47 de ellos de auditoría) y 145 funciones (78 de negocio o
+de autorización y 67 de trigger).** Las cifras son las del resumen del diccionario de datos, que
+se genera del catálogo de la base. Todas las tablas tienen RLS activo y todas las tablas,
+columnas, vistas, enums y funciones tienen descripción (lo exige la prueba
+`diccionario_de_datos.sql`).
 
 - **Diccionario de datos completo** -cada tabla con sus campos, tipos, nulos, valores por defecto,
   llaves, restricciones, políticas y triggers, con diagramas entidad-relación por módulo-:
@@ -447,23 +467,36 @@ erDiagram
   comunidades ||--o{ jornadas : "se hace en"
   comunidades |o--o{ pacientes : "vive en"
   pacientes ||--|| expedientes : "tiene"
+  pacientes ||--o{ paciente_area : "se atiende en"
+  areas_atencion ||--o{ paciente_area : "agrupa"
   pacientes ||--o{ atenciones : "visita"
   jornadas ||--o{ atenciones : "recibe"
   atenciones ||--o{ triajes : "signos vitales"
   atenciones ||--o{ consultas : "consulta"
   consultas ||--o{ consulta_diagnostico : "diagnosticos"
+  pacientes ||--o{ citas : "agenda"
+  jornadas ||--o{ citas : "agenda"
+  clinicas ||--o{ citas : "en"
+  areas_atencion ||--o{ citas : "para"
+  citas |o--o{ consultas : "se atiende con"
   consultas ||--o{ recetas : "receta"
   recetas ||--o{ receta_detalle : "renglones"
   medicamentos ||--o{ lotes : "lotes"
   lotes ||--o{ existencias : "por bodega"
   bodegas ||--o{ existencias : "guarda"
+  bodegas |o--o{ jornadas : "bodega de la jornada"
+  proveedores ||--o{ lotes : "provee"
+  donantes |o--o| proveedores : "su proveedor"
   lotes ||--o{ movimientos_inventario : "ingresos y salidas"
   lotes |o--o{ receta_detalle : "se entrega de"
   jornadas ||--o{ jornada_personal : "equipo"
   perfiles ||--o{ jornada_personal : "participa"
   jornadas ||--o{ gastos : "gastos"
   jornadas ||--o{ jornada_insumos : "insumos previstos"
-  proyectos |o--o{ jornadas : "agrupa"
+  jornadas ||--o{ jornada_presupuesto_origen : "aportes al presupuesto"
+  donaciones |o--o{ jornada_presupuesto_origen : "origen"
+  jornada_presupuesto_origen ||--o{ movimientos_de_caja : "caja"
+  proyectos ||--o{ jornadas : "agrupa"
   proyectos ||--o{ proyecto_hitos : "hitos"
   proyectos ||--o{ proyecto_personal : "equipo"
   donantes ||--o{ donaciones : "dona"
@@ -471,6 +504,10 @@ erDiagram
   proyectos |o--o{ donaciones : "destino"
   jornadas |o--o{ donaciones : "destino"
 ```
+
+Toda jornada nueva pertenece a un proyecto y lleva una bodega, móvil o la principal. Las dos
+columnas admiten nulo solo por las jornadas anteriores: lo exigen triggers, no un `NOT NULL`
+(migraciones `00169` y `00178`).
 
 ### 9.3 Cómo está protegida
 
@@ -487,8 +524,15 @@ erDiagram
 - **Funciones `SECURITY DEFINER`** solo cuando hace falta saltar RLS para una operación puntual, y
   validan por dentro quién las llama; las de trigger no se pueden llamar directamente.
 - **Vistas agregadas** para los reportes: los roles consultivos ven totales, no filas clínicas.
-- **Reglas de negocio en triggers**: transiciones de estado de jornadas y proyectos, proyecto
-  cancelado de solo lectura, inventario que no queda negativo, gastos aprobados que no cambian.
+- **Reglas de negocio en triggers**: transiciones de estado de jornadas y proyectos; proyecto
+  cancelado o finalizado de solo lectura (`00154`, `00172`); inventario que no queda negativo y
+  que no se entrega dos veces mientras espera aprobación (`00186`); gastos aprobados que no
+  cambian y que no pasan del presupuesto de su jornada (`00159`); cupo de la clínica y traslapes
+  de la agenda de citas (`00184`); toda jornada con proyecto y con bodega (`00169`, `00178`).
+- **Una donación registrada no se corrige ni se anula**: desde la `00173` no tiene política de
+  UPDATE y la función que la anulaba ya no existe.
+- **Tiempo real con el mismo RLS**: las tablas de negocio están en la publicación
+  `supabase_realtime` (`00163`) y el aviso de un cambio solo llega a quien puede leer esa fila.
 - **Bitácora de auditoría** (`eventos_auditoria`): cada alta, cambio y baja de las tablas de
   negocio, con quién y cuándo.
 
@@ -510,20 +554,24 @@ Todo el detalle, y qué hacer cuando falla un despliegue: [CI-CD.md](CI-CD.md).
 
 ## 10. Pantallas
 
-**35 rutas en la web y 29 pantallas en el móvil.** Para cada una, qué tablas, vistas, funciones de
+**40 rutas en la web y 31 pantallas en el móvil.** Para cada una, qué tablas, vistas, funciones de
 la base y Edge Functions usa, y a la inversa, qué pantallas usan cada tabla:
 [PANTALLAS.md](PANTALLAS.md) (**generado**).
 
 Por módulo, en la web: inicio, pacientes (listado, ficha, crónicos, condiciones, diagnósticos,
-comunidades, duplicados), jornadas (tablero y detalle), inventario, presupuestos, proyectos
+comunidades, áreas de atención, clínicas, agenda de citas, duplicados), jornadas (tablero y
+detalle, con sus pestañas de equipo, presupuesto, gastos, insumos, consumo y cierre), inventario
+(con la configuración de los avisos de vencimiento), presupuestos (con la caja), proyectos
 (listado y seguimiento), donaciones (resumen, registro, historial, constancia, donantes), reportes
-(impacto, vencimientos, pacientes atendidos, inventario, reporte de jornada), colaboradores, matriz
-de permisos, bitácora, perfil y notificaciones.
+(impacto, vencimientos, pacientes atendidos, inventario, enfermedades, reporte de jornada),
+colaboradores, matriz de permisos, bitácora, perfil y notificaciones.
 
 En el móvil, en cinco pestañas: Inicio, Pacientes (búsqueda, ficha, registro, historial, consulta,
-receta, entrega, crónicos, condiciones, diagnósticos), Jornadas (asignadas, en curso, selección,
-kanban, proyectos), Inventario (stock, ingreso, salida, existencias, alertas, movimientos, detalle
-de lote, principios activos, por aprobar) y Ajustes (perfil y notificaciones).
+receta, entrega, crónicos, condiciones, diagnósticos, citas), Jornadas (asignadas, en curso,
+selección, kanban, detalle de la jornada, proyectos), Inventario (stock, ingreso, salida y
+traslado, existencias, alertas, movimientos, detalle de lote, principios activos, por aprobar) y
+Ajustes (perfil y notificaciones). El detalle pantalla por pantalla, con el hook que sirve a cada
+una, está en [MODULOS.md](MODULOS.md).
 
 Qué módulo ve cada rol lo decide `packages/shared/navegacion.js`; las pantallas del móvil además
 llevan una guarda de rol (`conGuardaDeRol`), y la prueba `guardaDeRol.test.js` comprueba que
@@ -536,6 +584,7 @@ ninguna quede sin ella.
 | `npm run lint` | ESLint en todo el monorepo, incluidas las reglas de arquitectura |
 | `npm test` | Vitest (shared, ui-tokens, web) y Jest (móvil) |
 | `npx supabase test db --local` | pgTAP: políticas RLS, triggers, funciones y reglas de la base |
+| `npm run test:e2e` | Flujos críticos de punta a punta contra el stack local (atención clínica, agenda de citas, validación de inventario, reportes). No corre con `npm test`: necesita `supabase start` |
 | `npm run build` | Que la web compile |
 | `npm run verificar:jsdoc -- --estricto` | Toda función exportada de shared con JSDoc completo |
 | `npm run verificar:contratos` | Que las apps lean la clave que de verdad devuelve cada función de shared |
@@ -544,32 +593,68 @@ ninguna quede sin ella.
 | `npm run verificar:sin-emojis` | Sin emojis en el repositorio |
 | `npm run verificar:rewrite-vercel`, `verificar:cabeceras-http` | Configuración de Vercel: rutas y cabeceras de seguridad |
 | `npm run verificar:redireccion` | Enlace de recuperación de contraseña contra un despliegue real |
+| `npm run verificar:concurrencia-ficha` | Prueba manual: varias conexiones registran pacientes a la vez contra el stack local y ninguna repite número de ficha |
 
-El CI (`.github/workflows/ci.yml`) corre todo esto en cada PR. El plan y los casos de prueba:
+Los workflows `ci.yml` y `supabase.yml` corren esto en cada PR, salvo las dos últimas filas, que
+son manuales. El plan y los casos de prueba:
 [PLAN-DE-PRUEBAS.md](PLAN-DE-PRUEBAS.md) y [CASOS-DE-PRUEBA.md](CASOS-DE-PRUEBA.md).
 
 ## 12. Ambientes y despliegue
 
+> **Estado al 17 de octubre de 2026.** El sistema está en producción desde el 14 de octubre, todo a
+> nombre de la organización (issue #252). Cada paso, con cómo se comprobó, está en
+> [PLAN-DE-IMPLEMENTACION.md](PLAN-DE-IMPLEMENTACION.md); para instalarlo de nuevo en cuentas
+> nuevas, [MANUAL-DE-INSTALACION.md](MANUAL-DE-INSTALACION.md).
+
+### 12.1 Los tres ambientes
+
 | Ambiente | Rama | Base | Web |
 | --- | --- | --- | --- |
-| Local | cualquiera | `supabase start` (Docker) | `npm run dev:web` |
-| Desarrollo / staging | `develop` | Supabase `ecopac-dev` | Vercel Preview |
-| Producción | `main` | Supabase `ecopac-prod` | Vercel (producción) |
+| Local | cualquiera | `supabase start` (Docker), con `supabase/fixtures/datos-de-prueba.sql` | `npm run dev:web` |
+| Desarrollo / staging | `develop` | Supabase `ecopac-dev` (proyecto `ecopacdigital Dev`) | Vercel Preview, detrás del login de Vercel |
+| Producción | `main` | Supabase `ecopac-prod` (proyecto `ecopacdigital Prod`) | <https://ecopac-digital.vercel.app> |
+
+El código vive en `ecopacdigital/Ecopac-Digital`, en la cuenta de GitHub de la organización. El
+repositorio del curso, `URL-ECOPAC/Ecopac-Digital`, conserva la historia, los entregables y las
+issues.
+
+### 12.2 Cómo se despliega
 
 - **Flujo de Git**: rama desde `develop` (`feature/...`, `fix/...`, `chore/...`), PR hacia
-  `develop` con "Closes #X", commits con Conventional Commits, squash and merge. `main` solo recibe
-  `develop` con PR aprobado. Ver [CONTRIBUTING.md](CONTRIBUTING.md).
-- **Base**: al mergear, el workflow `supabase.yml` aplica las migraciones nuevas al ambiente de la
-  rama.
-- **Web**: Vercel compila `apps/web` en cada push; `vercel.json` define las rutas y las cabeceras.
-  Alternativa autohospedada: `npm run docker:prod` (Nginx, `apps/web/Dockerfile`).
-- **Móvil**: se prueba con Expo Go; para distribuirla se compila con EAS (`apps/mobile/app.config.js`,
-  `slug: ecopac-digital`).
-- **Tareas programadas** (GitHub Actions): alertas de vencimiento diarias, mantener activa la base
-  del plan gratuito y verificar que el despliegue responde.
-- **Respaldos y restauración**: [RESPALDO-Y-RECUPERACION.md](RESPALDO-Y-RECUPERACION.md) (el plan y el
-  procedimiento de recuperación) y [CI-CD.md](CI-CD.md), sección "Respaldos y restauración".
-- **Costos y límites** del plan gratuito y cuánto crece la base: [COSTOS-Y-LIMITES.md](COSTOS-Y-LIMITES.md).
+  `develop`, commits con Conventional Commits, squash and merge. `main` solo recibe `develop` con
+  PR aprobado; las dos ramas están protegidas. Ver [CONTRIBUTING.md](CONTRIBUTING.md).
+- **Base**: al mergear, el workflow `supabase.yml` aplica las migraciones nuevas y despliega las
+  Edge Functions: `develop` a `ecopac-dev` y `main` a `ecopac-prod`, cada una con su propia
+  contraseña. Nadie corre `supabase db push` a mano.
+- **Configuración de los Dashboard**: lo que no viaja en el repositorio está en
+  [CONFIGURACION-SUPABASE.md](CONFIGURACION-SUPABASE.md), con su registro por ambiente.
+- **Web**: Vercel, conectado al repositorio. `main` publica producción; `develop` y cada PR, una
+  vista previa. `apps/web/vercel.json` define las rutas y las cabeceras de seguridad, que dos
+  guardas comprueban. Hay además una imagen autohospedable: `npm run docker:prod` (Nginx,
+  `apps/web/Dockerfile`).
+- **Móvil**: APK de Android compilado con EAS (`apps/mobile/eas.json`, perfiles `desarrollo` y
+  `produccion`) y repartido desde la carpeta de Drive de la organización, sin tienda. Para
+  desarrollar, Expo Go o un emulador (`npm run dev:mobile`). Ver
+  [PLAN-DE-IMPLEMENTACION.md](PLAN-DE-IMPLEMENTACION.md), sección 7.
+- **Tareas programadas**: workflows de GitHub Actions que corren desde `main`. Alertas de
+  vencimiento y "mantener activo" corren contra los dos ambientes; verificar el despliegue, todos
+  los días. Se pueden correr a mano desde la pestaña Actions.
+
+### 12.3 Lo que queda pendiente
+
+- **El respaldo de la base** (issue #914): `respaldo-base.yml` está escrito y ensayado contra el
+  stack local, pero desactivado hasta tener sus secrets. Producción está en el plan gratuito de
+  Supabase, que no incluye respaldos: este es el único, y **producción no recibe datos reales hasta
+  que el primer respaldo se haya restaurado con éxito**. Plan y procedimiento:
+  [RESPALDO-Y-RECUPERACION.md](RESPALDO-Y-RECUPERACION.md).
+- **La entrega a la organización**: cambiar la contraseña temporal del administrador, revocar los
+  tokens del aprovisionamiento y rotar las llaves.
+
+La lista al día está en [PLAN-DE-IMPLEMENTACION.md](PLAN-DE-IMPLEMENTACION.md), "Lo que queda
+pendiente".
+
+**Costos y límites** del plan gratuito y cuánto crece la base:
+[COSTOS-Y-LIMITES.md](COSTOS-Y-LIMITES.md).
 
 ## 13. Cómo hacer un cambio típico
 
@@ -598,18 +683,25 @@ acceso visible hacia ella. La receta completa: [ARQUITECTURA-FRONTEND.md](ARQUIT
 | [QUICKSTART.md](QUICKSTART.md) | Arrancar en cinco minutos |
 | [ARQUITECTURA.md](ARQUITECTURA.md) | Contexto, capas, decisiones y su porqué |
 | [ARQUITECTURA-FRONTEND.md](ARQUITECTURA-FRONTEND.md) | La regla de shared + un componente por app |
+| [MODULOS.md](MODULOS.md) | Cada pantalla, en qué app está, qué hook la sirve y contra qué tablas trabaja |
 | [API-SHARED.md](API-SHARED.md) | Índice de la API de `packages/shared` |
+| [API-E-INTEGRACIONES.md](API-E-INTEGRACIONES.md) | Cómo se comunican las apps, la capa compartida y los servicios externos |
 | [DICCIONARIO-DE-DATOS.md](DICCIONARIO-DE-DATOS.md) | **Generado.** Todas las tablas, campos, relaciones, políticas y triggers |
 | [PANTALLAS.md](PANTALLAS.md) | **Generado.** Pantallas y los datos que usa cada una |
 | [MODELO-DE-DATOS.md](MODELO-DE-DATOS.md) | El porqué del modelo de datos |
 | [PERMISOS.md](PERMISOS.md) | Qué puede hacer cada rol y qué política lo implementa |
 | [SEGURIDAD.md](SEGURIDAD.md), [PROTECCION-DE-DATOS.md](PROTECCION-DE-DATOS.md) | Autenticación, endurecimiento y datos personales |
 | [CI-CD.md](CI-CD.md), [CONFIGURACION-SUPABASE.md](CONFIGURACION-SUPABASE.md) | Workflows, secrets, migraciones, ambientes |
+| [SUPABASE.md](SUPABASE.md) | Proyecto en la nube contra stack local, y el flujo de una migración |
+| [DESPLIEGUE_BASE_DE_DATOS.md](DESPLIEGUE_BASE_DE_DATOS.md) | Scripts de base de datos finales: orden de las migraciones, catálogos sembrados, administrador inicial y esquema consolidado |
+| [RESPALDO-Y-RECUPERACION.md](RESPALDO-Y-RECUPERACION.md) | Plan de respaldo de la base de producción y procedimiento de recuperación |
 | [DISENO.md](DISENO.md), [DISENO-MOVIL.md](DISENO-MOVIL.md) | Paleta, navegación y criterio de diseño móvil |
 | [COSTOS-Y-LIMITES.md](COSTOS-Y-LIMITES.md) | Plan gratuito y crecimiento |
 | [PLAN-DE-PRUEBAS.md](PLAN-DE-PRUEBAS.md), [CASOS-DE-PRUEBA.md](CASOS-DE-PRUEBA.md) | Estrategia y casos de prueba |
 | [CUMPLIMIENTO-DE-REQUERIMIENTOS.md](CUMPLIMIENTO-DE-REQUERIMIENTOS.md) | Cada requerimiento y su estado |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Flujo de trabajo del equipo |
+| [manual/](manual/README.md) | Manuales de usuario por rol y material de capacitación |
+| [formal/documentacion-tecnica.pdf](formal/documentacion-tecnica.pdf) | Documento formal para quien no tiene acceso al repositorio: consolida este manual y los documentos que resume |
 
 **Mantener los generados al día:** con la base local actualizada (`npx supabase db reset --local`),
 `npm run docs:diccionario` y `npm run docs:pantallas`. No se editan a mano.

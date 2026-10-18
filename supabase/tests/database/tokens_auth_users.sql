@@ -8,7 +8,7 @@
 -- 500 y la app lo muestra como "Error de conexion con el servidor".
 --
 -- El bug estuvo vivo en los dos INSERT INTO auth.users escritos a mano del repositorio -la
--- 00063 y supabase/seed-demo.sql- sin que nada lo detectara, porque una migracion aplica sin
+-- 00063 y supabase/fixtures/datos-de-prueba.sql- sin que nada lo detectara, porque una migracion aplica sin
 -- quejarse y el fallo solo aparece al intentar iniciar sesion. Esta suite es la guarda: mira
 -- el estado real de la base tras reconstruirla desde cero, asi que un tercer INSERT que vuelva
 -- a omitir las columnas pone el PR en rojo.
@@ -41,7 +41,7 @@ SELECT is(
 );
 
 -- ============================================================================
--- 2. Las siete cuentas de seed-demo.sql
+-- 2. Las siete cuentas de datos-de-prueba.sql
 -- ============================================================================
 SELECT is(
   (

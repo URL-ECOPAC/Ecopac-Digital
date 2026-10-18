@@ -6,7 +6,7 @@
 --     principal (cinco mujeres y un hombre), y dos pacientes sin comunidad con Y como principal y X
 --     como secundario.
 --   Jornada 2, en B, proyecto 2: cinco pacientes de la comunidad A con X como principal.
--- Todos los datos son inventados. La base de pruebas trae ademas seed-demo.sql, asi que cada
+-- Todos los datos son inventados. La base de pruebas trae ademas datos-de-prueba.sql, asi que cada
 -- consulta se recorta a estas dos jornadas o a estos dos proyectos.
 
 BEGIN;

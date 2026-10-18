@@ -17,11 +17,13 @@ El despliegue de la web **no** es un workflow: esta pensado para la app de Verce
 repositorio. Vercel publica un preview por cada PR y produccion desde `main`, al margen del
 CI, asi que un CI en rojo no detiene un deploy de Vercel.
 
-> **Esa conexion no es posible en el plan Hobby**, porque el repositorio pertenece a una
-> organizacion de GitHub (`docs/COSTOS-Y-LIMITES.md`, seccion 6.1). Las salidas -desplegar por CLI
-> desde un workflow, Vercel Pro, o mover la web a Cloudflare Pages o Netlify- y su costo estan en
-> ese documento; la decision se toma en la #252 (salida a produccion). Mientras no se tome, este
-> parrafo describe el diseno, no lo que hay desplegado.
+> **Por que el repositorio se movio de cuenta (issue #252).** La integracion de Git de Vercel no
+> funciona en el plan Hobby cuando el repositorio pertenece a una **organizacion** de GitHub
+> (`docs/COSTOS-Y-LIMITES.md`, seccion 6.1), y el repositorio original vivia en la organizacion
+> del curso. Se resolvio moviendo el repositorio a la **cuenta personal de GitHub de la
+> organizacion**, conectada a una cuenta Hobby de Vercel tambien suya: asi la integracion nativa
+> funciona sin costo y sin workflow propio de despliegue. El detalle esta en
+> [PLAN-DE-IMPLEMENTACION.md](./PLAN-DE-IMPLEMENTACION.md).
 
 ## Que hace el workflow de CI
 
@@ -581,7 +583,7 @@ funcionando en una maquina sin Docker.
 
 Tres cosas que conviene saber antes de escribir una prueba nueva aqui:
 
-- **Inician sesion de verdad**, con las cuentas del seed demo (`supabase/seed-demo.sql`), y cada
+- **Inician sesion de verdad**, con las cuentas del seed demo (`supabase/fixtures/datos-de-prueba.sql`), y cada
   paso lo ejecuta el rol que lo ejecutaria en campo. Las politicas RLS son parte de lo que se
   prueba, no un obstaculo que rodear con un administrador.
 - **Corren en serie.** `packages/shared` mantiene una sola instancia del cliente de Supabase, asi
@@ -723,34 +725,50 @@ contenedor no resuelve desde el runtime de las funciones y el envio falla en sil
 
 ## Ambientes
 
-| Rama      | Proyecto Supabase   | Secret del project-ref      | Despliegue web    |
-| --------- | ------------------- | --------------------------- | ----------------- |
-| `develop` | Ecopac-Digital-Dev  | `SUPABASE_PROJECT_REF_DEV`  | Local             |
-| `main`    | Ecopac-Digital-Prod | `SUPABASE_PROJECT_REF_PROD` | Vercel Produccion |
+Desde la issue #252 el repositorio, los dos proyectos de Supabase y el proyecto de Vercel son de
+las cuentas de la organizacion. Las URL y los refs de cada ambiente estan en
+[PLAN-DE-IMPLEMENTACION.md](./PLAN-DE-IMPLEMENTACION.md), seccion "Lo que quedo creado".
 
-Cada migracion se aplica **una vez por base**. El push a `develop` va contra `Ecopac-Digital-Dev` y el
-push a `main` contra `Ecopac-Digital-Prod`: son bases distintas, no una doble aplicacion. Ademas
+| Rama      | Proyecto Supabase | Secrets del ambiente                                  | Despliegue web                        |
+| --------- | ----------------- | ----------------------------------------------------- | ------------------------------------- |
+| `develop` | `ecopac-dev`      | `SUPABASE_PROJECT_REF_DEV`, `SUPABASE_DB_PASSWORD_DEV` | Vercel Preview, contra `ecopac-dev`    |
+| `main`    | `ecopac-prod`     | `SUPABASE_PROJECT_REF_PROD`, `SUPABASE_DB_PASSWORD_PROD` | Vercel Production, contra `ecopac-prod` |
+
+Cada migracion se aplica **una vez por base**. El push a `develop` va contra `ecopac-dev` y el
+push a `main` contra `ecopac-prod`: son bases distintas, no una doble aplicacion. Ademas
 `supabase db push` consulta `supabase_migrations.schema_migrations` del destino y aplica solo
 lo pendiente, asi que aunque el workflow corriera dos veces no repetiria nada.
 
+Los dos ambientes **arrancan limpios**: el repositorio no trae seeds (ver
+[DATOS-DE-PRUEBA.md](./DATOS-DE-PRUEBA.md)). Lo que una base necesita para funcionar -catalogo
+geografico, bodega principal, primer administrador- llega por migracion.
+
 ### Secrets
 
-Se configuran en Settings > Secrets and variables > Actions.
+Se configuran en Settings > Secrets and variables > Actions. **Diecisiete**, y ningun valor se
+escribe en el repositorio: de donde sale cada uno esta en
+[PLAN-DE-IMPLEMENTACION.md](./PLAN-DE-IMPLEMENTACION.md), seccion "Secrets de GitHub".
 
-| Secret                                                  | Lo usa                         |
-| ------------------------------------------------------- | ------------------------------ |
-| `SUPABASE_ACCESS_TOKEN`                                 | Vincular con proyectos remotos |
-| `SUPABASE_DB_PASSWORD`                                  | Vincular con proyectos remotos |
-| `SUPABASE_PROJECT_REF_DEV`                              | Aplicar migraciones en develop |
-| `SUPABASE_PROJECT_REF_PROD`                             | Aplicar migraciones en main    |
-| `SUPABASE_SERVICE_ROLE_KEY_DEV`                         | Disparar alertas-vencimiento y keep-alive |
-| `SUPABASE_URL_DEV`, `SUPABASE_ANON_KEY_DEV`             | Keep-alive de la rama `main`   |
-| `VITE_SUPABASE_URL_DEV`, `VITE_SUPABASE_ANON_KEY_DEV`   | Build de la web en develop y keep-alive |
-| `VITE_SUPABASE_URL_PROD`, `VITE_SUPABASE_ANON_KEY_PROD` | Build de la web en main        |
-| `SUPABASE_DB_PASSWORD_PROD`                             | Respaldo de la base: contrasena de la base de produccion, distinta de la de desarrollo (#252, punto 2) |
-| `RESPALDO_GPG_CLAVE_PUBLICA`                            | Respaldo de la base: llave **publica** GPG de la organizacion con la que se cifra. La privada nunca va aqui |
-| `RESPALDO_DRIVE_CLIENT_ID`, `RESPALDO_DRIVE_CLIENT_SECRET` | Respaldo de la base: cliente de OAuth del proyecto de Google Cloud de la organizacion |
-| `RESPALDO_DRIVE_TOKEN`                                  | Respaldo de la base: token de rclone de la cuenta de Drive de la organizacion |
+| Secret | Lo usa |
+| --- | --- |
+| `SUPABASE_ACCESS_TOKEN` | `supabase.yml`, `verificar-despliegue.yml`, `respaldo-base.yml`: la CLI contra los dos proyectos |
+| `SUPABASE_PROJECT_REF_DEV`, `SUPABASE_PROJECT_REF_PROD` | Elegir el proyecto segun la rama |
+| `SUPABASE_DB_PASSWORD_DEV`, `SUPABASE_DB_PASSWORD_PROD` | `supabase link` de cada ambiente. **Distintas** a proposito (#252, punto 2): con una sola, quien tiene la de desarrollo entra a los datos clinicos reales |
+| `SUPABASE_URL_DEV`, `SUPABASE_URL_PROD` | `alertas-vencimiento.yml` y `keep-alive-supabase.yml`. Sin barra final ni ruta |
+| `SUPABASE_SERVICE_ROLE_KEY_DEV`, `SUPABASE_SERVICE_ROLE_KEY_PROD` | Los mismos dos crons. La **`sb_secret_`**, no la legacy (docs/CONFIGURACION-SUPABASE.md) |
+| `VITE_SUPABASE_URL_DEV`, `VITE_SUPABASE_ANON_KEY_DEV` | Build de la web en el CI, ramas que no son `main` |
+| `VITE_SUPABASE_URL_PROD`, `VITE_SUPABASE_ANON_KEY_PROD` | Build de la web en el CI, `main` |
+| `RESPALDO_GPG_CLAVE_PUBLICA` | Respaldo: llave **publica** GPG de la organizacion con la que se cifra. La privada nunca va aqui |
+| `RESPALDO_DRIVE_CLIENT_ID`, `RESPALDO_DRIVE_CLIENT_SECRET` | Respaldo: cliente de OAuth del proyecto de Google Cloud de la organizacion |
+| `RESPALDO_DRIVE_TOKEN` | Respaldo: token de rclone de la cuenta de Drive de la organizacion |
+
+Los crons (`alertas-vencimiento.yml`, `keep-alive-supabase.yml`) corren contra **los dos**
+ambientes en una matriz. Hasta la #252 solo tocaban `ecopac-dev`: produccion, en el mismo plan
+Free, se habria pausado a la semana sin uso, y las alertas de caducidad nunca habrian corrido
+contra los lotes reales.
+
+Las variables `VITE_*` del build de **Vercel** no salen de aqui: Vercel tiene las suyas, por
+ambiente, en su propio Dashboard. Las del CI solo sirven para comprobar que la web compila.
 
 Los valores SMTP y las entradas de Vault del correo de notificaciones **no** van aqui: son secrets de
 las Edge Functions y de la base, ver "Las notificaciones al administrador y su correo".
@@ -769,10 +787,8 @@ funcion, como en local.
 El DSN es publico por diseno. Un DSN mal escrito no tumba nada: la app lo dice en la consola al
 arrancar y la funcion en su log.
 
-`SUPABASE_URL_DEV` y `VITE_SUPABASE_URL_DEV` son la misma URL con dos nombres, y conviven a
-proposito: el keep-alive de `main` lee el primero y el de `develop` el segundo. Renombrar uno
-mientras las dos ramas no esten al dia deja un workflow sin secret, que es justo el caso que
-termina en verde sin haber hecho nada.
+`SUPABASE_URL_*` y `VITE_SUPABASE_URL_*` son la misma URL con dos nombres: los primeros los leen
+los crons y los segundos el build. Se dejaron separados para que el nombre diga quien lo usa.
 
 Cuando falta un secret, el workflow **avisa de forma visible pero no falla**: deja un bloque en
 el resumen de la corrida y una anotacion de warning. La idea es no bloquear al equipo mientras
@@ -781,9 +797,7 @@ exitoso.
 
 **La excepcion es el respaldo de la base**, que con un secret de menos falla en rojo y abre una
 issue: un respaldo que no se hizo no puede verse en verde. De donde sale cada uno de sus secrets
-esta en [RESPALDO-Y-RECUPERACION.md](./RESPALDO-Y-RECUPERACION.md), seccion 7. Los cinco secrets
-nuevos de la tabla y `SUPABASE_PROJECT_REF_PROD` **todavia no existen** (11 de octubre de 2026):
-dependen de la cuenta de Google de la organizacion y de `Ecopac-Digital-Prod` (#252).
+esta en [RESPALDO-Y-RECUPERACION.md](./RESPALDO-Y-RECUPERACION.md), seccion 7.
 
 ## Respaldos y restauracion
 
@@ -829,7 +843,7 @@ Contra el stack local, que es desechable:
 
 ```bash
 supabase start
-supabase db reset --no-seed    # esquema de supabase/migrations, SIN seed.sql ni seed-demo.sql
+supabase db reset --no-seed    # esquema de supabase/migrations, SIN el fixture datos-de-prueba.sql
 docker exec -i supabase_db_ecopac-digital psql -U postgres -d postgres -v ON_ERROR_STOP=1 <<'SQL'
 DO $$
 DECLARE tablas TEXT;
@@ -894,8 +908,9 @@ repetir exactamente esto.
 Database > Backups de `Ecopac-Digital-Dev` dice literalmente "Free Plan does not include project
 backups. Upgrade to the Pro Plan for up to 7 days of scheduled backups" (issue #879). O sea que
 para dev **el respaldo propio de arriba no es un complemento: es el unico que hay**, y mientras
-nadie lo corra no existe ninguna copia. `Ecopac-Digital-Prod` esta pausado y su plan se confirma al
-reanudarlo (issue #252).
+nadie lo corra no existe ninguna copia. Produccion (`ecopac-prod`, de la organizacion desde el
+14-10-2026) tambien esta en Free: su respaldo es `respaldo-base.yml`
+([RESPALDO-Y-RECUPERACION.md](./RESPALDO-Y-RECUPERACION.md)), que se activa en la issue #914.
 
 La prueba de restauracion sigue sin hacerse. No es un olvido: `supabase db dump --linked` necesita
 vincular la CLI, y vincular pide la contrasena de la base. Queda como procedimiento escrito hasta
@@ -1319,7 +1334,7 @@ Esto ultimo reproduce el job. Lo que no reproduce es el escenario incremental co
 con historial, que es justo lo que la guarda de inmutabilidad protege.
 
 `npm run test:e2e` necesita el `supabase db reset` previo: las cuentas y los datos que usa los
-siembra `supabase/seed-demo.sql`, no las migraciones.
+siembra `supabase/fixtures/datos-de-prueba.sql`, no las migraciones.
 
 ## Ramas protegidas
 

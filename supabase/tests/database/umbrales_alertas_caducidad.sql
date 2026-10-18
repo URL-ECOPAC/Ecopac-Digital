@@ -15,7 +15,7 @@
 --     repone vuelve a alertar.
 --   - Un lote atendido (reubicado) vuelve a alertar al llegar a una etapa mas cercana.
 --
--- config.toml corre seed.sql y seed-demo.sql antes de esta suite; por eso todo se cuenta sobre los
+-- config.toml corre supabase/fixtures/datos-de-prueba.sql antes de esta suite; por eso todo se cuenta sobre los
 -- lotes de esta prueba. Ningun dato real: perfiles, medicamento y lotes son inventados.
 
 BEGIN;

@@ -39,7 +39,7 @@ packages/
 supabase/
   migrations/ Esquema de base de datos versionado
   functions/  Rutinas programadas (alertas de vencimiento)
-docs/         Documentacion, entregables y contexto para IA
+docs/         Documentacion tecnica, manuales, evidencias y entregables del curso
 .github/      Plantillas de issues, PR, GitHub Projects y workflows de CI/CD
 scripts/      Scripts de soporte del equipo
 ```

@@ -6,7 +6,7 @@ Catalogo de lo que existe construido: que pantalla hay, en que app, que hook de
 Sirve para dos cosas: **encontrar donde vive una pantalla** sin recorrer carpetas, y **ver de un
 vistazo que esta conectado y que no**.
 
-Estado al 30 de septiembre de 2026, sobre `develop` (esquema hasta la migracion `00156`). Lo que
+Estado al 13 de octubre de 2026, sobre `develop` (esquema hasta la migracion `00188`). Lo que
 consulta cada pantalla, tabla por tabla, esta en [PANTALLAS.md](./PANTALLAS.md), que es generado:
 si este documento y aquel no coinciden en una ruta, manda aquel.
 
@@ -77,6 +77,9 @@ sistema.
 | [CatalogoDiagnosticosPage.jsx](../apps/web/src/pages/CatalogoDiagnosticosPage.jsx) `/pacientes/diagnosticos` | `useCatalogoDiagnosticos` | Conectada |
 | [CatalogoCondicionesPage.jsx](../apps/web/src/pages/CatalogoCondicionesPage.jsx) `/pacientes/condiciones` | `useCatalogoCondiciones` | Conectada |
 | [CatalogoComunidadesPage.jsx](../apps/web/src/pages/CatalogoComunidadesPage.jsx) `/pacientes/comunidades` | `useCatalogoComunidades` | Conectada |
+| [CatalogoAreasPage.jsx](../apps/web/src/pages/CatalogoAreasPage.jsx) `/pacientes/areas` | `useCatalogoAreas` | Conectada |
+| [CatalogoClinicasPage.jsx](../apps/web/src/pages/CatalogoClinicasPage.jsx) `/pacientes/clinicas` | `useCatalogoClinicas` | Conectada |
+| [AgendaCitasPage.jsx](../apps/web/src/pages/AgendaCitasPage.jsx) `/pacientes/citas` (con [CalendarioCitas.jsx](../apps/web/src/pages/CalendarioCitas.jsx)) | `useAgendaCitas` | Conectada |
 | [PosiblesDuplicadosPage.jsx](../apps/web/src/pages/PosiblesDuplicadosPage.jsx) `/pacientes/duplicados` | `useDuplicadosPacientes` | Conectada |
 | [PestaniaHistorialPaciente.jsx](../apps/web/src/pages/PestaniaHistorialPaciente.jsx) | `useVisitasPaciente`, `useRecetasPaciente` | Conectada |
 | [PestaniaSignosPaciente.jsx](../apps/web/src/pages/PestaniaSignosPaciente.jsx) | `useEvolucionSignos` | Conectada |
@@ -88,6 +91,10 @@ sistema.
 | [ModalCondicionesPaciente.jsx](../apps/web/src/pages/ModalCondicionesPaciente.jsx) | `useCondicionesPaciente` | Conectada |
 | [ModalFusionPacientes.jsx](../apps/web/src/pages/ModalFusionPacientes.jsx) | `useFusionPacientes` | Conectada |
 | [ModalDiagnostico.jsx](../apps/web/src/pages/ModalDiagnostico.jsx), [ModalComunidad.jsx](../apps/web/src/pages/ModalComunidad.jsx) | `useFormularioDiagnostico`, `useFormularioComunidad` | Conectada |
+| [ModalAreaAtencion.jsx](../apps/web/src/pages/ModalAreaAtencion.jsx), [ModalClinica.jsx](../apps/web/src/pages/ModalClinica.jsx) | via `CatalogoAreasPage` y `CatalogoClinicasPage` | Conectada |
+| [ModalCita.jsx](../apps/web/src/pages/ModalCita.jsx), [SelectorDePacienteCita.jsx](../apps/web/src/pages/SelectorDePacienteCita.jsx) | `useFormularioCita`, `useBusquedaPacientes` | Conectada |
+| [ModalDetalleCita.jsx](../apps/web/src/pages/ModalDetalleCita.jsx), [FlujoDeCita.jsx](../apps/web/src/pages/FlujoDeCita.jsx) | `useCambioEstadoCita` (Atender abre la consulta con `usePaciente`) | Conectada |
+| [CitasDelPaciente.jsx](../apps/web/src/pages/CitasDelPaciente.jsx) (seccion de la ficha) | `useCitasDelPaciente` | Conectada |
 
 ### Movil (pestana Pacientes)
 
@@ -103,16 +110,20 @@ sistema.
 | [PacientesCronicosScreen.js](../apps/mobile/src/screens/PacientesCronicosScreen.js) | `usePacientesCronicos` | Conectada |
 | [CatalogoCondicionesScreen.js](../apps/mobile/src/screens/CatalogoCondicionesScreen.js) | `useCatalogoCondiciones` | Conectada |
 | [CatalogoDiagnosticosScreen.js](../apps/mobile/src/screens/CatalogoDiagnosticosScreen.js) | `useCatalogoDiagnosticos` | Conectada |
+| [AgendaCitasScreen.js](../apps/mobile/src/screens/AgendaCitasScreen.js) (con `agenda-citas/`: calendario de anio y de mes, agenda del dia y detalle) | `useAgendaCitas`, `useCambioEstadoCita` | Conectada |
 
 ### Contra que trabaja
 
 `pacientes`, `expedientes`, `idiomas`, `condiciones_cronicas`, `padecimientos_cronicos`,
-`fusiones_pacientes`, `atenciones`, `triajes`, `consultas`, `consulta_diagnostico`,
-`diagnosticos`, `recetas`, `comunidades`, `municipios`, `departamentos`.
+`fusiones_pacientes`, `areas_atencion`, `paciente_area`, `atenciones`, `triajes`, `consultas`,
+`consulta_diagnostico`, `diagnosticos`, `recetas`, `receta_detalle`, `clinicas`, `citas`,
+`jornadas`, `jornada_personal`, `comunidades`, `municipios`, `departamentos`, y la vista
+`vista_lotes_disponibles` (lo que se puede recetar).
 
-Funciones de base: `fn_registrar_paciente`, `fn_buscar_pacientes`, `fn_generar_receta`,
-`fn_ajustar_entrega_receta`, `fn_existencias_disponibles`, `fn_detectar_pacientes_duplicados`,
-`fn_fusionar_pacientes`.
+Funciones de base: `fn_registrar_paciente`, `fn_buscar_pacientes` (que cuenta sus llamadas en
+`limites_de_uso`), `fn_generar_receta`, `fn_ajustar_entrega_receta`,
+`fn_bodega_de_entrega_de_consulta`, `fn_existencias_disponibles`,
+`fn_detectar_pacientes_duplicados`, `fn_fusionar_pacientes`, `fn_eliminar_clinica`.
 
 ### Notas
 
@@ -125,6 +136,18 @@ Funciones de base: `fn_registrar_paciente`, `fn_buscar_pacientes`, `fn_generar_r
   similar) y `ModalFusionPacientes.jsx` compara y fusiona. `fusionarPacientes()` en si acepta
   cualquier par de ids, pero hoy no hay forma de elegir un par que el detector no proponga
   (limitacion conocida, ver el comentario de cabecera de `PosiblesDuplicadosPage.jsx`).
+- **Areas de atencion (`00182`)**: un catalogo que mantiene la administradora
+  (`/pacientes/areas`) y que se asigna a cada paciente en el alta y en la edicion
+  (`paciente_area`). Es tambien un filtro de la busqueda de pacientes.
+- **Clinicas y agenda de citas (`00183`, `00184`)**: una cita es de un paciente, en una jornada,
+  en una clinica y con un profesional del cuadro de turnos. La agenda de la web agenda, reagenda y
+  cancela; **Atender** abre la consulta, y al guardarla la cita queda atendida en la misma
+  transaccion. Cupo de la clinica, traslapes y transiciones los valida la base (`fn_validar_cita`);
+  `useFormularioCita` solo los anticipa. Agendar es el permiso fino `citas.agendar` (`00185`).
+- **Citas en movil**: `AgendaCitasScreen.js` consulta la agenda y cambia el estado de una cita
+  (atender, regresar a creada, cancelar). No agenda: crear y reagendar citas solo esta en la web.
+- La receta sale de la bodega de la jornada o, si no tiene, de la principal
+  (`fn_bodega_de_entrega_de_consulta`, `00176`).
 
 ---
 
@@ -138,7 +161,11 @@ La unidad de operacion. Casi todo lo clinico exige una jornada `en curso`.
 | ----------------------------------------------------------------------- | ----------------------------------------------- | --------- |
 | [JornadasPage.jsx](../apps/web/src/pages/JornadasPage.jsx) `/jornadas`   | `useJornadasKanban`                             | Conectada |
 | [DetalleJornadaPage.jsx](../apps/web/src/pages/DetalleJornadaPage.jsx) `/jornadas/:id` | `useDetalleJornada`, `useCuadroTurnos`, `useResumenCierreJornada` | Conectada |
-| [InsumosDeJornada.jsx](../apps/web/src/pages/InsumosDeJornada.jsx)       | `useInsumosDeJornada`                           | Conectada |
+| [InsumosDeJornada.jsx](../apps/web/src/pages/InsumosDeJornada.jsx) (pestana Insumos: lo previsto y la bodega de la jornada) | `useInsumosDeJornada` | Conectada |
+| [ModalCargaABodega.jsx](../apps/web/src/pages/ModalCargaABodega.jsx), [ModalDevolucionDeBodega.jsx](../apps/web/src/pages/ModalDevolucionDeBodega.jsx) | `useCargaDeBodegaDeJornada`, `useDevolucionDeBodegaDeJornada` | Conectada |
+| [ConsumoDeJornada.jsx](../apps/web/src/pages/ConsumoDeJornada.jsx) (pestana Consumo) | `useConsumoDeJornada` | Conectada |
+| [GastosDeJornada.jsx](../apps/web/src/pages/GastosDeJornada.jsx) (pestana Gastos) | `useGastosDeJornada` | Conectada |
+| [SobranteDeJornada.jsx](../apps/web/src/pages/SobranteDeJornada.jsx) (pestana Cierre) | `useSobranteDeJornada` | Conectada |
 | [OrigenesDePresupuesto.jsx](../apps/web/src/pages/OrigenesDePresupuesto.jsx) | `useOrigenesDePresupuesto`                  | Conectada |
 | [ModalJornada.jsx](../apps/web/src/pages/ModalJornada.jsx)               | `useFormularioJornada`                          | Conectada |
 | [ModalAsignarPersonal.jsx](../apps/web/src/pages/ModalAsignarPersonal.jsx) | `useAsignacionPersonal`                       | Conectada |
@@ -160,9 +187,16 @@ La unidad de operacion. Casi todo lo clinico exige una jornada `en curso`.
 ### Contra que trabaja
 
 `jornadas`, `jornada_personal`, `jornada_estado_historial`, `jornada_insumos`,
-`jornada_presupuesto_origen`, `fuentes_de_presupuesto`, `atenciones`, `comunidades`, `proyectos`,
-`donaciones`. Funciones: `fn_contar_atenciones_incompletas`, `personal_registro_atenciones`,
-`fn_atenciones_de_persona_por_jornada`, `fn_reporte_jornada`.
+`jornada_presupuesto_origen`, `fuentes_de_presupuesto`, `gastos`, `categorias_de_gasto`,
+`atenciones`, `consultas`, `recetas`, `citas`, `comunidades`, `proyectos`, `donaciones`, `bodegas`,
+`existencias`, `movimientos_inventario`, y las vistas `vista_lotes_disponibles`,
+`vista_reporte_impacto` y `nombres_de_perfiles`.
+
+Funciones: `fn_contar_atenciones_incompletas`, `personal_registro_atenciones`,
+`fn_atenciones_de_persona_por_jornada`, `fn_reporte_jornada`,
+`fn_cargar_insumo_a_bodega_de_jornada`, `fn_devolver_de_bodega_de_jornada`,
+`fn_consumo_de_insumos_de_jornada`, `existencias_totales_por_bodega`, `sobrante_de_jornada`,
+`fn_liquidar_sobrante_de_jornada`, `saldo_de_caja`.
 
 ### Notas
 
@@ -172,6 +206,22 @@ La unidad de operacion. Casi todo lo clinico exige una jornada `en curso`.
   no se puede finalizar con atenciones abiertas: eso lo hace cumplir la base
   (`fn_contar_atenciones_incompletas`).
 - Las transiciones validas viven en `TRANSICIONES_JORNADA` y las revalida un trigger en Postgres.
+- **Toda jornada pertenece a un proyecto (`00169`) y lleva una bodega (`00178`)**: una bodega
+  movil o, desde la `00181`, la principal. Las dos cosas las exige la base.
+- **Bodega de la jornada**: desde la pestana Insumos se carga la bodega movil
+  (`fn_cargar_insumo_a_bodega_de_jornada`, `00178`) y, al terminar, lo que sobra se devuelve a
+  una bodega fija (`fn_devolver_de_bodega_de_jornada`, `00179`). La pestana Consumo muestra por
+  lote lo cargado, lo entregado en recetas, lo devuelto, lo pendiente de aprobar y lo que le
+  queda a la jornada (`fn_consumo_de_insumos_de_jornada`; por jornada desde la `00186`). Con la
+  bodega principal solo hay entregas, y la pantalla quita las columnas que no aplican.
+- **Gastos y sobrante**: la pestana Gastos registra los gastos de la jornada contra su
+  presupuesto (un gasto no lo pasa, `00159`). En Cierre, el sobrante de una jornada finalizada
+  se devuelve a su origen o se traspasa a otra jornada (`00160`); lo que no vuelve a una donacion
+  entra a la caja (`00168`).
+- Las fechas reales de inicio y de cierre no se capturan: las pone la base al cambiar el estado
+  (`00174`).
+- Cancelar o finalizar una jornada cancela sus citas abiertas (`00184`); el resumen de cierre lo
+  avisa antes.
 - **Detalle de jornada en movil (issue #925)**: `DetalleJornadaScreen.js` es una version acotada
   de `DetalleJornadaPage.jsx` (web): solo Resumen, Insumos y Consumo, los mismos hooks que la web
   (`useDetalleJornada`, `useInsumosDeJornada`/`useConsumoDeJornada` via `InsumosDeJornada.js`/
@@ -185,6 +235,13 @@ La unidad de operacion. Casi todo lo clinico exige una jornada `en curso`.
   de insumos/gastos por proyecto, que si tiene `ProyectosSocialesPage.jsx` en la web). Queda fuera
   del alcance cubierto por la issue #925 en movil; no es un hueco nuevo, es el mismo estado previo.
 
+---
+
+## 3. Inventario
+
+Catalogo de medicamentos e insumos, lotes, existencias por bodega, movimientos con aprobacion y
+alertas de vencimiento.
+
 ### Web
 
 [InventarioPage.jsx](../apps/web/src/pages/InventarioPage.jsx) `/inventario` es una sola ruta con
@@ -197,7 +254,8 @@ en cliente sobre lo ya filtrado); el kardex sigue mostrando todos sus movimiento
 | Pantalla                                                                              | Hook                            | Estado    |
 | ------------------------------------------------------------------------------------- | ------------------------------- | --------- |
 | [InventarioPage.jsx](../apps/web/src/pages/InventarioPage.jsx) (catalogo y lotes)      | `@ecopac/shared` (`inventario/`) | Conectada |
-| [PanelAlertasVencimiento.jsx](../apps/web/src/pages/PanelAlertasVencimiento.jsx)       | `useAlertasVencimiento`         | Conectada |
+| [PanelAlertasVencimiento.jsx](../apps/web/src/pages/PanelAlertasVencimiento.jsx)       | `useAlertasVencimiento`, `useAtencionAlertaCaducidad` | Conectada |
+| [AvisosVencimientoPage.jsx](../apps/web/src/pages/AvisosVencimientoPage.jsx) `/inventario/avisos-vencimiento` | `useConfiguracionAlertasVencimiento` | Conectada |
 | [KardexMovimientosPage.jsx](../apps/web/src/pages/KardexMovimientosPage.jsx)           | `useKardexMovimientos`          | Conectada |
 | [AdministracionBodegasProveedoresPage.jsx](../apps/web/src/pages/AdministracionBodegasProveedoresPage.jsx) | `useAdministracionBodegasProveedores` | Conectada |
 | [CatalogoPrincipiosActivosPage.jsx](../apps/web/src/pages/CatalogoPrincipiosActivosPage.jsx) | `useCatalogoPrincipiosActivos` | Conectada |
@@ -205,7 +263,7 @@ en cliente sobre lo ya filtrado); el kardex sigue mostrando todos sus movimiento
 | [MisMovimientosPage.jsx](../apps/web/src/pages/MisMovimientosPage.jsx)                 | `useMisMovimientos`             | Conectada |
 | [BandejaValidacionPage.jsx](../apps/web/src/pages/BandejaValidacionPage.jsx)           | `usePendientesValidacion`       | Conectada |
 | [ModalRegistroIngreso.jsx](../apps/web/src/pages/ModalRegistroIngreso.jsx)             | `useRegistroIngreso`            | Conectada |
-| [ModalSalidaMedicamento.jsx](../apps/web/src/pages/ModalSalidaMedicamento.jsx)         | `useRegistroSalida`             | Conectada |
+| [ModalSalidaMedicamento.jsx](../apps/web/src/pages/ModalSalidaMedicamento.jsx) (salida y traslado entre bodegas) | `useRegistroSalida` | Conectada |
 | [ModalMedicamento.jsx](../apps/web/src/pages/ModalMedicamento.jsx), [ModalPrincipioActivo.jsx](../apps/web/src/pages/ModalPrincipioActivo.jsx), [ModalPresentacion.jsx](../apps/web/src/pages/ModalPresentacion.jsx) | via `InventarioPage` | Conectada |
 
 ### Movil (pestana Inventario)
@@ -219,7 +277,7 @@ en cliente sobre lo ya filtrado); el kardex sigue mostrando todos sus movimiento
 | [DetalleLoteScreen.js](../apps/mobile/src/screens/DetalleLoteScreen.js)                | `useDetalleLote`         | Conectada |
 | [PrincipiosActivosScreen.js](../apps/mobile/src/screens/PrincipiosActivosScreen.js)    | `useCatalogoPrincipiosActivos` | Conectada |
 | [RegistroIngresoScreen.js](../apps/mobile/src/screens/RegistroIngresoScreen.js)        | `useRegistroIngreso`     | Conectada |
-| [RegistroSalidaScreen.js](../apps/mobile/src/screens/RegistroSalidaScreen.js)          | `useRegistroSalida`      | Conectada |
+| [RegistroSalidaScreen.js](../apps/mobile/src/screens/RegistroSalidaScreen.js) (salida y traslado entre bodegas) | `useRegistroSalida` | Conectada |
 | [MisMovimientosScreen.js](../apps/mobile/src/screens/MisMovimientosScreen.js)          | `useMisMovimientos`      | Conectada |
 | [ValidacionMovimientosScreen.js](../apps/mobile/src/screens/ValidacionMovimientosScreen.js) | `usePendientesValidacion` | Conectada |
 
@@ -229,13 +287,15 @@ Registrar ingreso, registrar salida y mis movimientos llevan la guarda de
 ### Contra que trabaja
 
 `medicamentos`, `principios_activos`, `medicamento_principio`, `presentaciones`, `proveedores`,
-`bodegas`, `lotes`, `existencias`, `movimientos_inventario`, `alertas_caducidad`, y la vista
+`bodegas`, `lotes`, `existencias`, `movimientos_inventario`, `alertas_caducidad`,
+`alerta_caducidad_detalle`, `configuracion_alertas_caducidad`, `avisos_caducidad`, y la vista
 `vista_lotes_disponibles`.
 
 Funciones de base: `fn_existencias_disponibles`, `existencias_totales_por_bodega`,
 `fn_registrar_medicamento`, `fn_aplicar_ajuste_existencias`, `fn_generar_alertas_caducidad`,
 `fn_sincronizar_alertas_caducidad`, `fn_atender_alerta_caducidad`,
-`fn_medicamento_tiene_existencias`, `fn_valor_de_inventario_disponible`.
+`fn_medicamento_tiene_existencias`, `fn_valor_de_inventario_disponible`,
+`fn_trasladar_entre_bodegas`, `fn_cambiar_principio_de_medicamento`.
 
 ### Notas
 
@@ -253,6 +313,20 @@ Funciones de base: `fn_existencias_disponibles`, `existencias_totales_por_bodega
   politica RLS de UPDATE de `00107`). El valor del stock disponible se ve en el panel de
   indicadores y en el reporte de inventario, gateado a administracion y a los roles consultivos
   (`puedeVerValorizacion()`, `fn_valor_de_inventario_disponible`, `00122`).
+- **Avisos de vencimiento configurables (`00162`, issue #899)**: en
+  `/inventario/avisos-vencimiento` la administracion elige con cuantos dias de antelacion se
+  avisa (de cero a cuatro antelaciones, en `configuracion_alertas_caducidad`); el aviso del dia
+  del vencimiento siempre sale. La rutina deja un registro por etapa en `avisos_caducidad`, que
+  ninguna pantalla lee: cada fila dispara su notificacion. Atender una alerta reparte lo que
+  queda del lote entre una o varias acciones (`alerta_caducidad_detalle`).
+- **Traslados entre bodegas (`00179`)**: el motivo "traslado" de la salida, solo para la
+  administradora, llama a `fn_trasladar_entre_bodegas`: ingreso en la destino y salida del
+  origen, aprobados en una transaccion. Antes un traslado era solo la salida.
+- **Lo pendiente ya esta comprometido (`00186`)**: una salida que espera aprobacion deja de
+  contarse como disponible (`vista_lotes_disponibles`). La entrega de una receta se aprueba o se
+  rechaza entera, y rechazarla anula la receta.
+- Un insumo no lleva principio activo ni concentracion (`00164`) y su lote puede no tener fecha
+  de vencimiento (`00171`); el principio activo de un medicamento se puede cambiar (`00166`).
 
 ---
 
@@ -267,12 +341,14 @@ Solo web.
 | [MovimientosPresupuesto.jsx](../apps/web/src/pages/MovimientosPresupuesto.jsx)   | `useEjecucionPresupuestal`        | Conectada |
 | [TablaGastos.jsx](../apps/web/src/pages/TablaGastos.jsx), [ModalGasto.jsx](../apps/web/src/pages/ModalGasto.jsx) | `useFormularioGasto` | Conectada |
 | [BandejaAprobacionGastos.jsx](../apps/web/src/pages/BandejaAprobacionGastos.jsx) | `usePendientesAprobacionGastos`   | Conectada |
+| [CajaDePresupuesto.jsx](../apps/web/src/pages/CajaDePresupuesto.jsx) (pestana Caja) | `useCajaDePresupuesto` | Conectada |
 
 ### Contra que trabaja
 
-`gastos`, `jornadas`, `proyectos`. Funciones: `presupuestos_de_jornadas`,
-`presupuestos_de_proyectos` (y las de un solo elemento, `presupuesto_de_jornada`,
-`presupuesto_de_proyecto`, `presupuesto_del_sistema`).
+`gastos`, `categorias_de_gasto`, `movimientos_de_caja`, `jornadas`, `proyectos`, y la vista
+`nombres_de_perfiles`. Funciones: `presupuestos_de_jornadas`, `presupuestos_de_proyectos` (y las
+de un solo elemento, `presupuesto_de_jornada`, `presupuesto_de_proyecto`,
+`presupuesto_del_sistema`) y `saldo_de_caja`.
 
 ### Notas
 
@@ -281,6 +357,13 @@ Solo web.
 - Mismo patron de aprobacion que inventario, con autoaprobacion para el administrador (`00109`).
 - El personal de campo ve el presupuesto de lo suyo y registra gastos, que entran pendientes;
   aprobar es de quien tiene `presupuestos.aprobar`.
+- Las categorias de gasto son un catalogo ampliable (`categorias_de_gasto`, `00158`), no un enum.
+- Un gasto no deja lo comprometido (pendiente mas aprobado) por encima del presupuesto de su
+  jornada, y una jornada finalizada no admite gastos nuevos (`00159`).
+- **Caja (`00167`, `00168`)**: el sobrante de una jornada que no vuelve a una donacion entra a la
+  caja (`movimientos_de_caja`), y la caja es un origen mas del presupuesto de otra jornada. La
+  pestana Caja muestra el saldo y sus movimientos.
+- Los gastos de una jornada tambien se registran desde su detalle (pestana Gastos, seccion 2).
 
 ---
 
@@ -307,13 +390,17 @@ cada "Nuevo hito" empiecen en blanco, en vez de traer lo escrito la vez anterior
 
 `proyectos`, `proyecto_hitos`, `proyecto_seguimiento`, `proyecto_estado_historial`,
 `proyecto_personal`, `proyecto_insumos`, `jornada_insumos`, `jornadas`, `gastos`. Funciones:
-`equipo_de_proyecto`, `fn_pasar_insumo_de_proyecto_a_jornada`.
+`equipo_de_proyecto`, `fn_pasar_insumo_de_proyecto_a_jornada`, `fn_insumos_de_proyecto`,
+`fn_consumo_de_insumos_de_jornada`.
 
 ### Notas
 
 - Un proyecto agrupa sus jornadas; sus insumos previstos pasan a una jornada con
   `fn_pasar_insumo_de_proyecto_a_jornada`.
-- Un proyecto cancelado queda en solo consulta: la base rechaza cualquier modificacion (`00154`).
+- Un proyecto cancelado o finalizado queda en solo consulta: la base rechaza cualquier
+  modificacion, de sus datos y de lo que cuelga de el (`00154`, y `00172` para el finalizado).
+- La pestana de insumos del proyecto muestra lo que les queda a sus jornadas en sus bodegas
+  moviles (`fn_insumos_de_proyecto`, `00186`).
 - El porcentaje de avance no se edita a mano sin dejar rastro: un trigger escribe en
   `proyecto_seguimiento` cada cambio.
 
@@ -334,7 +421,7 @@ Solo web, solo administrador.
 ### Contra que trabaja
 
 `donantes`, `donaciones`, `donacion_detalle`, `lotes`, `movimientos_inventario`, `proyectos`,
-`jornadas`. Funciones: `fn_registrar_donacion`, `fn_anular_donacion`.
+`jornadas`, `proveedores`. Funcion: `fn_registrar_donacion`.
 
 ### Notas
 
@@ -343,7 +430,13 @@ Solo web, solo administrador.
 - Una donacion puede destinarse a un proyecto o a una jornada concreta. Si es de dinero y la
   jornada esta planificada o en curso, entra sola al presupuesto de esa jornada como un aporte
   (`00187`); no hay que volver a asignarla desde la pestana Presupuesto.
-- Una donacion no se borra: se anula, con motivo y responsable (`fn_anular_donacion`).
+- **Una donacion registrada no se borra, no se corrige y ya no se anula.** La `00173` quito la
+  politica de UPDATE y la funcion `fn_anular_donacion`, porque no hay proceso para devolver lo
+  donado. Las donaciones anuladas antes conservan su estado y se siguen mostrando como anuladas.
+- Cada donante tiene su proveedor en inventario (`proveedores.donante_id`, `00175`): lo crea y
+  lo mantiene un trigger a partir del donante, y por eso no se edita en Inventario sino en Donantes.
+- El renglon de una donacion de insumos elige el articulo del catalogo, igual que el de
+  medicamentos (`00170`).
 
 ---
 
@@ -353,17 +446,19 @@ Solo web (`movil: false`).
 
 | Pantalla                                                                                 | Hook                   | Estado    |
 | ---------------------------------------------------------------------------------------- | ---------------------- | --------- |
-| [ReportesPage.jsx](../apps/web/src/pages/ReportesPage.jsx) `/reportes`                    | `useReporteMedicamentosPorVencer` | Hub con cuatro pestanas, cada una con su ruta |
+| [ReportesPage.jsx](../apps/web/src/pages/ReportesPage.jsx) `/reportes`                    | `useReporteMedicamentosPorVencer` | Hub con cinco pestanas, cada una con su ruta |
 | [DashboardMetricasPage.jsx](../apps/web/src/pages/DashboardMetricasPage.jsx) pestana `/reportes` y `/reportes/dashboard` | `useDashboardMetricas` | Conectada |
 | Medicamentos por vencer, pestana `/reportes/medicamentos-por-vencer` (dentro de `ReportesPage.jsx`) | `useReporteMedicamentosPorVencer` | Conectada |
 | [ReportePacientesPage.jsx](../apps/web/src/pages/ReportePacientesPage.jsx) pestana `/reportes/pacientes-atendidos` | `useReportePacientes` (usa `useFiltrosReportes` por dentro) | Conectada |
 | [ReporteInventarioPage.jsx](../apps/web/src/pages/ReporteInventarioPage.jsx) pestana `/reportes/inventario-actual` | `useReporteInventario` | Conectada |
+| [ReporteEnfermedadesPage.jsx](../apps/web/src/pages/ReporteEnfermedadesPage.jsx) pestana `/reportes/enfermedades` | `useReporteEnfermedades` | Conectada |
 | [ReporteJornada.jsx](../apps/web/src/pages/ReporteJornada.jsx) `/reportes/jornada/:id`    | `useReporteJornada`    | Conectada |
 
 ### Contra que trabaja
 
 Vistas `vista_reporte_impacto_por_comunidad` y `vista_reporte_impacto`; funciones
-`fn_reporte_pacientes_atendidos`, `fn_reporte_jornada` y `fn_valor_de_inventario_disponible`.
+`fn_reporte_pacientes_atendidos`, `fn_reporte_jornada`, `fn_valor_de_inventario_disponible`,
+`fn_reporte_enfermedades` y `fn_opciones_reporte_enfermedades`.
 Exportacion a CSV con `exportarFilasACSV` (`reportes/csv.js`).
 
 ### Notas
@@ -374,7 +469,13 @@ Exportacion a CSV con `exportarFilasACSV` (`reportes/csv.js`).
 - Excepcion conocida: el reporte de inventario y el de medicamentos por vencer leen `existencias`
   y `lotes` directamente, por eso los consultivos conservan esa lectura (ver las divergencias de
   [PERMISOS.md](./PERMISOS.md)).
-- Las cuatro rutas de pestana montan `ReportesPage`, que elige la pestana por la direccion.
+- Las seis rutas de pestana (`/reportes` y `/reportes/dashboard` son la misma) montan
+  `ReportesPage`, que elige la pestana por la direccion.
+- **Reporte de enfermedades (`00177`, issue #916)**: cuatro vistas sobre `fn_reporte_enfermedades`
+  -las mas frecuentes, comparacion entre jornadas, comparacion entre comunidades y evolucion de
+  una enfermedad-, con graficas. Devuelve solo conteos agregados, desde la `00180` con el numero
+  real de casos. Los selectores salen de `fn_opciones_reporte_enfermedades`, porque los roles
+  consultivos no leen `jornadas`, `proyectos` ni `diagnosticos`.
 - **El margen del papel lo pone el documento, no la pagina.** Todo lo que se imprime (reportes,
   constancia, kardex, receta, cuadro de turnos) trae su margen como `padding` de `.doc-imprimible`
   o `.turnos-imprimible` (`apps/web/src/index.css`), repetido en cada hoja con
@@ -499,7 +600,7 @@ movil es cambiar el import, no reescribir la logica.
 | **Pendiente** | 0         | -                                                                        |
 | **Local**     | 0         | -                                                                        |
 | **Parcial**   | 0         | -                                                                        |
-| **Conectada** | Todas     | 35 rutas web y 29 pantallas moviles ([PANTALLAS.md](./PANTALLAS.md))      |
+| **Conectada** | Todas     | 40 rutas web y 31 pantallas moviles ([PANTALLAS.md](./PANTALLAS.md))      |
 
 Diferencias entre plataformas. La app movil es para el trabajo en campo, asi que lo de
 administracion y consulta queda en la web a proposito:
@@ -507,6 +608,6 @@ administracion y consulta queda en la web a proposito:
 | Solo en web                                                                 | Solo en movil                                        |
 | --------------------------------------------------------------------------- | ---------------------------------------------------- |
 | Presupuestos, Donaciones, Reportes, Colaboradores, Matriz de permisos, Bitacora | Entrega de medicamentos de una receta            |
-| Catalogo de comunidades y deteccion y fusion de duplicados (Pacientes)      | Seleccion de la jornada activa y panel de jornada en curso |
-| Creacion y edicion de jornadas, asignacion de personal y cuadro de turnos   | Mis jornadas asignadas                               |
-| Seguimiento e hitos de proyecto; administracion de bodegas y proveedores; presentaciones | -                                      |
+| Catalogos de comunidades, areas de atencion y clinicas; deteccion y fusion de duplicados; agendar y reagendar citas (Pacientes) | Seleccion de la jornada activa y panel de jornada en curso |
+| Creacion y edicion de jornadas, asignacion de personal y cuadro de turnos; equipo, pacientes atendidos, historial, presupuesto, gastos y cierre del detalle de jornada | Mis jornadas asignadas |
+| Seguimiento e hitos de proyecto; administracion de bodegas y proveedores; presentaciones; configuracion de los avisos de vencimiento | - |

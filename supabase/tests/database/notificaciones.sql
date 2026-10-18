@@ -12,7 +12,7 @@
 --     sentencia, y una fila reclamada para correo no se vuelve a reclamar.
 --   - RLS y GRANT: cada perfil ve y marca solo lo suyo, y solo puede tocar leida_en.
 --
--- config.toml corre seed.sql y seed-demo.sql antes de esta suite, y ahi ya hay administradores.
+-- config.toml corre supabase/fixtures/datos-de-prueba.sql antes de esta suite, y ahi ya hay administradores.
 -- Por eso ninguna prueba cuenta el total de la tabla: todas cuentan por perfil de esta suite.
 --
 -- Ningun dato real: perfiles, medicamento, lotes y gastos son inventados.

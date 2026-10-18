@@ -199,6 +199,13 @@ No es un limite de volumen. Son estas tres, en orden de urgencia.
 La documentacion de Vercel es explicita: un proyecto en un equipo Hobby no puede conectarse a un
 repositorio **propiedad de** una organizacion de Git. `URL-ECOPAC/Ecopac-Digital` lo es.
 
+> **Como se resolvio (issue #252, octubre de 2026).** Ninguna de las cuatro salidas de abajo: el
+> repositorio se movio a la **cuenta personal de GitHub de la organizacion** -una cuenta, no una
+> organizacion de GitHub-, y el proyecto de Vercel vive en una cuenta Hobby tambien de la
+> organizacion. Asi la integracion nativa funciona, con sus previews por PR, sin costo y sin
+> mantener un fork: el repositorio del curso queda congelado y el de la organizacion es la fuente
+> de verdad. La seccion se conserva porque explica por que se tomo esa decision.
+
 **La restriccion es sobre quien es dueno del repositorio, no sobre quien hace el enlace.** Da igual
 desde que cuenta se intente conectar, y da igual que quien lo intente sea miembro de la
 organizacion: mientras el repositorio pertenezca a `URL-ECOPAC`, la integracion nativa de Git no
@@ -300,8 +307,9 @@ Y el limite muerde por partida doble: un proyecto Free **se pausa tras una seman
 Para eso existe `keep-alive-supabase.yml`, que segun la issue #762 llevaba desde el 13 de agosto
 reportando verde mientras cada ping fallaba; desde la #830 falla con el error HTTP y avisa cuando
 no hizo nada por falta de secrets. Un proyecto pausado no responde hasta que alguien lo reactiva a
-mano desde el panel, y si eso pasa en mitad de una jornada, el sistema no esta. `Ecopac-Digital-Prod`
-esta pausado hoy (#252).
+mano desde el panel, y si eso pasa en mitad de una jornada, el sistema no esta. Desde el
+14-10-2026 `keep-alive-supabase.yml` le hace ping a los dos proyectos de la organizacion,
+`ecopac-prod` y `ecopac-dev`.
 
 ---
 

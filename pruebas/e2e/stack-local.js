@@ -61,7 +61,7 @@ function leerDelCli() {
     throw new Error(
       "No se pudo leer la configuracion del stack local. Estas pruebas necesitan Supabase " +
         "corriendo: ejecuta `supabase start` y despues `supabase db reset` (el seed de " +
-        "supabase/seed-demo.sql es el que crea las cuentas y los datos que usan). " +
+        "supabase/fixtures/datos-de-prueba.sql es el que crea las cuentas y los datos que usan). " +
         `Detalle: ${error.message}`,
     );
   }

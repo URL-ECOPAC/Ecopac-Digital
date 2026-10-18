@@ -8,8 +8,8 @@ herramienta se ejecuta y cual es su criterio de aprobacion (issue #758).
 
 La fuente es la **Matriz de Trazabilidad de Requerimientos** del Entregable Semana 5 (paginas
 14-17), que define **7 requerimientos funcionales** con su historia de usuario, y la lista de
-**15 requerimientos no funcionales** del Entregable Semana 3-4 (paginas 30-31). Los dos PDF estan en
-`docs/entregables/`.
+**15 requerimientos no funcionales** del Entregable Semana 3-4 (paginas 30-31). Los dos PDF son
+entregables del curso y no se versionan en este repositorio (issue #252).
 
 **Cuidado con la numeracion de las issues.** Las issues del tablero usan otra numeracion, la de un
 backlog mas granular que llega hasta `RF-34`. No coincide con la de la matriz: la #126, por
@@ -22,7 +22,7 @@ el numero del backlog. Este documento usa siempre la numeracion de la matriz.
 - **Ejecucion**: donde vive el caso. Si es una ruta, el caso esta automatizado y corre en el CI o
   con `npm test`. `Manual` significa que hay que ejecutarlo a mano siguiendo los pasos.
 - **Precondiciones comunes** de todo caso automatizado contra base real: stack local levantado con
-  la CLI de Supabase 2.115.0 y `supabase db reset`, que carga `supabase/seed-demo.sql` (datos
+  la CLI de Supabase 2.115.0 y `supabase db reset`, que carga `supabase/fixtures/datos-de-prueba.sql` (datos
   ficticios, ningun paciente real).
 - El numero entre parentesis despues de un archivo pgTAP es su cantidad de aserciones.
 

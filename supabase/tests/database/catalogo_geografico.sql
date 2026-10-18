@@ -15,7 +15,7 @@
 --   supabase test db supabase/tests/database/catalogo_geografico.sql
 --
 -- Se nombra el archivo y no el directorio entero porque otras tres suites SI dependen de
--- seed-demo.sql y lo declaran en su cabecera -tokens_auth_users.sql necesita las siete cuentas
+-- datos-de-prueba.sql y lo declaran en su cabecera -tokens_auth_users.sql necesita las siete cuentas
 -- demo, generar_alertas_caducidad.sql y desacoplar_gastos_de_inventario.sql sus fixtures-, asi
 -- que sin semillas fallan por diseno. Esta no: se sostiene sola.
 --
@@ -63,7 +63,7 @@ SELECT is(
 -- Los ids que otros archivos dan por ciertos
 -- ============================================================================
 -- Quince suites de este directorio insertan su comunidad de fixture sobre el municipio 101, y
--- supabase/seed-demo.sql cuelga las suyas de los municipios 106, 401 y 1601. Si la 00125
+-- supabase/fixtures/datos-de-prueba.sql cuelga las suyas de los municipios 106, 401 y 1601. Si la 00125
 -- renumerara el catalogo, esos archivos reventarian con un error de llave foranea que no
 -- mencionaria esta migracion.
 SELECT is(
@@ -75,7 +75,7 @@ SELECT is(
 SELECT is(
   (SELECT count(*) FROM municipios WHERE id IN (106, 401, 1601)),
   3::bigint,
-  'los tres municipios de los que cuelgan las comunidades de seed-demo.sql existen'
+  'los tres municipios de los que cuelgan las comunidades de datos-de-prueba.sql existen'
 );
 
 -- ============================================================================

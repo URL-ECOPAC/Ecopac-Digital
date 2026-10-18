@@ -4,33 +4,31 @@ Cuántas sesiones hacen falta para que el personal de Ecopac Guatemala use el si
 
 | | |
 | --- | --- |
-| Versión | 1.1 |
-| Fecha | 13 de octubre de 2026 |
+| Versión | 1.4 |
+| Fecha | 18 de octubre de 2026 (1.1: 13 de octubre de 2026) |
 | Dirigido a | Dirección de Ecopac Guatemala y quien imparta las capacitaciones |
 | Material de apoyo | Manuales de usuario por rol, guías rápidas y videos cortos |
 | Datos de práctica | Solo datos de demostración, todos ficticios |
 
 ## Estado del material de apoyo
 
-Cada tema de este plan dice qué sección de qué manual lo respalda. Los manuales y las guías ya están publicados; los videos todavía no.
+Cada tema de este plan dice qué sección de qué manual y qué video lo respaldan. Los manuales, las guías y los videos ya están publicados.
 
-| Código | Material | Estado al 13 de octubre de 2026 |
+| Código | Material | Estado al 18 de octubre de 2026 |
 | --- | --- | --- |
 | - | Plan de capacitaciones (este documento) | Escrito |
 | M-ADM | [Manual de la administradora](../formal/manual-del-administrador.pdf), que es también el manual de administración | Publicado. Computadora y teléfono |
 | M-MED | [Manual del médico](../formal/manual-del-medico.pdf) | Publicado. Computadora y teléfono |
-| M-VOL | [Manual del voluntario](../formal/manual-del-voluntario.pdf) | Publicado. Solo computadora |
+| M-VOL | [Manual del voluntario](../formal/manual-del-voluntario.pdf) | Publicado. Computadora y teléfono |
 | M-JD | [Manual de junta directiva y socio fundador](../formal/manual-de-junta-directiva-y-socio-fundador.pdf), uno solo para los dos roles | Publicado. Solo computadora, que es donde trabajan estos roles |
 | G-VOL | [Guía rápida del voluntario](../formal/guia-rapida-voluntario.pdf) | Publicada |
+| G-MED | [Guía rápida del médico](../formal/guia-rapida-medico.pdf) | Publicada |
 | G-JD | [Guía rápida de junta directiva y socio fundador](../formal/guia-rapida-junta-directiva-y-socio-fundador.pdf) | Publicada |
-| V-01 a V-07 | Videos cortos de los flujos clave | **Sin publicar.** Se citan por código; el enlace se agrega cuando estén en la cuenta de la organización |
-| - | Aplicación instalable en los teléfonos | Pendiente de la salida a producción (issue #252) |
+| V-01 a V-07 | Videos cortos de los flujos clave | Publicados en YouTube. Enlaces en la sección 8 |
+| - | Aplicación instalable en los teléfonos | Disponible: APK de producción para Android ([plan de implementación](../PLAN-DE-IMPLEMENTACION.md), sección 7) |
+| - | [Lista de asistencia](../formal/lista-de-asistencia-capacitaciones.pdf) | Hoja general imprimible, para anotar el nombre y la firma de quienes asisten |
 
-Tres cosas que quien capacita tiene que saber antes de usar el material:
-
-- **M-VOL y M-JD numeran sus secciones distinto que M-ADM y M-MED.** Por eso cada tema cita la sección exacta de cada manual.
-- **M-VOL solo muestra la computadora.** Los colaboradores trabajan sobre todo en el teléfono: para esas pantallas se usa M-MED (capítulos 4, 5, 6 y 8), que muestra las mismas tareas "En el teléfono".
-- **Las reglas de confidencialidad y qué hacer sin señal no están en M-VOL ni en G-VOL.** Para los colaboradores se enseñan con M-MED, secciones 1.5, 9.2 y 10.2.
+Antes de usar el material, quien capacita tiene que saber que **M-VOL y M-JD numeran sus capítulos distinto que M-ADM y M-MED**, porque cada rol tiene tareas distintas. Por eso cada tema cita la sección exacta de cada manual.
 
 ## 1. Objetivo y alcance
 
@@ -45,7 +43,7 @@ Cada persona se capacita solo en lo que su rol puede hacer. Nadie recibe una ses
 | Rol | Qué hace en el sistema | Dónde trabaja | Manual |
 | --- | --- | --- | --- |
 | Administradora | Todo: planifica jornadas y proyectos, administra el inventario y aprueba sus movimientos, lleva presupuestos y donaciones, gestiona a las personas y sus permisos | Web y móvil | M-ADM |
-| Médico | Atiende en la jornada: consulta, diagnóstico y receta. Registra pacientes, triaje y movimientos de inventario | Web y móvil | M-MED |
+| Médico | Atiende en la jornada: consulta, diagnóstico y receta. Registra pacientes, triaje y movimientos de inventario | Web y móvil | M-MED y G-MED |
 | Colaborador (voluntario general) | Apoya en la jornada: recibe y registra pacientes, toma los signos vitales, apoya en inventario | Web y móvil | M-VOL y G-VOL |
 | Junta directiva | Consulta los reportes | Solo web | M-JD y G-JD |
 | Socio fundador | Consulta los reportes. Tiene los mismos permisos que junta directiva | Solo web | M-JD y G-JD |
@@ -112,7 +110,7 @@ Reglas para quien capacita:
 
 ## 6. Las sesiones en detalle
 
-En las tablas, la columna "Manual" da la sección exacta de cada manual. Un video entre paréntesis todavía no está publicado.
+En las tablas, la columna "Manual" da la sección exacta de cada manual, y la columna del video, el código del video que muestra ese flujo (sección 8).
 
 ### Sesión 1. Primer ingreso, navegación y confidencialidad
 
@@ -127,12 +125,12 @@ Qué se enseña, en orden:
 
 | Tema | Manual | Video |
 | --- | --- | --- |
-| Qué es Ecopac Digital y qué puede hacer cada rol | M-ADM 1.1 y 1.2; M-MED 1.1 y 1.2; M-VOL 1; M-JD 1; G-VOL 1; G-JD 1 | - |
-| Reglas de confidencialidad: no tomar capturas, no compartir la cuenta, no hablar de pacientes fuera de la jornada | M-ADM 1.5; M-MED 1.5 | - |
-| Primer ingreso: el correo de bienvenida y la creación de la contraseña | M-ADM 2.1; M-MED 2.1 | (V-01) |
-| Iniciar y cerrar sesión, en la web y en el teléfono | M-ADM 2.2 y 2.4; M-MED 2.2 y 2.4; M-VOL 2; M-JD 2; G-VOL 2; G-JD 2 | (V-01) |
-| Qué hacer si se olvida la contraseña | M-ADM 2.3; M-MED 2.3; M-VOL 2; M-JD 2 | (V-01) |
-| La pantalla de inicio y el menú: qué módulos ve cada rol y por qué no todos ven lo mismo | M-ADM 3.1; M-MED 3.1; M-VOL 3 y 4; M-JD 3 y 4; G-VOL 3; G-JD 3 | - |
+| Qué es Ecopac Digital y qué puede hacer cada rol | M-ADM 1.1 y 1.2; M-MED 1.1 y 1.2; M-VOL 1.1 y 1.2; M-JD 1.1 y 1.2; G-VOL 3; G-JD 2 | - |
+| Reglas de confidencialidad: no tomar capturas, no compartir la cuenta, no hablar de pacientes fuera de la jornada | M-ADM 1.5; M-MED 1.5; M-VOL 1.5; M-JD 1.5; G-VOL 4; G-MED 4; G-JD 4 | - |
+| Primer ingreso: el correo de bienvenida y la creación de la contraseña | M-ADM 2.1; M-MED 2.1; M-VOL 2.1; M-JD 2.1; G-VOL 1; G-MED 1; G-JD 1 | V-01 |
+| Iniciar y cerrar sesión, en la web y en el teléfono | M-ADM 2.2 y 2.4; M-MED 2.2 y 2.4; M-VOL 2.2 y 2.5; M-JD 2.2 y 2.4; G-VOL 1; G-JD 1 | V-01 |
+| Qué hacer si se olvida la contraseña | M-ADM 2.3; M-MED 2.3; M-VOL 2.3; M-JD 2.3 | V-01 |
+| La pantalla de inicio y el menú: qué módulos ve cada rol y por qué no todos ven lo mismo | M-ADM 3.1; M-MED 3.1; M-VOL 3.1; M-JD 3; G-VOL 3; G-JD 2 | - |
 | Mi perfil, las notificaciones y cambiar la contraseña | M-ADM 3.2 a 3.4; M-MED 3.2 a 3.4 | - |
 | El cierre de sesión por inactividad | M-ADM 16.2; M-MED 9.2 | - |
 
@@ -159,15 +157,15 @@ Qué se enseña, en orden:
 
 | Tema | Manual | Video |
 | --- | --- | --- |
-| Qué es una jornada, sus estados y por qué casi todo lo clínico exige una jornada en curso | M-MED 4.1 y 9.1; M-ADM 4.1 y 16.1; M-VOL 6 | (V-07) |
-| Ver las jornadas asignadas y elegir la jornada en la que se trabaja | M-MED 4.2 y 4.3; M-VOL 6 | - |
-| Buscar a un paciente antes de registrarlo, para no duplicarlo | M-MED 5.1; M-ADM 5.1; M-VOL 9.1 | (V-02) |
-| Registrar a un paciente nuevo | M-MED 5.2; M-ADM 5.2; M-VOL 10.8 | (V-02) |
-| La ficha del paciente: datos, historial y condiciones crónicas | M-MED 5.3 a 5.5; M-ADM 5.3 a 5.5; M-VOL 9.2, 9.4 y 9.5 | - |
-| Recibir al paciente en la jornada | M-MED 6.1; M-ADM 6.1; M-VOL 9.3 | (V-02) |
-| Triaje y signos vitales | M-MED 6.2; M-ADM 6.2; M-VOL 9.3 | (V-02) |
-| La agenda de citas de la jornada | M-MED 5.6; M-ADM 5.6; M-VOL 9.6 y 10.7 | - |
-| Qué hacer si no hay señal o algo falla: el aviso "Sin conexión" y por qué lo que se escribe sin señal no queda guardado | M-MED 9.2 y 10.2; M-ADM 16.2; G-VOL 6 | - |
+| Qué es una jornada, sus estados y por qué casi todo lo clínico exige una jornada en curso | M-MED 4.1 y 9.1; M-ADM 4.1 y 16.1; M-VOL 5 y 10.1 | V-07 |
+| Ver las jornadas asignadas y elegir la jornada en la que se trabaja | M-MED 4.2 y 4.3; M-VOL 5.1 | - |
+| Buscar a un paciente antes de registrarlo, para no duplicarlo | M-MED 5.1; M-ADM 5.1; M-VOL 8.1 | V-02 |
+| Registrar a un paciente nuevo | M-MED 5.2; M-ADM 5.2; M-VOL 8.2 | V-02 |
+| La ficha del paciente: datos, historial y condiciones crónicas | M-MED 5.3 a 5.5; M-ADM 5.3 a 5.5; M-VOL 8.3, 8.5 y 8.6 | - |
+| Recibir al paciente en la jornada | M-MED 6.1; M-ADM 6.1; M-VOL 8.4 | V-02 |
+| Triaje y signos vitales | M-MED 6.2; M-ADM 6.2; M-VOL 8.4 | V-02 |
+| La agenda de citas de la jornada | M-MED 5.6; M-ADM 5.6; M-VOL 8.7 y 9.4 | - |
+| Qué hacer si no hay señal o algo falla: el aviso "Sin conexión" y por qué lo que se escribe sin señal no queda guardado | M-MED 9.2 y 10.2; M-ADM 16.2; M-VOL 1.6 y 10.2; G-VOL 5 | - |
 
 Para las pantallas del teléfono, los colaboradores siguen M-MED: M-VOL solo muestra la computadora.
 
@@ -192,12 +190,12 @@ Qué se enseña, en orden:
 
 | Tema | Manual | Video |
 | --- | --- | --- |
-| Abrir la consulta de un paciente que ya pasó por triaje | M-MED 7.1 | (V-02) |
-| Registrar la consulta: motivo, síntomas, exploración, diagnóstico principal y secundarios | M-MED 7.2 | (V-02) |
+| Abrir la consulta de un paciente que ya pasó por triaje | M-MED 7.1 | V-02 |
+| Registrar la consulta: motivo, síntomas, exploración, diagnóstico principal y secundarios | M-MED 7.2 | V-02 |
 | Condiciones crónicas del paciente | M-MED 5.4; M-ADM 5.4 | - |
-| Generar la receta: qué medicamentos hay disponibles y qué pasa con uno vencido o sin existencia | M-MED 7.3 y 9.2 | (V-02) |
+| Generar la receta: qué medicamentos hay disponibles y qué pasa con uno vencido o sin existencia | M-MED 7.3 y 9.2 | V-02 |
 | Imprimir la receta | M-MED 7.4; M-ADM 7.2 | - |
-| Entregar los medicamentos, y la aprobación de la salida por la administradora | M-MED 7.5; M-ADM 7.4 | (V-02) |
+| Entregar los medicamentos, y la aprobación de la salida por la administradora | M-MED 7.5; M-ADM 7.4 | V-02 |
 | Corregir una consulta y anular una receta | M-MED 7.6 y 7.7; M-ADM 7.3 | - |
 | Consultar el historial y la evolución de signos de un paciente | M-MED 5.5; M-ADM 5.5 | - |
 
@@ -222,14 +220,14 @@ Es la parte más compleja del sistema. Se enseña con los cuatro videos de inven
 
 | Tema | Manual | Video |
 | --- | --- | --- |
-| Medicamentos, insumos, lotes y bodegas: qué es cada cosa | M-MED 8.1; M-VOL 8.1, 8.2 y 8.5 | - |
-| Consultar las existencias por bodega y por lote | M-MED 8.2; M-ADM 8.1; M-VOL 8.1 y 8.2 | - |
-| Registrar el ingreso de un lote, por compra y por donación | M-MED 8.3; M-ADM 8.3; M-VOL 8.8 | (V-03) |
-| Los estados de un movimiento: pendiente, aprobado y rechazado. Por qué un ingreso no cuenta hasta que se aprueba | M-MED 9.1; M-ADM 16.1; M-VOL 8.8 | (V-03) |
-| Registrar una salida y un traslado entre bodegas | M-MED 8.4; M-ADM 8.4; M-VOL 8.8 | (V-04) |
-| Mis movimientos: ver en qué quedó lo que registré | M-MED 8.5; M-ADM 8.6; M-VOL 8.8 | (V-04) |
-| Insumos que salen a una jornada y lo que regresa | M-MED 8.6; M-ADM 8.7 | (V-05) |
-| Medicamentos vencidos o por vencer, y sus alertas | M-MED 8.7; M-ADM 8.8; M-VOL 8.3 | (V-06) |
+| Medicamentos, insumos, lotes y bodegas: qué es cada cosa | M-MED 8.1; M-VOL 7.1, 7.2 y 7.5 | - |
+| Consultar las existencias por bodega y por lote | M-MED 8.2; M-ADM 8.1; M-VOL 7.1 y 7.2 | - |
+| Registrar el ingreso de un lote, por compra y por donación | M-MED 8.3; M-ADM 8.3; M-VOL 7.7 | V-03 |
+| Los estados de un movimiento: pendiente, aprobado y rechazado. Por qué un ingreso no cuenta hasta que se aprueba | M-MED 9.1; M-ADM 16.1; M-VOL 7.9 y 10.1 | V-03 |
+| Registrar una salida y un traslado entre bodegas | M-MED 8.4; M-ADM 8.4; M-VOL 7.8 | V-04 |
+| Mis movimientos: ver en qué quedó lo que registré | M-MED 8.5; M-ADM 8.6; M-VOL 7.9 | V-04 |
+| Insumos que salen a una jornada y lo que regresa | M-MED 8.6; M-ADM 8.7 | V-05 |
+| Medicamentos vencidos o por vencer, y sus alertas | M-MED 8.7; M-ADM 8.8; M-VOL 7.3 | V-06 |
 
 Ejercicio de comprobación. Cada persona, sola:
 
@@ -253,14 +251,14 @@ Qué se enseña, en orden:
 | Tema | Manual | Video |
 | --- | --- | --- |
 | Proyectos: crear uno, su detalle, sus hitos y su seguimiento | M-ADM 9.1 a 9.4 | - |
-| El tablero de jornadas y planificar una jornada: comunidad, fechas, proyecto y bodega | M-ADM 4.1 y 4.2 | (V-07) |
-| Asignar personal y armar el cuadro de turnos | M-ADM 4.3 | (V-07) |
-| Preparar los insumos de la jornada | M-ADM 4.4 | (V-05) |
-| Iniciar la jornada y seguirla; los estados de una jornada | M-ADM 4.5 y 16.1 | (V-07) |
+| El tablero de jornadas y planificar una jornada: comunidad, fechas, proyecto y bodega | M-ADM 4.1 y 4.2 | V-07 |
+| Asignar personal y armar el cuadro de turnos | M-ADM 4.3 | V-07 |
+| Preparar los insumos de la jornada | M-ADM 4.4 | V-05 |
+| Iniciar la jornada y seguirla; los estados de una jornada | M-ADM 4.5 y 16.1 | V-07 |
 | Presupuesto: de dónde salen los fondos, los movimientos y la caja | M-ADM 10.1 y 10.4 | - |
 | Registrar un gasto y aprobarlo o rechazarlo | M-ADM 10.2 y 10.3 | - |
-| Donantes y donaciones: dinero, medicamentos e insumos, y la constancia | M-ADM 11.1 a 11.5 | (V-03) |
-| Cerrar la jornada: resumen, sobrante y lo que regresa a bodega | M-ADM 4.6 | (V-07) |
+| Donantes y donaciones: dinero, medicamentos e insumos, y la constancia | M-ADM 11.1 a 11.5 | V-03 |
+| Cerrar la jornada: resumen, sobrante y lo que regresa a bodega | M-ADM 4.6 | V-07 |
 
 Ejercicio de comprobación. La administradora, sola:
 
@@ -283,9 +281,9 @@ Qué se enseña, en orden:
 
 | Tema | Manual | Video |
 | --- | --- | --- |
-| Validar lo que registran otras personas: aprobar y rechazar movimientos de inventario, en la web y en el teléfono | M-ADM 8.5 | (V-03) y (V-04) |
+| Validar lo que registran otras personas: aprobar y rechazar movimientos de inventario, en la web y en el teléfono | M-ADM 8.5 | V-03 y V-04 |
 | El kárdex: la historia de cada lote | M-ADM 8.2 | - |
-| Configurar cuándo avisar de un vencimiento | M-ADM 8.9 | (V-06) |
+| Configurar cuándo avisar de un vencimiento | M-ADM 8.9 | V-06 |
 | Catálogos de inventario: medicamentos, insumos, principios activos, presentaciones, bodegas y proveedores | M-ADM 12.1 a 12.3 | - |
 | Catálogos clínicos: diagnósticos, condiciones crónicas, comunidades, áreas de atención y clínicas | M-ADM 12.4 a 12.7 | - |
 | Pacientes duplicados: cómo se revisan y cómo se fusionan | M-ADM 5.7 | - |
@@ -315,11 +313,11 @@ Qué se enseña, en orden:
 
 | Tema | Manual | Video |
 | --- | --- | --- |
-| Qué reportes hay y qué pregunta responde cada uno: dashboard de impacto, medicamentos por vencer, pacientes atendidos, inventario actual y enfermedades | M-JD 5; M-ADM 15.1; G-JD 3 y 4 | - |
-| Elegir el periodo, agrupar y comparar comunidades | M-JD 5.1; M-ADM 15.2 | - |
-| Leer cada reporte: qué significa cada número y de dónde sale | M-JD 5.1 a 5.5; M-ADM 15.1 | - |
-| Por qué los reportes muestran totales y no datos de un paciente | M-JD 5.3 | - |
-| Exportar un reporte a una hoja de cálculo e imprimirlo | M-JD 5.1; M-ADM 15.2; G-JD 4 | - |
+| Qué reportes hay y qué pregunta responde cada uno: dashboard de impacto, medicamentos por vencer, pacientes atendidos, inventario actual y enfermedades | M-JD 4; M-ADM 15.1; G-JD 2 | - |
+| Elegir el periodo, agrupar y comparar comunidades | M-JD 4.1; M-ADM 15.2 | - |
+| Leer cada reporte: qué significa cada número y de dónde sale | M-JD 4.1 a 4.5 y 5.1; M-ADM 15.1 | - |
+| Por qué los reportes muestran totales y no datos de un paciente | M-JD 1.2 y 4.3 | - |
+| Exportar un reporte a una hoja de cálculo e imprimirlo | M-JD 4; M-ADM 15.2; G-JD 2 | - |
 
 Ejercicio de comprobación. Cada persona, sola:
 
@@ -364,7 +362,7 @@ Comprobación: la jornada queda cerrada, con al menos cinco pacientes atendidos 
 | Usuarios de práctica, uno por rol y por persona | Los prepara la administradora antes de la sesión 1 | Todas |
 | Ambiente de práctica con los datos de demostración | Uno, distinto del sistema real | Todas |
 | Manual impreso o en PDF del rol de cada persona | Uno por persona | Todas |
-| Guía rápida de su rol, impresa | Una por colaborador, miembro de junta directiva y socio fundador | 1, 2, 7 y 8 |
+| Guía rápida de su rol, impresa | Una por colaborador, médico, miembro de junta directiva y socio fundador | 1, 2, 3, 7 y 8 |
 | Hoja de datos ficticios para los ejercicios | Una por persona | 2, 3, 4, 5 y 6 |
 | Lista de comprobación de la sesión | Una por persona | Todas |
 
@@ -373,7 +371,7 @@ Antes de la primera sesión, quien capacita comprueba que:
 - El ambiente de práctica abre y tiene los datos de demostración cargados.
 - Cada persona tiene su usuario de práctica y puede abrir el correo con el que se creó.
 - La aplicación está instalada en todos los teléfonos y abre.
-- Los videos se pueden reproducir en la sala, si ya están publicados.
+- Los videos se pueden reproducir en la sala.
 
 **Las capacitaciones no se hacen en el sistema real.** Todo lo que se registra en una sesión es ficticio, y en el sistema real se quedaría mezclado con los expedientes de verdad.
 
@@ -385,26 +383,27 @@ Manuales y guías, todos en PDF:
 | --- | --- | --- |
 | M-ADM | [Manual de la administradora](../formal/manual-del-administrador.pdf) | 17 capítulos, numerados 1 a 17 |
 | M-MED | [Manual del médico](../formal/manual-del-medico.pdf) | 10 capítulos, numerados 1 a 10 |
-| M-VOL | [Manual del voluntario](../formal/manual-del-voluntario.pdf) | 10 capítulos con numeración propia |
-| M-JD | [Manual de junta directiva y socio fundador](../formal/manual-de-junta-directiva-y-socio-fundador.pdf) | 5 capítulos con numeración propia |
+| M-VOL | [Manual del voluntario](../formal/manual-del-voluntario.pdf) | 11 capítulos, numerados 1 a 11 |
+| M-JD | [Manual de junta directiva y socio fundador](../formal/manual-de-junta-directiva-y-socio-fundador.pdf) | 6 capítulos, numerados 1 a 6 |
 | G-VOL | [Guía rápida del voluntario](../formal/guia-rapida-voluntario.pdf) | 6 secciones |
-| G-JD | [Guía rápida de junta directiva y socio fundador](../formal/guia-rapida-junta-directiva-y-socio-fundador.pdf) | 6 secciones |
+| G-MED | [Guía rápida del médico](../formal/guia-rapida-medico.pdf) | 6 secciones |
+| G-JD | [Guía rápida de junta directiva y socio fundador](../formal/guia-rapida-junta-directiva-y-socio-fundador.pdf) | 5 secciones |
 
 "M-MED 7.3" es la sección 7.3 del manual del médico. El índice de cada PDF lleva a la página.
 
-Videos, todavía sin publicar:
+Videos, publicados en YouTube. V-05 y V-07 solo existen en la computadora, porque esos flujos no se hacen en el teléfono:
 
-| Código | Video |
-| --- | --- |
-| V-01 | Primer ingreso al sistema y cambio de contraseña |
-| V-02 | La consulta completa: recibir al paciente, triaje, consulta, receta y entrega de medicamentos |
-| V-03 | Ingreso de lotes por compra y por donación, y su aprobación |
-| V-04 | Movimientos entre bodegas y su aprobación |
-| V-05 | Insumos que salen a una jornada y lo que regresa |
-| V-06 | Medicamentos vencidos o por vencer y sus alertas |
-| V-07 | Planificar y cerrar una jornada |
+| Código | Video | En la computadora | En el teléfono |
+| --- | --- | --- | --- |
+| V-01 | Primer ingreso al sistema y cambio de contraseña | https://youtu.be/DFRs3Te8VC4 | https://youtu.be/8umqLyAj0nE |
+| V-02 | La consulta completa: recibir al paciente, triaje, consulta, receta y entrega de medicamentos | https://youtu.be/Knd4ATnlUUs | https://youtu.be/hbmSSMQ3oJQ |
+| V-03 | Ingreso de lotes por compra y por donación, y su aprobación | https://youtu.be/syuIWsvOSMY | https://youtu.be/KvrXnOd6_RE |
+| V-04 | Movimientos entre bodegas y su aprobación | https://youtu.be/Rz50VTEznu4 | https://youtu.be/2Gtyj1r2Y_g |
+| V-05 | Insumos que salen a una jornada y lo que regresa | https://youtu.be/X_Qt1l8gGwc | No aplica |
+| V-06 | Medicamentos vencidos o por vencer y sus alertas | https://youtu.be/Zbg-o5bG48o | https://youtu.be/1ugbkPWuQlk |
+| V-07 | Planificar y cerrar una jornada | https://youtu.be/3RO6gtUiXpg | No aplica |
 
-Los enlaces de los videos se anotan en `docs/manual/README.md` cuando se publiquen.
+Los mismos enlaces están en [docs/manual/README.md](./README.md#videos). Si se vuelve a subir un video, se cambia el enlace en los dos lugares.
 
 ## 9. Después de las capacitaciones
 
@@ -420,6 +419,8 @@ Quien llega a una jornada por primera vez sin haber recibido las sesiones trabaj
 ## 10. Registro de las capacitaciones
 
 Cada sesión impartida se anota aquí. Una sesión cuenta como aprobada cuando la persona completó sola el ejercicio de comprobación.
+
+La asistencia se registra en la [lista de asistencia](../formal/lista-de-asistencia-capacitaciones.pdf), que se imprime y se firma en cada capacitación.
 
 | Fecha | Sesión | Quién capacitó | Asistentes | Aprobaron | Observaciones |
 | --- | --- | --- | --- | --- | --- |

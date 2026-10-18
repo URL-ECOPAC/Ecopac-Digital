@@ -144,7 +144,7 @@ packages/
 supabase/
   migrations/  esquema de base de datos versionado
   functions/   rutinas programadas (alertas de vencimiento)
-docs/          documentacion, entregables y contexto para IA
+docs/          documentacion, manuales y evidencias
 .github/       plantillas de issues, PR, Projects y workflows
 ```
 
@@ -181,6 +181,13 @@ Detalles en [CONTRIBUTING.md](./CONTRIBUTING.md).
 - Expo no abre -> reiniciar con `npm run dev:mobile` y luego `npm run dev:mobile -- --clear`.
 - Las variables de entorno no cargan -> reiniciar el servidor despues de editar
   `.env.development`.
+
+## Instalar un ambiente desde cero
+
+Esta guia es para trabajar en local. Para levantar un ambiente remoto completo -cuentas, proyectos
+de Supabase, secrets, Vercel, APK y respaldos-, el recorrido en orden esta en
+**[MANUAL-DE-INSTALACION.md](./MANUAL-DE-INSTALACION.md)**. Las tres secciones que siguen resumen
+las trampas de cada pieza; el manual es el que dice en que orden se hace todo.
 
 ## Configurar el proyecto Supabase remoto (lo que no viaja en el repositorio)
 
@@ -266,7 +273,14 @@ si los dos archivos dejan de coincidir o si falta alguno.
 Las variables `VITE_*` se embeben en el bundle en tiempo de build, asi que un cambio de valor
 exige volver a desplegar: no basta con guardarlo en el Dashboard.
 
-Cuando el proyecto exista, anotar aqui la URL de cada ambiente.
+URL de cada ambiente (issue #252):
+
+| Ambiente | Web | Supabase |
+| --- | --- | --- |
+| Produccion (`main`) | https://ecopac-digital.vercel.app | `https://vuujluoxlkiakfstiiur.supabase.co` |
+| Desarrollo (`develop`) | https://ecopac-digital-git-develop-ecopacdigital.vercel.app (pide iniciar sesion en Vercel) | `https://swwtjekapvnkjzshzdjk.supabase.co` |
+
+Lo demas que quedo creado, y como, esta en [PLAN-DE-IMPLEMENTACION.md](./PLAN-DE-IMPLEMENTACION.md).
 
 ## Aprovisionamiento del primer administrador
 
@@ -279,6 +293,10 @@ esquema.
 La migracion es idempotente: si el correo `ecopac.digital@gmail.com` ya existe, reutiliza ese usuario en
 vez de crear otro, y se limita a asegurar que su perfil tenga rol `administrador`. Se puede
 aplicar tantas veces como haga falta.
+
+**Es el unico usuario con el que nace una base.** La `00063` habia aprovisionado antes a
+`admin@ecopac.org`, un buzon que la organizacion no controla; la `00189` lo retira si nunca se
+uso, para que no quede una cuenta de administrador recuperable desde un correo ajeno (issue #252).
 
 **La migracion no fija ninguna contrasena.** Crea el usuario con `encrypted_password` en NULL a
 proposito: una contrasena versionada en un repositorio publico es una credencial publicada. La

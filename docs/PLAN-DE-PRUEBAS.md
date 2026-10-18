@@ -118,7 +118,7 @@ de Supabase configuradas en web y movil sean `https://`.
 ### Usabilidad y aceptacion
 
 Las prepara el equipo y las ejecuta la organizacion. Se graba o se toman notas **sin datos reales
-de pacientes**: se trabaja sobre `seed-demo.sql` o sobre una copia anonimizada, nunca sobre
+de pacientes**: se trabaja sobre `datos-de-prueba.sql` o sobre una copia anonimizada, nunca sobre
 `ecopac-prod`.
 
 ## Donde vive cada evidencia
@@ -155,7 +155,7 @@ guardan donde decida la organizacion y el archivo de evidencia apunta a ellas.
 **Politica de datos**, siguiendo `AGENTS.md` y `docs/PROTECCION-DE-DATOS.md`:
 
 - Ningun dato real de pacientes en una evidencia: ni en capturas, ni en grabaciones, ni en salidas
-  de consola copiadas. Se ejecuta sobre `supabase/seed-demo.sql`, cuyos datos son ficticios.
+  de consola copiadas. Se ejecuta sobre `supabase/fixtures/datos-de-prueba.sql`, cuyos datos son ficticios.
 - Las pruebas nunca se ejecutan contra `ecopac-prod`, y no se escribe a mano sobre `ecopac-dev`.
 - En una sesion de usabilidad o de aceptacion, las personas participantes se registran por su rol,
   no por su nombre, y la grabacion requiere su consentimiento.

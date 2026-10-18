@@ -23,21 +23,23 @@ name: Alertas de vencimiento
 # "todavia no toca". Empieza a correr en cuanto `develop` se mergea a `main`, y el primer disparo
 # se puede forzar antes con `workflow_dispatch` desde la rama que sea.
 #
-# Consecuencia de lo anterior: los secrets que este workflow lee son los del ambiente que se
-# quiera alertar, y hoy son los de `ecopac-dev` porque `ecopac-prod` todavia no existe (issue
-# #252). Cuando exista, este archivo tiene que apuntar a el; no se deja preparado con secrets de
-# produccion inventados, que fallarian en silencio hasta que alguien los configure.
+# CONTRA QUE AMBIENTES (issue #252)
+#
+# Contra los dos, en una matriz: ecopac-prod, que es donde la organizacion necesita los avisos,
+# y ecopac-dev, donde un cambio en la rutina se ve antes de llegar a produccion. Cada ambiente
+# lee su par de secrets, y uno que falle no deja al otro sin correr.
 #
 # GitHub ademas desactiva los workflows programados de un repositorio sin actividad durante 60
 # dias. Si las alertas dejan de llegar y aqui no hay corridas, ese es el primer sitio donde mirar:
 # se reactivan a mano desde la pestania Actions.
 #
-# Mientras los secrets no esten configurados, el disparo se omite y el workflow termina en verde
-# (no falla), igual que keep-alive-supabase.yml.
+# Mientras los secrets de un ambiente no esten configurados, su disparo se omite y el workflow
+# termina en verde (no falla), igual que keep-alive-supabase.yml.
 #
 # Configurar los secrets en: Settings > Secrets and variables > Actions del repositorio.
-#   - SUPABASE_URL_DEV                (ya existe, reusado del keep-alive)
-#   - SUPABASE_SERVICE_ROLE_KEY_DEV   (llave de servicio del proyecto ecopac-dev)
+#   - SUPABASE_URL_PROD / SUPABASE_URL_DEV                         URL del proyecto, sin barra final
+#   - SUPABASE_SERVICE_ROLE_KEY_PROD / SUPABASE_SERVICE_ROLE_KEY_DEV  la `sb_secret_` del proyecto
+#     (no la legacy service_role: la funcion la compara literalmente, docs/CONFIGURACION-SUPABASE.md)
 
 on:
   schedule:
@@ -49,17 +51,31 @@ permissions:
 
 jobs:
   disparar:
-    name: Disparar alertas-vencimiento
+    name: Disparar alertas-vencimiento en ${{ matrix.ambiente }}
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - ambiente: ecopac-prod
+            secret_url: SUPABASE_URL_PROD
+            secret_llave: SUPABASE_SERVICE_ROLE_KEY_PROD
+          - ambiente: ecopac-dev
+            secret_url: SUPABASE_URL_DEV
+            secret_llave: SUPABASE_SERVICE_ROLE_KEY_DEV
     env:
-      SUPABASE_URL_DEV: ${{ secrets.SUPABASE_URL_DEV }}
-      SUPABASE_SERVICE_ROLE_KEY_DEV: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY_DEV }}
+      SUPABASE_URL: ${{ secrets[matrix.secret_url] }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets[matrix.secret_llave] }}
 
     steps:
       - name: Verificar secrets configurados
-        if: env.SUPABASE_URL_DEV == '' || env.SUPABASE_SERVICE_ROLE_KEY_DEV == ''
+        if: env.SUPABASE_URL == '' || env.SUPABASE_SERVICE_ROLE_KEY == ''
         run: |
-          echo "Los secrets de Supabase no estan configurados; se omite el disparo." >> "$GITHUB_STEP_SUMMARY"
+          echo "::warning::Alertas de vencimiento omitidas en ${{ matrix.ambiente }}: faltan ${{ matrix.secret_url }} o ${{ matrix.secret_llave }}."
+          echo "Faltan los secrets de ${{ matrix.ambiente }} (${{ matrix.secret_url }}, ${{ matrix.secret_llave }}); se omite el disparo." >> "$GITHUB_STEP_SUMMARY"
           echo "Configuralos en: Settings > Secrets and variables > Actions" >> "$GITHUB_STEP_SUMMARY"
 
       # El resultado se guarda en vez de dejarlo solo en el log del paso: el criterio de la issue
@@ -72,11 +88,11 @@ jobs:
       # funcion deja su mensaje en el resumen en lugar de un "exit 22" pelado.
       - name: Invocar alertas-vencimiento
         id: invocar
-        if: env.SUPABASE_URL_DEV != '' && env.SUPABASE_SERVICE_ROLE_KEY_DEV != ''
+        if: env.SUPABASE_URL != '' && env.SUPABASE_SERVICE_ROLE_KEY != ''
         run: |
           set -o pipefail
-          respuesta="$(curl -sS -X POST "$SUPABASE_URL_DEV/functions/v1/alertas-vencimiento" \
-            -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY_DEV" \
+          respuesta="$(curl -sS -X POST "$SUPABASE_URL/functions/v1/alertas-vencimiento" \
+            -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
             -H "Content-Type: application/json" \
             --fail-with-body)"
 
@@ -84,10 +100,10 @@ jobs:
           echo "Respuesta de la funcion: $respuesta"
 
       - name: Registrar el resultado
-        if: always() && env.SUPABASE_URL_DEV != '' && env.SUPABASE_SERVICE_ROLE_KEY_DEV != ''
+        if: always() && env.SUPABASE_URL != '' && env.SUPABASE_SERVICE_ROLE_KEY != ''
         run: |
           {
-            echo "## Alertas de vencimiento"
+            echo "## Alertas de vencimiento en ${{ matrix.ambiente }}"
             echo ""
             echo "- Fecha: $(date -u '+%Y-%m-%d %H:%M UTC')"
             echo "- Resultado: \`${{ steps.invocar.outcome }}\`"
@@ -99,27 +115,20 @@ jobs:
             fi
           } >> "$GITHUB_STEP_SUMMARY"
 
-  # --------------------------------------------------------------------------------
-  # Un cron que falla en silencio es peor que no tenerlo: la organizacion cree que alguien vigila
-  # los vencimientos y nadie lo hace. Un check rojo en una pestania que nadie abre no basta --
-  # esa es la leccion que ya dejo el despliegue de base de datos, que fallo cuatro corridas
-  # seguidas sin que nadie se enterara (ver el job "Avisar fallo" de supabase.yml). Una issue
-  # abierta si se ve.
-  avisar:
-    name: Avisar fallo
-    needs: disparar
-    if: failure()
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      issues: write
-
-    steps:
+      # Un cron que falla en silencio es peor que no tenerlo: la organizacion cree que alguien
+      # vigila los vencimientos y nadie lo hace. Un check rojo en una pestania que nadie abre no
+      # basta -- esa es la leccion que ya dejo el despliegue de base de datos, que fallo cuatro
+      # corridas seguidas sin que nadie se enterara (ver el job "Avisar fallo" de supabase.yml).
+      # Una issue abierta si se ve. Es un paso de la matriz y no un job aparte para que la issue
+      # nombre el ambiente que fallo: produccion y desarrollo no se atienden con la misma prisa.
       - name: Abrir issue si no hay una ya
+        if: failure()
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        env:
+          AMBIENTE: ${{ matrix.ambiente }}
         with:
           script: |
-            const titulo = '[BUG] No se estan generando las alertas de vencimiento';
+            const titulo = `[BUG] No se estan generando las alertas de vencimiento en ${process.env.AMBIENTE}`;
             const corrida = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
 
             const abiertas = await github.rest.issues.listForRepo({
@@ -147,7 +156,7 @@ jobs:
             const cuerpo = [
               '## Que paso',
               '',
-              'El disparo diario de la Edge Function `alertas-vencimiento` fallo.',
+              `El disparo diario de la Edge Function \`alertas-vencimiento\` fallo en \`${process.env.AMBIENTE}\`.`,
               '',
               `Corrida: ${corrida}`,
               '',

@@ -24,7 +24,7 @@ import pg from "pg";
 import { configuracionDelStackLocal } from "./stack-local.js";
 
 /**
- * Ids fijos que siembra supabase/seed-demo.sql.
+ * Ids fijos que siembra supabase/fixtures/datos-de-prueba.sql.
  *
  * Se referencian por id y no se buscan por nombre porque el seed los fija a proposito (prefijo
  * "de00000X-" por tipo de entidad) para que sean estables entre corridas. La excepcion es la

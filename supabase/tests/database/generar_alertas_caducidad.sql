@@ -98,8 +98,8 @@ INSERT INTO existencias (lote_id, bodega_id, cantidad_disponible) VALUES
 INSERT INTO alertas_caducidad (id, lote_id, estado, cantidad_afectada) VALUES
   ('a5000000-0000-0000-0000-000000000001', 'a4000000-0000-0000-0000-000000000004', 'pendiente', 3);
 
--- config.toml (db.seed) corre seed.sql y seed-demo.sql antes de las pruebas, tanto local como
--- en el job "validar" del CI. seed-demo.sql (issue #94) trae dos lotes que cumplen el criterio de
+-- config.toml (db.seed) corre supabase/fixtures/datos-de-prueba.sql antes de las pruebas, tanto local como
+-- en el job "validar" del CI. datos-de-prueba.sql (issue #94) trae dos lotes que cumplen el criterio de
 -- la funcion, y a los dos se les da una alerta pendiente ya existente -- igual que al lote 4 de
 -- arriba -- para que esta prueba dependa solo de sus propios fixtures y no de las fechas o el
 -- stock que tenga el seed de demo en un momento dado:

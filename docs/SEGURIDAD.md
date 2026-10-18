@@ -394,11 +394,12 @@ activar el ajuste en un Dashboard.
   `500 unexpected_failure "Database error saving new user"`, o sea que la base ya lo rechazaba y el
   Dashboard cambio **como** falla, no **si** falla. "Confirm email" sigue activado a proposito; el
   motivo esta en CFG-05 de [CONFIGURACION-SUPABASE.md](./CONFIGURACION-SUPABASE.md).
-- **`Ecopac-Digital-Prod`**: existe y esta **pausado**, asi que su API no responde y su
-  configuracion no se puede leer sin reanudarlo. **Al reanudarlo hay que comprobar y cerrar el
-  registro antes de exponerlo**: el default de Supabase al crear un proyecto es tenerlo abierto.
-  La migracion `00074` lo protege en cuanto se le apliquen las migraciones. El orden completo de
-  aprovisionamiento esta en [CONFIGURACION-SUPABASE.md](./CONFIGURACION-SUPABASE.md).
+- **`ecopac-prod` y `ecopac-dev` de la organizacion** (desde el 14-10-2026): el registro se cerro
+  antes que cualquier otro paso, porque el default de Supabase al crear un proyecto es tenerlo
+  abierto. Comprobado en los dos: `POST /auth/v1/signup` responde `422 signup_disabled`
+  ([PLAN-DE-IMPLEMENTACION.md](./PLAN-DE-IMPLEMENTACION.md), paso 2). La migracion `00074` los
+  protege ademas en la base. El orden completo de aprovisionamiento esta en
+  [CONFIGURACION-SUPABASE.md](./CONFIGURACION-SUPABASE.md).
 
 ### Como se da de alta a una persona
 
@@ -618,10 +619,10 @@ no habia razon para no acotarlo). Ahora
 (secret de la Edge Function, lista separada por comas -no vive en `supabase/config.toml`, que
 solo aplica al stack local-).
 
-**La aplicacion todavia no esta desplegada**, asi que no hay dominio real que fijar hoy: mientras
-`ALLOWED_ORIGINS` no se configure en un ambiente, ningun origen se refleja y las llamadas desde el
-navegador quedan bloqueadas por CORS -fail-closed, no fail-open-. Antes de o al desplegar por
-primera vez a cada ambiente:
+Desde el 14-10-2026 cada ambiente tiene en `ALLOWED_ORIGINS` la URL de su web (CFG-14; en dev,
+ademas `http://localhost:5173`). Si un ambiente nuevo no lo configura, ningun origen se refleja y
+las llamadas desde el navegador quedan bloqueadas por CORS -fail-closed, no fail-open-. Al desplegar
+por primera vez a un ambiente:
 
 ```
 supabase secrets set ALLOWED_ORIGINS=https://dominio-real-de-ese-ambiente --project-ref <ref>

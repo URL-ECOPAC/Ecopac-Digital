@@ -6,8 +6,9 @@ Sirve para responder dos preguntas antes de escribir codigo nuevo: **"esto ya ex
 **"como se llama?"**. La causa mas repetida de deuda en este repositorio es una segunda
 implementacion de algo que ya estaba escrito, hecha aparte y peor.
 
-Estado al 28 de septiembre de 2026, sobre `develop`. Que recibe y que devuelve cada funcion esta en
-su JSDoc: toda funcion exportada lo tiene, con sus `@param` y su `@returns`, y
+Estado al 13 de octubre de 2026, sobre `develop` (esquema hasta la migracion `00188`). Que recibe y
+que devuelve cada funcion esta en su JSDoc: toda funcion exportada lo tiene, con sus `@param` y su
+`@returns`, y
 `npm run verificar:jsdoc -- --estricto` lo comprueba en CI.
 
 ---
@@ -17,7 +18,7 @@ su JSDoc: toda funcion exportada lo tiene, con sus `@param` y su `@returns`, y
 Todo entra por el barril unico:
 
 ```js
-import { usePacientesListado, CAMPOS_PACIENTE, validarPaciente } from "@ecopac/shared";
+import { usePacientesListado, CAMPOS_REGISTRO_PACIENTE, validarRegistroPaciente } from "@ecopac/shared";
 ```
 
 `packages/shared/index.js` reexporta cada modulo con `export *`. Eso tiene una consecuencia que ya
@@ -30,7 +31,7 @@ un solo sitio:
 | `descriptores.js`                  | El vocabulario de campos, columnas y filtros                |
 | `enums.js`                         | Los valores de enum del dominio, congelados                 |
 | `usuarios/roles.js`                | Los cinco roles, congelados                                 |
-| `navegacion.js`                    | Los nueve modulos y quien los ve                            |
+| `navegacion.js`                    | Los once modulos y quien los ve                             |
 
 Un valor de enum o un rol **nace ahi una sola vez**, no en el modulo que lo consume.
 
@@ -107,7 +108,7 @@ app no levanta.
 
 `formatearFechaCorta`, `formatearFechaLarga`, `formatearFechaConHora`, `aFechaLocal`,
 `esFechaValida`, `calcularEdad`, `diasHastaVencimiento`, `describirVencimiento`, `formatearMoneda`,
-`MONEDA`, `MESES`, `OPCIONES_DE_MES`, `DIAS_DE_LA_SEMANA`, `fechaLocalISO`.
+`MONEDA`, `MESES`, `OPCIONES_DE_MES`, `DIAS_DE_LA_SEMANA`, `aCadenaFechaLocal`.
 
 Ninguna pantalla formatea una fecha por su cuenta.
 
@@ -115,7 +116,8 @@ Ninguna pantalla formatea una fecha por su cuenta.
 "vence manana", "vence en 12 dias". `MESES` va en minuscula para usarlo dentro de una frase
 ("18 de agosto de 2026"); `OPCIONES_DE_MES` son los meses con mayuscula inicial para un selector.
 
-`fechaLocalISO(fecha?)` es la unica forma de escribir "hoy" como `AAAA-MM-DD`.
+`aCadenaFechaLocal(fecha?)` es la unica forma de escribir "hoy" como `AAAA-MM-DD` (hubo un
+`fechaLocalISO()` identico; se retiro al integrar la #849 y ya no existe).
 `new Date().toISOString().slice(0, 10)` da el dia UTC, que en Guatemala es manana a partir de las
 18:00; el lint lo rechaza fuera de las pruebas, y las pruebas de shared corren con
 `TZ=America/Guatemala` para que el defecto no pueda pasar en el CI, que corre en UTC (issue #840).
@@ -147,7 +149,8 @@ poner solos el "+" y el basurero; ninguna pantalla los escribe a mano.
 `useBitacoraAuditoria`, `armarFilasDeAuditoria`, `calcularPaginasDeAuditoria`,
 `EVENTOS_POR_PAGINA`: la bitacora de la web. `diferenciaDeEvento`, `nombreDeCampo` y
 `formatearValorDeAuditoria(valor, clave)` arman el antes y el despues de cada evento; un estado se
-muestra con mayuscula inicial ("Emitida").
+muestra con mayuscula inicial ("Emitida"). La bitacora muestra ademas los envios de correo de las
+notificaciones, con `useEnviosDeCorreo` (vive en `notificaciones/`).
 
 ### `observabilidad/` - reporte de errores (issue #762)
 
@@ -181,8 +184,8 @@ el alta en linea desde el registro de paciente (#838).
 
 ### `pacientes/`
 
-El modulo mas grande: 38 archivos. Cubre paciente, expediente, condiciones cronicas, triaje,
-consulta y receta.
+El modulo mas grande: 58 archivos sin contar pruebas. Cubre paciente, expediente, condiciones
+cronicas, areas de atencion, triaje, consulta y receta.
 
 **Consultas**
 
@@ -210,7 +213,7 @@ catalogo (`puedeAdministrarDiagnosticos`, politica de INSERT de la 00105) y `nul
 
 **Validaciones**
 
-`validarPaciente`, `validarRegistroPaciente`, `validarTriaje`, `validarCambioDeTriaje`,
+`validarRegistroPaciente`, `validarTriaje`, `validarCambioDeTriaje`,
 `validarCondicionCronica`, `validarCambioDeCondicion`, mas `avisosDeSignos(valores, edad)` y
 `advertirPacienteDuplicado`.
 
@@ -222,7 +225,7 @@ opcionales, pero la presion va completa o no va (`haySignosCapturados`, 00136).
 
 **Descriptores**
 
-`CAMPOS_PACIENTE`, `CAMPOS_REGISTRO_PACIENTE`, `CAMPOS_EDICION_PACIENTE`, `CAMPOS_FICHA_PACIENTE`,
+`CAMPOS_REGISTRO_PACIENTE`, `CAMPOS_EDICION_PACIENTE`, `CAMPOS_FICHA_PACIENTE`,
 `CAMPOS_TRIAJE`, `CAMPOS_CONSULTA`, `CAMPOS_RECETA`, `CAMPOS_CONDICION_CRONICA`,
 `COLUMNAS_PACIENTE`, `COLUMNAS_PACIENTE_MOVIL`, `COLUMNAS_PACIENTE_CRONICO`,
 `COLUMNAS_CONDICION_DEL_PACIENTE`, `FILTROS_PACIENTE`, `FILTROS_PACIENTE_CRONICO`,
@@ -250,6 +253,30 @@ web), `useCatalogoCondiciones` y `useAltaDeCondicionEnLinea` (`resolverCondicion
 #850), `useCatalogoDiagnosticos` y `useFormularioDiagnostico` (con
 `catalogoDiagnosticos.{campos,columnas,filtros}.js`), `useDuplicadosPacientes`,
 `useFusionPacientes` y `useFusionesDelPaciente` (con `duplicados.columnas.js`, #637).
+
+`CAMPOS_PACIENTE` y `validarPaciente` ya no existen: eran un segundo descriptor y una segunda
+validacion de la misma entidad, y se borraron con la issue #699. Se usan `CAMPOS_REGISTRO_PACIENTE`
+y `validarRegistroPaciente`.
+
+**Areas de atencion** (00182, issue #927; archivos `areas.*`): el catalogo y lo que tiene cada
+paciente.
+
+- `areas.api.js`: `obtenerCatalogoDeAreas({ soloVigentes })` -> `{ areas, error }`,
+  `crearAreaCatalogo` y `actualizarAreaCatalogo` -> `{ area, errores, error }`,
+  `sincronizarAreasDelPaciente(pacienteId, areaIds)` (deja al paciente con esas areas y ninguna
+  otra), `aAreasDelPaciente` y `EMBEBIDO_DE_AREAS_DEL_PACIENTE` (el `select` embebido que usan las
+  consultas de paciente).
+- Descriptores: `CAMPOS_AREA_CATALOGO`, `COLUMNAS_CATALOGO_AREAS`, `ESTADOS_AREA_CATALOGO`,
+  `FILTROS_CATALOGO_AREAS` y `FILTROS_CATALOGO_AREAS_VACIOS`; `opcionesDeAreas`,
+  `opcionesDeFiltroDeAreas` y `etiquetaDeArea` (marca la retirada con `SUFIJO_AREA_RETIRADA`).
+- `validarAreaCatalogo` (`LARGO_MAXIMO_NOMBRE_DE_AREA`).
+- Permisos: `puedeVerCatalogoDeAreas`, `puedeGestionarCatalogoDeAreas` (solo la administradora:
+  crear, editar, retirar y reactivar) y `puedeAsignarAreasAPaciente`.
+- `useCatalogoAreas` es la pantalla del catalogo (`/pacientes/areas`): lo trae completo, tambien
+  las retiradas para poder reactivarlas, y la busqueda filtra en el cliente.
+
+El area es ademas un filtro de `buscarPacientes` (`p_area_id` de `fn_buscar_pacientes`) y un
+argumento del alta (`p_area_ids` de `fn_registrar_paciente`).
 
 `useConsulta({ pacienteId, jornadaId, rol, perfilId, ... })` es la consulta como unidad (issue
 #840, F): signos vitales opcionales, consulta y receta en un solo flujo, y el mismo hook para crear
@@ -294,8 +321,9 @@ ni consulta no dejaba ningun rastro en el historial del paciente.
 
 **Hooks**: `useJornadasKanban`, `useDetalleJornada`, `useFormularioJornada`,
 `useAsignacionPersonal`, `useDesasignacionPersonal`, `useCuadroTurnos`, `useEdicionTurno`,
-`useJornadaActiva`, `useJornadasAsignadas`, `usePanelJornada`, `useSeleccionJornada`,
-`useResumenCierreJornada`.
+`useJornadaActiva`, `useJornadasAsignadas`, `usePanelJornada`, `useResumenCierreJornada`,
+`useInsumosDeJornada`, `useCargaDeBodegaDeJornada`, `useDevolucionDeBodegaDeJornada`,
+`useConsumoDeJornada`.
 
 `useJornadaActiva` es el estado que el movil comparte entre pantallas: se elige la jornada una vez
 y toda la operacion de campo la hereda.
@@ -304,12 +332,42 @@ y toda la operacion de campo la hereda.
 `listarInsumosDeLasJornadasDelProyecto`, agregar, actualizar y quitar, y `resumirInsumosPrevistos`
 (total estimado).
 
+**Bodega de la jornada** (00178, 00179, 00181, 00186; `bodega.api.js`): toda jornada lleva una
+bodega, movil o la principal.
+
+- `cargarInsumoABodegaDeJornada` y `devolverDeBodegaDeJornada` -> `{ ingresoId, error }`
+  (`fn_cargar_insumo_a_bodega_de_jornada`, `fn_devolver_de_bodega_de_jornada`).
+- `listarConsumoDeInsumosDeJornada(jornadaId)` -> `{ consumo, error }`
+  (`fn_consumo_de_insumos_de_jornada`), con `aConsumoDeLote` y `resumirConsumoDeJornada`.
+- Reglas puras: `jornadaUsaBodegaPrincipal`, `motivoParaNoCargarBodega`, `tieneInventarioCargado`,
+  `mensajeDeInventarioCargado` y, en `api.js`, `mensajeDeBodegaOcupada` (una bodega movil no esta
+  en dos jornadas en curso).
+- `useCargaDeBodegaDeJornada({ jornadaId, bodegaId, rol, activo, onCargado })` es el formulario
+  "Cargar a la bodega": articulo, lote de origen (el que vence antes primero) y cantidad. Un lote
+  que esta en la bodega movil de otra jornada en curso se puede cargar, y `avisoOrigen` lo dice
+  antes de guardar.
+- `useDevolucionDeBodegaDeJornada({ jornadaId, bodegaId, rol, contenido, activo, onDevuelto })` es
+  "Devolver a otra bodega": lo que sobra vuelve a una bodega fija, lote por lote
+  (`opcionesDeBodegaDeDevolucion`). No ofrece lotes vencidos.
+- `useConsumoDeJornada({ jornadaId, rol, usaBodegaPrincipal, activo })` es la pestana Consumo:
+  por lote, lo cargado, lo entregado en recetas, lo devuelto y lo que queda, con su valor
+  (`COLUMNAS_CONSUMO_DE_JORNADA`). Con la bodega principal solo hay entregas y usa
+  `COLUMNAS_CONSUMO_CON_BODEGA_PRINCIPAL`.
+- Permiso: `puedeCargarBodegaDeJornada`. Las pestanas del detalle salen de
+  `seccionesDeDetalleJornada` (`SECCIONES_DETALLE_JORNADA`).
+
+Los tres hooks de formulario y de pestana reciben `activo`: en falso no consultan nada, porque se
+cargan al abrirse.
+
 **Formulario**: `useFormularioJornada` ofrece como botiquin todas las bodegas, las moviles primero
-(`opcionesDeBodegaDeBotiquin`), no ofrece proyectos cancelados, y expone `catalogosCargados` para
-distinguir "cargando" de "no hay opciones".
+(`opcionesDeBodegaDeBotiquin`), no ofrece proyectos cancelados ni finalizados, y expone
+`catalogosCargados` para distinguir "cargando" de "no hay opciones".
 
 **Otros**: `datosDeCuadroTurnosImprimible` (`turnos.imprimible.js`), y `mensajeSinJornada` para la
-seleccion de jornada activa en el movil (`useSeleccionJornada.js`).
+seleccion de jornada activa en el movil (`useSeleccionJornada.js`, que pese al nombre del archivo
+no exporta ningun hook: la seleccion la lleva `useJornadaActiva`). El resumen de cierre avisa de
+las citas que la jornada va a cancelar (`mensajeDeCitasPendientesAlCerrar`) y del inventario que
+queda en su bodega (`obtenerInventarioQueQueda`).
 
 ### `atenciones/`
 
@@ -319,9 +377,80 @@ La cola de la jornada. Modulo pequeno y con una sola responsabilidad.
 `minutosEsperando`, `ETAPAS_DE_COLA`, `ORDEN_DE_ETAPAS`, `NOMBRES_DE_ETAPA`,
 `puedeVerCola`, `puedeIniciarAtencion`, `puedeCerrarAtencion`.
 
+### `citas/`
+
+Clinicas y agenda de citas por jornada (issue #927; 00183, 00184, 00185). 21 archivos sin contar
+pruebas. Las clinicas van con prefijo `clinicas.` porque son un catalogo propio dentro del modulo.
+
+**Clinicas** (`clinicas.api.js`): `listarClinicas({ soloVigentes })` -> `{ clinicas, error }`,
+`crearClinica` y `actualizarClinica` -> `{ clinica, errores, error }`, y `eliminarClinica(id)` ->
+`{ resultado, error }`, donde `resultado` es `"eliminada"` o `"retirada"`: `fn_eliminar_clinica`
+borra la clinica que nunca tuvo citas y retira la que si las tuvo. Descriptores: `CAMPOS_CLINICA`,
+`opcionesDeClinicas`, `COLUMNAS_CATALOGO_CLINICAS`, `ESTADOS_CLINICA`, `FILTROS_CATALOGO_CLINICAS` y
+`FILTROS_CATALOGO_CLINICAS_VACIOS`. `validarClinica` (`LARGO_MAXIMO_NOMBRE_DE_CLINICA`,
+`MAXIMO_DE_SALAS`). Permisos: `puedeVerCatalogoDeClinicas`, `puedeMantenerClinicas` (crear y
+editar: la administradora y quien gestiona jornadas) y `puedeRetirarClinicas` (retirar, reactivar
+y eliminar: solo la administradora).
+
+**Consultas de citas** (`api.js`): `listarCitas(filtros)` y `citasQueSeCruzan(...)` ->
+`{ citas, error }`; `obtenerCita(id)` -> `{ cita, error }`;
+`contarCitasPendientesDeJornada(jornadaId)` -> `{ cantidad, error }`;
+`listarJornadasParaAgendar()` -> `{ jornadas, error }` (planificadas o en curso);
+`listarProfesionalesDeJornada(jornadaId)` -> `{ profesionales, error }` (los medicos de su cuadro
+de turnos). `aCita` convierte la fila.
+
+**Escrituras**: `crearCita`, `actualizarCita` y `cambiarEstadoDeCita(id, estado, { motivo })` ->
+`{ cita, error }`. `errorDeCita(error)` traduce los rechazos de `fn_validar_cita` (cupo de la
+clinica, traslape, estado de la jornada) al mensaje que ve la persona.
+
+**Estados** (`estados.js`): `ESTADOS_CITA` (creada, en_atencion, atendida, cancelada),
+`TRANSICIONES_CITA`, `puedePasarCitaA`, `citaPendiente`, `citaOcupaSala`, `citaSeReagenda`,
+`ETIQUETAS_ESTADO_CITA`, `etiquetaDeEstadoDeCita`, `OPCIONES_ESTADO_CITA`. Atendida y cancelada
+son terminales; una cita en atencion puede regresar a creada.
+
+**Validaciones** (`validaciones.js`): `validarCita`, `validarCancelacion` y `motivoDeCancelacion`,
+mas el espejo del cupo y de los traslapes que la base comprueba con bloqueo: `conflictosDeCita`,
+`seTraslapan`, `intervaloDeCita`, `salasLibres`, `maximoDeCitasSimultaneas`. `avisoDeFueraDeTurno`
+avisa de una cita fuera del turno del profesional y no bloquea.
+
+**Horas** (`horas.js`): la agenda se piensa en hora de Guatemala aunque el dispositivo este en
+otra zona. `aInstanteDeGuatemala`, `partesEnGuatemala`, `fechaEnGuatemala`, `horaEnGuatemala`,
+`hoyEnGuatemala`, `rangoDelDia`, `minutosDelDia`, `sumarDias`, `sumarMinutos`, `msDe`,
+`formatearHorarioDeCita`, `formatearFechaHoraDeCita` y `DURACION_DE_CITA_MIN`.
+
+**Calendario** (`agenda.js`, logica pura de las vistas): `VISTAS_AGENDA`, `OPCIONES_VISTA_AGENDA`,
+`rangoDeLaVista`, `moverFecha`, `tituloDeLaAgenda`, `semanasDelMes`, `mesesDelAnio`,
+`horariosDelDia`, `textoDeCantidadDeCitas`, `DIAS_DE_LA_SEMANA_AGENDA`, `HORA_DE_INICIO_DEL_DIA`,
+`HORA_DE_FIN_DEL_DIA`, `MINUTOS_POR_HORARIO`.
+
+**Descriptores**: `CAMPOS_CITA`, `CAMPOS_EDITABLES_SIN_AGENDA`, `valoresDeCitaNueva`,
+`opcionesDeJornadasParaAgendar`, `opcionesDeProfesionales`, `CAMPOS_DETALLE_CITA`,
+`COLUMNAS_CITAS_DEL_PACIENTE`, `ESTADOS_CITA_PARA_CHIP`, `filaDeCita`, `detalleDeCita`,
+`FILTROS_AGENDA_CITAS`, `FILTROS_AGENDA_CITAS_VACIOS`, `filtrarCitas`.
+
+**Permisos** (`permisos.js`): `puedeVerCitas`, `puedeAgendarCitas` (el permiso fino
+`citas.agendar`, 00185), `puedeAtenderCita`, `puedeCancelarCita`, `puedeRegresarCitaACreada` y
+`edicionDeCita(cita)`, que dice que se puede tocar: una cita creada se reagenda entera; atendida o
+cancelada, solo sus notas.
+
+**Hooks**
+
+| Hook                    | Que hace                                                               |
+| ----------------------- | ---------------------------------------------------------------------- |
+| `useAgendaCitas`        | La agenda: calendario de mes y de dia, filtros y "Mis citas". Trae las citas del rango visible sin filtros y filtra en el cliente, porque para decir cuantas salas le quedan a una clinica hacen falta todas sus citas (`opcionesDeProfesionalesDeCitas`) |
+| `useFormularioCita`     | Alta y edicion de una cita: opciones (jornadas, clinicas y areas vigentes, medicos del cuadro de turnos de la jornada elegida), validacion y espejo de cupo y traslapes antes de guardar (`valoresDeCita`, `aplicarCambioDeCita`, `datosAGuardar`) |
+| `useCambioEstadoCita`   | Atender, regresar a creada y cancelar. Atender pasa la cita a en atencion y devuelve lo que necesita el formulario de consulta (`citaParaConsulta`); la consulta, al guardarse, la deja atendida en la misma transaccion (`accionesDeCita`) |
+| `useCitasDelPaciente`   | Las citas de un paciente en su ficha, proximas y pasadas (`separarCitasDelPaciente`) |
+| `useCatalogoClinicas`   | La pantalla del catalogo de clinicas (`/pacientes/clinicas`): completo, tambien las retiradas, con busqueda en el cliente (`filtrarClinicas`, `mensajeDeEliminacionDeClinica`) |
+
+La cuenta de salas libres es la de las citas que RLS deja ver: el personal de campo ve las de sus
+jornadas, asi que una clinica compartida con otra jornada puede tener menos salas libres de las
+que muestra. La base no deja pasar el exceso (`fn_validar_cita`).
+
 ### `inventario/`
 
-30 archivos. Cubre catalogo, lotes, existencias, movimientos y alertas.
+50 archivos sin contar pruebas. Cubre catalogo, lotes, existencias, movimientos, traslados y
+alertas y avisos de vencimiento.
 
 **Consultas**: `listarMedicamentos`, `listarLotes`, `listarLotesDeMedicamento`,
 `consultarExistencias`, `consultarExistenciasDeBodega`, `consultarLotesDisponibles`,
@@ -341,7 +470,8 @@ donacion en el ingreso) y no deja guardar mientras falte alguno.
 
 **Escrituras**: `registrarMedicamento`, `actualizarMedicamento`, `cambiarPrincipioDeMedicamento` (00166), `desactivarMedicamento`,
 `registrarIngreso`, `registrarSalida`, `editarMovimiento`, `aprobarMovimiento`,
-`rechazarMovimiento`, `aprobarMovimientosEnLote`, `registrarBodega`, `actualizarBodega`,
+`rechazarMovimiento`, `aprobarMovimientosEnLote`, `trasladarEntreBodegas` (00179),
+`registrarBodega`, `actualizarBodega`,
 `registrarProveedor`, `actualizarProveedor`, `registrarPrincipioActivo`,
 `actualizarPrincipioActivo`, `eliminarPrincipioActivo`, `atenderAlerta` (desde la issue #755 llama
 a `fn_atender_alerta_caducidad`, que descuenta o traslada el stock; reubicar exige
@@ -349,7 +479,27 @@ a `fn_atender_alerta_caducidad`, que descuenta o traslada el stock; reubicar exi
 
 **Alertas** (issue #755): `accionesPermitidasParaAlerta` (un vencido no se reubica),
 `requiereBodegaDestino`, `efectoDeAccionSobreElStock`. `useAlertasVencimiento` expone ademas
-`atendidas`, `errorAtendidas`, `bodegas` y `errorBodegas`.
+`atendidas`, `errorAtendidas`, `bodegas` y `errorBodegas`. `useAtencionAlertaCaducidad({
+marcarComoAtendida, bodegas })` es el formulario de "Registrar accion tomada" (issue #899): una
+alerta se reparte en una o mas acciones cuyas cantidades tienen que sumar exacto lo que queda hoy
+en el lote, la misma regla que valida `fn_atender_alerta_caducidad` (`validarAccionesDeAlerta`).
+
+**Avisos de vencimiento configurables** (00162, issue #899):
+
+- `configuracionAlertas.api.js`: `obtenerConfiguracionAlertas()` y
+  `guardarConfiguracionAlertas(id, { umbralesDias, rolUsuario })` -> `{ configuracion, error }`.
+- `configuracionAlertas.validaciones.js`: `validarUmbrales` y `normalizarUmbrales` (de cero a
+  cuatro antelaciones, distintas, entre 1 y 365 dias: la misma regla que el CHECK de la base),
+  `ventanaDeAviso` (la antelacion mas larga), `etapaDeVencimiento`, `describirEtapa`,
+  `resumenDeAvisos`, `UMBRALES_POR_DEFECTO`, `MAXIMO_DE_UMBRALES`, `DIA_MAXIMO_DE_UMBRAL`.
+- `useConfiguracionAlertasVencimiento({ rolUsuario })` es la pantalla web "Avisos de vencimiento"
+  (`/inventario/avisos-vencimiento`). Al guardar sincroniza las alertas (`sincronizarAlertas`,
+  `fn_sincronizar_alertas_caducidad`) para que un lote que entra a la ventana nueva avise en el
+  momento. Permiso: `puedeConfigurarAlertasVencimiento`.
+- `useVentanaDeAvisoVencimiento()` -> `{ umbrales, diasAviso, cargando, error }`: las antelaciones
+  y la ventana, para las pantallas que marcan un lote como "por vencer" con la misma regla que la
+  rutina. Mientras carga o si falla usa `UMBRALES_POR_DEFECTO`. `invalidarVentanaDeAviso()` hace
+  que los hooks montados la vuelvan a leer despues de guardar.
 
 Un lote no se da de alta por su cuenta: nace dentro de `registrarIngreso`, que crea el lote y su
 movimiento en la misma operacion. Hubo un `registrarLote` que insertaba en `lotes` y nada mas, y
@@ -374,7 +524,26 @@ administrador confirma despues (migracion `00107`).
 
 **Hooks**: `useInventario`, `useVistaExistencias`, `useCatalogoMedicamentos`, `useGestionLotes`,
 `useKardexMovimientos`, `useRegistroIngreso`, `useRegistroSalida`, `usePendientesValidacion`,
-`useAlertasVencimiento`, `useAdministracionBodegasProveedores`.
+`useAlertasVencimiento`, `useAtencionAlertaCaducidad`, `useConfiguracionAlertasVencimiento`,
+`useVentanaDeAvisoVencimiento`, `useAdministracionBodegasProveedores`.
+
+**Traslados** (00179): `trasladarEntreBodegas({ loteId, bodegaOrigenId, bodegaDestinoId,
+cantidad })` -> `{ ingresoId, error }` llama a `fn_trasladar_entre_bodegas`: un ingreso en la
+destino y una salida del origen, aprobados en una transaccion. En `useRegistroSalida` es el motivo
+`MOTIVO_TRASLADO`, que `motivosDeSalida(rol)` solo ofrece a la administradora y que exige bodega
+destino (`bodegaDestinoValidaParaLote`).
+
+**Entrega de una receta en la bandeja de validacion** (00186, `entregasDeReceta.js`):
+`esEntregaDeReceta`, `folioDeEntregaDeReceta`, `agruparPendientesDeValidacion` y
+`avisoDeRechazoDeEntregaDeReceta`. Una receta con tres medicamentos son tres salidas pendientes; la
+base las valida como un conjunto y la bandeja las muestra como una sola fila.
+
+**Mensajes de rechazo** (`rechazos.js`): `REGLAS_DE_RECHAZO_DE_INVENTARIO` le da un mensaje propio
+a cada rechazo de negocio de cargar, devolver y trasladar inventario (00179, 00181, 00186).
+
+**Validacion del catalogo** (`medicamentos.validaciones.js`): `validarMedicamentoDelCatalogo`
+marca cada campo obligatorio vacio del alta y de la edicion de un articulo antes de llamar al
+servidor (issue #911).
 
 **Catalogos**: presentaciones (00144: `presentaciones.api.js`, `presentaciones.permisos.js`,
 `useCatalogoPresentaciones`), principios activos (`useCatalogoPrincipiosActivos`) y el alta de un
@@ -420,6 +589,12 @@ desconocida), `agruparPorCategoria`, `DESTINOS_MOVILES_NOTIFICACION`. El enum
 `useContadorNotificaciones` (no leidas, para la campana de la web y la del movil). Se avisan entre
 si con `suscribirCambiosDelBuzon` / `avisarCambioDelBuzon` (`eventos.js`).
 
+**Envios de correo** (00149): `listarEnviosDeCorreo()` -> `{ envios, error }`, `estadoDeCorreo`,
+`ESTADOS_DE_CORREO` y `ETIQUETAS_ESTADO_DE_CORREO`. `useEnviosDeCorreo({ activo })` es la seccion
+de la bitacora de auditoria que dice si el correo de cada notificacion salio, fallo o sigue
+pendiente, y por que fallo (`COLUMNAS_ENVIOS_DE_CORREO`, `FILTROS_ENVIOS_DE_CORREO`). Con
+`activo` en falso no consulta: la seccion se pide al abrirla.
+
 ### `donaciones/`
 
 **Consultas**: `listarDonaciones`, `obtenerDonacion`, `listarDonantes`, `obtenerHistoricoDonante`,
@@ -428,7 +603,7 @@ si con `suscribirCambiosDelBuzon` / `avisarCambioDelBuzon` (`eventos.js`).
 **Escrituras**: `registrarDonante`, `actualizarDonante`, `darDeBajaDonante`,
 `reactivarDonante`, `generarIngresoDesdeDonacion`.
 
-**Validaciones**: `validarDonacion`, `validarDonante`, `validarAnulacionDeDonacion`.
+**Validaciones**: `validarDonacion`, `validarDonante`.
 
 **Hooks**: `useRegistroDonacion`, `useHistorialDonaciones`, `useDonantesPage`,
 `useConstanciaDonacion`.
@@ -436,12 +611,21 @@ si con `suscribirCambiosDelBuzon` / `avisarCambioDelBuzon` (`eventos.js`).
 `generarIngresoDesdeDonacion` es la costura entre donaciones e inventario: una donacion de
 medicamentos crea el lote correspondiente.
 
-`registro.api.js`: `registrarDonacion` y `anularDonacion` (`fn_registrar_donacion`,
-`fn_anular_donacion`), y `aDetalleParaGuardar`. Una donacion puede ser para una jornada (00153);
-el formulario no ofrece proyectos cancelados. Si es de dinero y la jornada esta planificada o en
-curso, la base crea sola su aporte en el presupuesto de esa jornada (00187):
-`entraAlPresupuestoDeLaJornada(tipo, estadoDeLaJornada)` es el espejo de esa regla, y
-`useRegistroDonacion` lo entrega ya resuelto para que el formulario lo avise. `useResumenDonaciones` da los indicadores del modulo.
+`registro.api.js`: `registrarDonacion` (`fn_registrar_donacion`) y `aDetalleParaGuardar`. Una
+donacion puede ser para una jornada (00153); el formulario no ofrece proyectos cancelados ni
+finalizados. `useResumenDonaciones` da los indicadores del modulo.
+
+Una donacion ya no se anula. Hubo un `anularDonacion` (que llamaba a `fn_anular_donacion`) y un
+`validarAnulacionDeDonacion`; ya no existen desde la `00173`, que elimino la funcion de la base y
+la politica de UPDATE porque no hay proceso para devolver lo donado (issue #911). Las donaciones
+anuladas antes conservan su estado y se siguen leyendo.
+
+**Donacion de dinero para una jornada** (00187): si la donacion es de dinero y la jornada esta
+planificada o en curso, la base crea sola su aporte en el presupuesto de esa jornada
+(`fn_aportar_donacion_a_su_jornada`). `entraAlPresupuestoDeLaJornada(tipoDonacion,
+estadoDeLaJornada)` es el espejo puro de esa regla, y `useRegistroDonacion` lo entrega ya
+resuelto para que el formulario lo avise. En una jornada finalizada o cancelada la donacion queda
+con su saldo libre.
 
 ### `presupuestos/`
 
@@ -485,26 +669,34 @@ total guardado se desincroniza.
 
 ### `proyectos/`
 
-**Consultas**: `listarProyectos`, `obtenerProyecto`, `obtenerProyectosTablero`, `listarHitos`,
+**Consultas**: `listarProyectos`, `obtenerProyecto`, `obtenerHistorialDeProyecto`, `listarHitos`,
 `listarSeguimiento`, `listarJornadasDelProyecto`.
 
 **Escrituras**: `crearProyecto`, `actualizarProyecto`, `cambiarEstadoProyecto`, `cerrarProyecto`,
-`moverProyectoAEtapa`, `reordenarProyectosColumna`, `asociarJornadaAProyecto`, `registrarHito`,
-`actualizarHito`, `marcarHitoCumplido`, `reabrirHito`, `registrarNota`, `actualizarAvance`.
+`asociarJornadaAProyecto`, `registrarHito`, `actualizarHito`, `marcarHitoCumplido`, `reabrirHito`,
+`registrarNota`, `actualizarAvance`.
 
 **Reglas de estado**: `TRANSICIONES_PROYECTO`, `esTransicionDeProyectoValida`,
-`transicionesDeProyectoDesde`, `obtenerTransicionesPermitidas`, `validarCambioDeEstadoProyecto`,
-`obtenerAdvertenciaDeCierre`, `esPorcentajeDeAvanceValido`.
+`transicionesDeProyectoDesde`, `validarCambioDeEstadoProyecto`, `obtenerAdvertenciaDeCierre`,
+`esPorcentajeDeAvanceValido`.
 
-**Proyecto cancelado** (00154): `proyectoAdmiteCambios(estado)` es falso para un proyecto
-cancelado; `permisosDeProyectos(rol, proyecto)` apaga entonces todo lo que lo modifica (editar,
-estado, jornadas, equipo, insumos, `puedeRegistrarSeguimiento`), sea cual sea el rol.
-`proyectosQueAdmitenCambios(proyectos, conservarId)` es la lista para un selector que asocia algo
-nuevo a un proyecto; `MENSAJE_PROYECTO_CANCELADO` es el aviso que se muestra. Quien lo impide de
-verdad son los triggers de la 00154.
+Del tablero por etapas ya no queda nada: `obtenerProyectosTablero`, `moverProyectoAEtapa`,
+`reordenarProyectosColumna` y `obtenerTransicionesPermitidas` ya no existen. Las transiciones se
+leen de `TRANSICIONES_PROYECTO` con `transicionesDeProyectoDesde`.
+
+**Proyecto cancelado o finalizado** (00154, 00172): `proyectoAdmiteCambios(estado)` es falso para
+un proyecto cancelado y, desde la 00172, tambien para uno finalizado: los dos estados son
+terminales y el proyecto queda en solo consulta. `permisosDeProyectos(rol, proyecto)` apaga
+entonces todo lo que lo modifica (editar, estado, jornadas, equipo, insumos,
+`puedeRegistrarSeguimiento`), sea cual sea el rol. `proyectosQueAdmitenCambios(proyectos,
+conservarId)` es la lista para un selector que asocia algo nuevo a un proyecto;
+`MENSAJE_PROYECTO_CANCELADO` es el aviso que se muestra (el nombre no cambio al sumarse el
+finalizado). Quien lo impide de verdad son los triggers de la 00154, extendidos por la 00172.
 
 **Equipo e insumos**: `equipo.api.js` (00146; desde la 00150, union con el equipo de sus jornadas, y desde la 00157 con sus responsables),
-`insumos.api.js` (00147: listar, quitar y `pasarInsumoDelProyectoAJornada`, 00151) y
+`insumos.api.js` (00147: listar, quitar y `pasarInsumoDelProyectoAJornada`, 00151; lo que les queda
+a las jornadas del proyecto en sus bodegas moviles sale de `listarInsumosQueQuedanEnElProyecto`,
+en `jornadas/insumos.api.js`, sobre `fn_insumos_de_proyecto`, 00186) y
 `normalizacion.js` (`vacioANull` para columnas DATE y UUID opcionales).
 
 **Hooks**: `useProyectosSociales`, `useSeguimientoProyecto`.
@@ -533,6 +725,22 @@ con las unidades que quedan (suma de `existencias`, 00020) y sus bodegas, con el
 calculados en el dia local. `useReporteMedicamentosPorVencer` **necesita `{ rol }`**: sin el, el
 permiso sale falso y no consulta. No hay filtro por comunidad: `bodegas` no tiene comunidad.
 
+**Enfermedades** (00177, issue #916; `enfermedades.api.js`, `enfermedades.js`):
+`obtenerReporteEnfermedades({...})` -> `{ casos, error }` llama a `fn_reporte_enfermedades`, que
+devuelve solo conteos agregados (desde la 00180, con el numero real de casos), y
+`obtenerOpcionesReporteEnfermedades({ rol })` -> `{ opciones, error }` trae jornadas, proyectos y
+diagnosticos de `fn_opciones_reporte_enfermedades`, porque los roles consultivos no leen esas
+tablas. `VISTAS_DE_ENFERMEDADES` son las cuatro vistas (las mas frecuentes, comparacion entre
+jornadas, comparacion entre comunidades y evolucion de una enfermedad) y `COMUNIDAD_DE` dice si
+la comunidad es la de la jornada o la del paciente. La forma de cada vista es logica pura:
+`filasDeRankingDeEnfermedades`, `graficaDeRankingDeEnfermedades`,
+`pivotearComparacionDeEnfermedades`, `serieDeEvolucionDeEnfermedad`, `diagnosticoMasFrecuente`,
+`etiquetaDeMes`. Descriptores: `FILTROS_ENFERMEDADES`, `FILTROS_ENFERMEDADES_VACIOS`,
+`COLUMNAS_RANKING_ENFERMEDADES`, `COLUMNAS_EVOLUCION_ENFERMEDAD`,
+`columnasDeComparacionDeEnfermedades`, `OPCIONES_DE_VISTA_ENFERMEDADES`. Permiso:
+`puedeVerReporteDeEnfermedades`. `useReporteEnfermedades` es la pestana `/reportes/enfermedades`
+y solo orquesta (`parametrosDeReporteEnfermedades`, `catalogosDeEnfermedades`).
+
 **Exportacion**: `exportarFilasACSV`, `escaparCampoCSV`.
 
 **Descriptores**: `COLUMNAS_PACIENTES_ATENDIDOS`, `COLUMNAS_INDICADORES_IMPACTO`,
@@ -542,7 +750,7 @@ permiso sale falso y no consulta. No hay filtro por comunidad: `bodegas` no tien
 `AGRUPACIONES_DE_PACIENTES`.
 
 **Hooks**: `useDashboardMetricas`, `useReportePacientes`, `useReporteInventario`,
-`useReporteJornada`.
+`useReporteJornada`, `useReporteMedicamentosPorVencer`, `useReporteEnfermedades`.
 
 ### `usuarios/`
 
@@ -572,11 +780,25 @@ de Postgres.
 
 **Hooks**: `useInicioSesion`, `useRestablecerContrasena`, `useNuevaContrasena`, `usePerfilPropio`,
 `useUsuariosListado`, `useAltaUsuario`, `useEdicionUsuario`, `useDesactivacionUsuario`,
-`useGestionPermisos`, `useFichaVoluntario`, `useHistorialDePersona`.
+`useGestionPermisos`, `useFichaColaborador`, `useHistorialDePersona`, `useMatrizDeAccesoPorRol`.
 
 `useFichaColaborador`, `ficha.js` y `useEspecialidadesDePerfil`: la ficha de una persona del
-equipo, con sus pestanas, historial y especialidades. `useMatrizPermisosPorRol` (00139, #638): la
-matriz de permisos por rol, que escribe y vuelve a leer para detectar lo que RLS no dejo cambiar.
+equipo, con sus pestanas, historial y especialidades. Es el nombre vigente: `useFichaVoluntario`
+ya no existe.
+
+**Matriz de acceso por rol** (00148): `useMatrizDeAccesoPorRol` es la pantalla
+`/matriz-permisos`: que modulo ve cada rol. Abre y cierra con `abrirModuloARol` y
+`cerrarModuloARol` (`permisos.api.js`, sobre `rol_modulo`; `listarAccesosPorRol` la lee) y,
+despues de cada cambio, vuelve a leer la matriz y compara la celda en vez de voltear un booleano
+local, porque un INSERT o un DELETE que RLS no deja pasar no siempre lanza
+(`estadoDeCeldaDeAcceso`, `ESTADOS_DE_ACCESO`, `ROLES_DE_LA_MATRIZ`, `MENSAJE_SIN_EFECTO_MATRIZ`).
+Reemplaza a `useMatrizPermisosPorRol` (00139, #638), que editaba `rol_permiso` y ya no existe: esa
+matriz prometia algo que el cliente no leia.
+
+**Acceso de la sesion** (`acceso.js`, 00148): `fijarAccesoDeSesion` y `limpiarAccesoDeSesion` (los
+llama `useSesion` con lo que devuelve `obtenerMisAccesos`, sobre `mis_accesos()`),
+`accedeAModuloPorMatriz`, `tienePermisoFino`, `modulosPorPermisoFino`. Es lo que hace que los
+`puede*(rol)` de cada modulo respeten la matriz y los permisos por persona sin cambiar de firma.
 
 ---
 

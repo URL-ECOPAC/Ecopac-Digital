@@ -1,12 +1,21 @@
 import { colors } from "@ecopac/ui-tokens";
 
-// Provisional: confirmar con el dominio institucional real antes de la primera publicación en tiendas.
+// Definitivo desde la issue #252. No tiene que ser un dominio real -la app se reparte como APK, no
+// por tienda-, pero NO SE CAMBIA: Android trata otro identificador como otra app, y cambiarlo
+// obligaria a desinstalar y reinstalar en cada telefono.
 const IDENTIFICADOR_DE_PAQUETE = "org.ecopacguatemala.digital";
 
 export default {
   expo: {
     name: "Ecopac Digital",
     slug: "ecopac-digital",
+    // Cuenta de Expo de la organizacion, duena de las builds de EAS y de la llave de firma.
+    owner: "ecopacdigitals-team",
+    extra: {
+      // Proyecto de EAS. `eas init` no puede escribirlo en un app.config.js (es JavaScript, no
+      // JSON), asi que se copia a mano de lo que devuelve.
+      eas: { projectId: "a47ad811-6f01-43cb-be59-b10617b994e1" },
+    },
     version: "0.1.0",
     orientation: "portrait",
     userInterfaceStyle: "light",

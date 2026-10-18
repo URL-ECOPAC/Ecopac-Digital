@@ -2,7 +2,7 @@
 -- tipo con estado_movimiento, y fn_gastos_updated_at() deja de duplicar a
 -- actualizar_timestamp_updated_at(). Corre con: supabase test db
 --
--- Reutiliza fixtures de seed-demo.sql (perfil de000001-...-0001, jornada de00000a-...-0002) en
+-- Reutiliza fixtures de datos-de-prueba.sql (perfil de000001-...-0001, jornada de00000a-...-0002) en
 -- vez de armar una cadena de comunidad/jornada/perfil propia: esta prueba no ejercita RLS, asi
 -- que no hace falta impersonar ningun rol ni aislar datos de otra suite.
 

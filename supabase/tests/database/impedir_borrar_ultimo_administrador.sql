@@ -1,7 +1,7 @@
 -- Pruebas de impedir_borrar_ultimo_administrador() (issue #511, migracion 00103).
 -- Corre con: supabase test db
 --
--- seed-demo.sql (siempre presente) y la 00063 (aprovisionar_primer_admin) ya dejan dos
+-- datos-de-prueba.sql (siempre presente) y la 00063 (aprovisionar_primer_admin) ya dejan dos
 -- administradores activos en la base antes de que esta prueba empiece. Se neutralizan primero
 -- -se les cambia el rol, con los triggers de usuario apagados para no disparar
 -- impedir_dejar_sin_administrador_activo (00072) durante el propio setup- para que el conteo
