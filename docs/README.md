@@ -4,6 +4,28 @@ Indice de la documentacion del repositorio. En esta carpeta viven las guias. Los
 configuracion de GitHub (plantillas de issues, PR y los workflows de CI/CD) estan en
 `.github/`.
 
+## Entrega a la organizacion
+
+Donde esta cada pieza de la entrega. Los documentos formales (PDF) viven en [formal/](./formal/); cada uno tiene su `.md` de origen en esta carpeta.
+
+| Entregable | Documento | Version formal |
+| --- | --- | --- |
+| Plan de implementacion | [PLAN-DE-IMPLEMENTACION.md](./PLAN-DE-IMPLEMENTACION.md) | [PDF](./formal/plan-de-implementacion.pdf) |
+| Sistema desplegado y ambiente de produccion | [PLAN-DE-IMPLEMENTACION.md](./PLAN-DE-IMPLEMENTACION.md), secciones 9 y 10; [MANUAL-DE-INSTALACION.md](./MANUAL-DE-INSTALACION.md), anexo 13 | - |
+| Pruebas posteriores a la implementacion | [evidencias/2026-10-17.md](./evidencias/2026-10-17.md) | - |
+| Acta de implementacion | [ACTA-DE-IMPLEMENTACION.md](./ACTA-DE-IMPLEMENTACION.md) | [PDF](./formal/acta-de-implementacion.pdf) |
+| Manuales de usuario | Uno por rol, en la seccion "Manuales de usuario" | PDF |
+| Manual de administracion | El manual del administrador | [PDF](./formal/manual-del-administrador.pdf) |
+| Material de capacitacion | [manual/PLAN-DE-CAPACITACIONES.md](./manual/PLAN-DE-CAPACITACIONES.md), guias rapidas y [videos](./manual/README.md#videos) | [PDF](./formal/plan-de-capacitaciones.pdf) |
+| Lista de asistencia y evidencia de capacitacion | [LISTA-DE-ASISTENCIA-CAPACITACIONES.md](./LISTA-DE-ASISTENCIA-CAPACITACIONES.md); el registro, en la seccion 10 del plan de capacitaciones | [PDF](./formal/lista-de-asistencia-capacitaciones.pdf) |
+| Scripts de base de datos (departamentos, municipios, administrador inicial) | [DESPLIEGUE_BASE_DE_DATOS.md](./DESPLIEGUE_BASE_DE_DATOS.md), [`supabase/migrations/`](../supabase/migrations/) y [`supabase/esquema-final.sql`](../supabase/esquema-final.sql) | - |
+| Diccionario de datos | [DICCIONARIO-DE-DATOS.md](./DICCIONARIO-DE-DATOS.md) | - |
+| Manual tecnico | [MANUAL-TECNICO.md](./MANUAL-TECNICO.md) | [PDF](./formal/documentacion-tecnica.pdf) |
+| Manual de instalacion y configuracion | [MANUAL-DE-INSTALACION.md](./MANUAL-DE-INSTALACION.md) | [PDF](./formal/manual-de-instalacion-y-configuracion.pdf) |
+| Documentacion de API e integraciones | [API-E-INTEGRACIONES.md](./API-E-INTEGRACIONES.md) | - |
+| Plan de mantenimiento y soporte | [MANTENIMIENTO-Y-SOPORTE.md](./MANTENIMIENTO-Y-SOPORTE.md) | [PDF](./formal/plan-de-mantenimiento-y-soporte.pdf) |
+| Plan de respaldo y recuperacion | [RESPALDO-Y-RECUPERACION.md](./RESPALDO-Y-RECUPERACION.md) | [PDF](./formal/plan-de-respaldo-y-recuperacion.pdf) |
+
 ## Para empezar
 
 | Documento                            | Para que sirve                                                          |
@@ -17,13 +39,14 @@ configuracion de GitHub (plantillas de issues, PR y los workflows de CI/CD) esta
 | [CI-CD.md](./CI-CD.md)               | Que valida y despliega cada workflow, y que hacer cuando falla         |
 | [SEGURIDAD.md](./SEGURIDAD.md)       | Politica de contrasenas, expiracion de sesion, credenciales y observabilidad (errores, fallos de red, bitacora, respaldos) |
 | [RESPALDO-Y-RECUPERACION.md](./RESPALDO-Y-RECUPERACION.md) | Plan de respaldo y recuperacion de la base de produccion: que se respalda, cada cuanto, quien puede abrirlo y como se restaura paso a paso (issue #914). Version formal en PDF: [formal/plan-de-respaldo-y-recuperacion.pdf](./formal/plan-de-respaldo-y-recuperacion.pdf) |
-| [MANTENIMIENTO-Y-SOPORTE.md](./MANTENIMIENTO-Y-SOPORTE.md) | Plan de mantenimiento y soporte para el personal de Ecopac: responsables y cuentas, revisiones mensuales, por temporada y anuales, como reportar una falla y sus prioridades, como se pide un cambio, y que hacer en los casos mas comunes (issue #921). Version formal en Word: [formal/plan-de-mantenimiento-y-soporte.docx](./formal/plan-de-mantenimiento-y-soporte.docx); el PDF se genera cuando se designen los responsables |
+| [MANTENIMIENTO-Y-SOPORTE.md](./MANTENIMIENTO-Y-SOPORTE.md) | Plan de mantenimiento y soporte para el personal de Ecopac: responsables y cuentas, revisiones mensuales, por temporada y anuales, como reportar una falla y sus prioridades, como se pide un cambio, y que hacer en los casos mas comunes (issue #921). Version formal en PDF: [formal/plan-de-mantenimiento-y-soporte.pdf](./formal/plan-de-mantenimiento-y-soporte.pdf); se vuelve a generar cuando la organizacion designe a los responsables |
 | [CONFIGURACION-SUPABASE.md](./CONFIGURACION-SUPABASE.md) | Lista de verificacion de lo que se configura a mano en el Dashboard de cada ambiente |
 | [MANUAL-DE-INSTALACION.md](./MANUAL-DE-INSTALACION.md) | **Instalar el sistema completo desde cero** en cuentas nuevas: cuentas, Supabase, secrets, Vercel, APK, respaldos, verificacion y problemas comunes (issue #919). Version formal en PDF: [formal/manual-de-instalacion-y-configuracion.pdf](./formal/manual-de-instalacion-y-configuracion.pdf) |
 | [PLAN-DE-IMPLEMENTACION.md](./PLAN-DE-IMPLEMENTACION.md) | Salida a produccion a nombre de la organizacion (issue #252): decisiones, pasos en orden, secrets, app movil por APK, riesgos, pruebas posteriores en produccion y lo que quedo creado. Version formal en PDF: [formal/plan-de-implementacion.pdf](./formal/plan-de-implementacion.pdf) |
+| [ACTA-DE-IMPLEMENTACION.md](./ACTA-DE-IMPLEMENTACION.md) | Acta de implementacion para firmar con la organizacion: que se instalo, la configuracion de produccion, las pruebas, la documentacion entregada, los pendientes y las responsabilidades desde la firma. Version formal en PDF: [formal/acta-de-implementacion.pdf](./formal/acta-de-implementacion.pdf) |
 | [PROTECCION-DE-DATOS.md](./PROTECCION-DE-DATOS.md) | Logs, almacenamiento movil, cifrado de columnas y secretos (OWASP A02) |
 | [MARCO-LEGAL.md](./MARCO-LEGAL.md) | Marco jurídico guatemalteco aplicable: obligaciones, riesgos, licencia, consentimiento, transferencia internacional y delimitación de responsabilidad del equipo de desarrollo |
-| [manual/](./manual/README.md) | Manual de usuario y material de capacitacion (issue #251): indice de las piezas, formato comun y el [plan de capacitaciones](./manual/PLAN-DE-CAPACITACIONES.md) ([PDF](./formal/plan-de-capacitaciones.pdf)) |
+| [manual/](./manual/README.md) | Manual de usuario y material de capacitacion (issue #251): indice de las piezas, formato comun y el [plan de capacitaciones](./manual/PLAN-DE-CAPACITACIONES.md) ([PDF](./formal/plan-de-capacitaciones.pdf)) y la [lista de asistencia](./LISTA-DE-ASISTENCIA-CAPACITACIONES.md) ([PDF](./formal/lista-de-asistencia-capacitaciones.pdf)) |
 | [formal/documentacion-tecnica.pdf](./formal/documentacion-tecnica.pdf) | Documento formal para quien no tiene acceso al repositorio (issue #867): permisos, modelo de datos, pantallas, conexion con Supabase, configuracion y herramientas, consolidados de los `.md` de esta carpeta |
 
 ## Manuales de usuario
@@ -60,7 +83,7 @@ pantallas usan los datos de demostracion.
 | [CASOS-DE-PRUEBA.md](./CASOS-DE-PRUEBA.md)             | Cada caso de prueba vinculado a su requerimiento, y los requerimientos que no tienen ninguno |
 | [CUMPLIMIENTO-DE-REQUERIMIENTOS.md](./CUMPLIMIENTO-DE-REQUERIMIENTOS.md) | Los 34 RF y 15 RNF: donde esta cada uno, que issues lo cubren, su evidencia y su estado (issue #253) |
 | [evidencias/](./evidencias/)                           | Registro de cada ejecucion completa del plan, con fecha y commit      |
-| [DESPLIEGUE_BASE_DE_DATOS.md](./DESPLIEGUE_BASE_DE_DATOS.md) | Guía de orden de migraciones, catálogos sembrados, usuario admin y despliegue en producción |
+| [DESPLIEGUE_BASE_DE_DATOS.md](./DESPLIEGUE_BASE_DE_DATOS.md) | Scripts de base de datos finales: orden de las migraciones, departamentos y municipios, administrador inicial, catalogos sembrados y el esquema consolidado (`supabase/esquema-final.sql`) |
 
 ## Dependencias y Herramientas
 

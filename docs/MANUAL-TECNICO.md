@@ -693,7 +693,7 @@ acceso visible hacia ella. La receta completa: [ARQUITECTURA-FRONTEND.md](ARQUIT
 | [SEGURIDAD.md](SEGURIDAD.md), [PROTECCION-DE-DATOS.md](PROTECCION-DE-DATOS.md) | Autenticación, endurecimiento y datos personales |
 | [CI-CD.md](CI-CD.md), [CONFIGURACION-SUPABASE.md](CONFIGURACION-SUPABASE.md) | Workflows, secrets, migraciones, ambientes |
 | [SUPABASE.md](SUPABASE.md) | Proyecto en la nube contra stack local, y el flujo de una migración |
-| [DESPLIEGUE_BASE_DE_DATOS.md](DESPLIEGUE_BASE_DE_DATOS.md) | Cómo se levanta la base de producción desde cero y el administrador inicial |
+| [DESPLIEGUE_BASE_DE_DATOS.md](DESPLIEGUE_BASE_DE_DATOS.md) | Scripts de base de datos finales: orden de las migraciones, catálogos sembrados, administrador inicial y esquema consolidado |
 | [RESPALDO-Y-RECUPERACION.md](RESPALDO-Y-RECUPERACION.md) | Plan de respaldo de la base de producción y procedimiento de recuperación |
 | [DISENO.md](DISENO.md), [DISENO-MOVIL.md](DISENO-MOVIL.md) | Paleta, navegación y criterio de diseño móvil |
 | [COSTOS-Y-LIMITES.md](COSTOS-Y-LIMITES.md) | Plan gratuito y crecimiento |
