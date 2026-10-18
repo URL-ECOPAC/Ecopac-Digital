@@ -54,7 +54,7 @@ Identificar el marco jurídico guatemalteco aplicable al sistema que gestiona ex
 - **Ley de Derecho de Autor — Decreto 33-98**, Arts. 5 y 11
   - El código es obra protegida; sin licencia escrita **no se define uso ni titularidad**
 - Reglamento de propiedad intelectual de la universidad → a consultar
-- Riesgo: repositorio público **sin archivo LICENSE**
+- Resuelto: el repositorio tiene **licencia MIT** (archivo `LICENSE`), a nombre del equipo de desarrollo
 
 ### 2.7 Transferencia Internacional de Datos
 - Alojamiento en Supabase y Vercel → **datos salen de Guatemala**
@@ -68,7 +68,7 @@ Identificar el marco jurídico guatemalteco aplicable al sistema que gestiona ex
 | # | Riesgo | Nivel |
 |---|---|---|
 | R-01 | Sin consentimiento registrado | Alto |
-| R-02 | Repositorio sin licencia | Medio |
+| R-02 | Repositorio sin licencia | Resuelto: licencia MIT |
 | R-03 | Menores sin autorización de representante | Alto |
 | R-04 | Datos fuera del país sin aviso explícito | Medio |
 | R-05 | Sin acta de entrega, responsabilidad no se transmite formalmente | Alto |
@@ -80,8 +80,8 @@ Identificar el marco jurídico guatemalteco aplicable al sistema que gestiona ex
 ## 4. Medidas para Delimitar la Responsabilidad
 
 ### 4.1 Licencia del Repositorio
-> Propuesta: **Licencia MIT** o la que indique la universidad
-> Archivo: `LICENSE` en raíz del repositorio
+> Decisión: **Licencia MIT**, código abierto, con los derechos de autor a nombre de los integrantes del equipo de desarrollo
+> Archivo: [`LICENSE`](../LICENSE) en la raíz del repositorio
 > Incluye cláusula de **sin garantía** y limitación de responsabilidad
 
 ### 4.2 Acta de Entrega y Transferencia
@@ -113,7 +113,7 @@ La organización asume desde la fecha de firma:
 | Paso | Acción | Estado |
 |---|---|---|
 | 1 | Revisión por asesoría jurídica |  Pendiente |
-| 2 | Agregar archivo `LICENSE` al repositorio |  Pendiente |
+| 2 | Agregar archivo `LICENSE` al repositorio |  Hecho: licencia MIT |
 | 3 | Diseñar campo de consentimiento en registro |  Issue pendiente |
 | 4 | Redactar aviso de privacidad en idiomas locales |  Pendiente |
 | 5 | Firmar Acta de Entrega antes de pasar a producción |  Pendiente |
