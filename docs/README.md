@@ -17,8 +17,8 @@ Donde esta cada pieza de la entrega. Los documentos formales (PDF) viven en [for
 | Manual de administracion | El manual del administrador | [PDF](./formal/manual-del-administrador.pdf) |
 | Material de capacitacion | [manual/PLAN-DE-CAPACITACIONES.md](./manual/PLAN-DE-CAPACITACIONES.md), guias rapidas y [videos](./manual/README.md#videos) | [PDF](./formal/plan-de-capacitaciones.pdf) |
 | Lista de asistencia de la capacitacion | Hoja general para imprimir y firmar; el registro, en la seccion 10 del plan de capacitaciones | [PDF](./formal/lista-de-asistencia-capacitaciones.pdf) |
-| Scripts de base de datos (departamentos, municipios, administrador inicial) | [DESPLIEGUE_BASE_DE_DATOS.md](./DESPLIEGUE_BASE_DE_DATOS.md), [`supabase/migrations/`](../supabase/migrations/) y [`supabase/esquema-final.sql`](../supabase/esquema-final.sql) | - |
-| Diccionario de datos | [DICCIONARIO-DE-DATOS.md](./DICCIONARIO-DE-DATOS.md) | - |
+| Scripts de base de datos (departamentos, municipios, administrador inicial) | [DESPLIEGUE_BASE_DE_DATOS.md](./DESPLIEGUE_BASE_DE_DATOS.md), [`supabase/migrations/`](../supabase/migrations/) y [`supabase/esquema-final.sql`](../supabase/esquema-final.sql) | [PDF](./formal/diccionario-de-datos-y-scripts.pdf), seccion 1 |
+| Diccionario de datos | [DICCIONARIO-DE-DATOS.md](./DICCIONARIO-DE-DATOS.md) | [PDF](./formal/diccionario-de-datos-y-scripts.pdf), seccion 2 |
 | Manual tecnico | [MANUAL-TECNICO.md](./MANUAL-TECNICO.md) | [PDF](./formal/documentacion-tecnica.pdf) |
 | Manual de instalacion y configuracion | [MANUAL-DE-INSTALACION.md](./MANUAL-DE-INSTALACION.md) | [PDF](./formal/manual-de-instalacion-y-configuracion.pdf) |
 | Documentacion de API e integraciones | [API-E-INTEGRACIONES.md](./API-E-INTEGRACIONES.md) | - |
