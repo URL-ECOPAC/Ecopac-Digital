@@ -189,3 +189,11 @@ Una rama por issue, PRs hacia `develop` con "Closes #X", merge con squash.
 
 - [GitHub Issues](https://github.com/LisAY22/Ecopac-Digital/issues) - trabajo pendiente
 - [GitHub Projects](https://github.com/LisAY22/Ecopac-Digital/projects) - tablero y sprints
+
+## Licencia
+
+Codigo abierto bajo la [licencia MIT](./LICENSE). Los autores son los integrantes del equipo de
+desarrollo (estudiantes de Ingenieria en Informatica y Sistemas, Universidad Rafael Landivar,
+Campus de Quetzaltenango). Cualquier persona, incluida Ecopac Guatemala, puede usar, copiar,
+modificar y distribuir el codigo, siempre que conserve el aviso de autoria y de licencia. Se
+entrega tal cual, sin garantia de ningun tipo.
