@@ -415,11 +415,12 @@ Las variables de entorno se copian desde `.env.example`. **Nunca se suben llaves
 repositorio**, y `packages/shared/entorno/reglas.js` rechaza al arrancar una `service_role` que
 aparezca en el bundle del cliente.
 
-**Lo que este diagrama describe y lo que hay hoy no es lo mismo.** `ecopac-prod` esta pausado,
-`main` no tiene los secrets de produccion, y el plan Hobby de Vercel no puede conectarse a un
-repositorio de una organizacion. Todo eso -y la eleccion entre desplegar por CLI, pagar Vercel Pro o
-mover la web- se resuelve en la #252. Los limites y costos de cada servicio estan en
-[COSTOS-Y-LIMITES.md](./COSTOS-Y-LIMITES.md).
+**Asi funciona desde el 14 de octubre de 2026**, a nombre de la organizacion (issue #252):
+`ecopac-prod` y `ecopac-dev` son proyectos de su cuenta de Supabase, y la web de produccion es
+https://ecopac-digital.vercel.app. El repositorio vive en la cuenta personal de GitHub de la
+organizacion porque el plan Hobby de Vercel no puede conectarse a uno de una organizacion de GitHub.
+Cada paso y como se comprobo: [PLAN-DE-IMPLEMENTACION.md](./PLAN-DE-IMPLEMENTACION.md). Los limites
+y costos de cada servicio estan en [COSTOS-Y-LIMITES.md](./COSTOS-Y-LIMITES.md).
 
 Que valida cada workflow y que hacer cuando falla: [CI-CD.md](./CI-CD.md).
 Nube contra stack local: [SUPABASE.md](./SUPABASE.md).
@@ -448,7 +449,7 @@ Operacion
   SUPABASE.md              nube contra local
   CONFIGURACION-SUPABASE.md lo que se configura a mano en el Dashboard de cada ambiente
   COSTOS-Y-LIMITES.md      capas gratuitas, que se agota primero, siguiente escalon
-  DATOS-DEMO.md            datos de prueba
+  DATOS-DE-PRUEBA.md            datos de prueba
   DEPENDENCIES.md          politica de versionado
 
 Seguridad

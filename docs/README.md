@@ -19,10 +19,12 @@ configuracion de GitHub (plantillas de issues, PR y los workflows de CI/CD) esta
 | [RESPALDO-Y-RECUPERACION.md](./RESPALDO-Y-RECUPERACION.md) | Plan de respaldo y recuperacion de la base de produccion: que se respalda, cada cuanto, quien puede abrirlo y como se restaura paso a paso (issue #914). Version formal en PDF: [formal/plan-de-respaldo-y-recuperacion.pdf](./formal/plan-de-respaldo-y-recuperacion.pdf) |
 | [MANTENIMIENTO-Y-SOPORTE.md](./MANTENIMIENTO-Y-SOPORTE.md) | Plan de mantenimiento y soporte para el personal de Ecopac: responsables y cuentas, revisiones mensuales, por temporada y anuales, como reportar una falla y sus prioridades, como se pide un cambio, y que hacer en los casos mas comunes (issue #921). Version formal en Word: [formal/plan-de-mantenimiento-y-soporte.docx](./formal/plan-de-mantenimiento-y-soporte.docx); el PDF se genera cuando se designen los responsables |
 | [CONFIGURACION-SUPABASE.md](./CONFIGURACION-SUPABASE.md) | Lista de verificacion de lo que se configura a mano en el Dashboard de cada ambiente |
+| [MANUAL-DE-INSTALACION.md](./MANUAL-DE-INSTALACION.md) | **Instalar el sistema completo desde cero** en cuentas nuevas: cuentas, Supabase, secrets, Vercel, APK, respaldos, verificacion y problemas comunes (issue #919). Version formal en PDF: [formal/manual-de-instalacion-y-configuracion.pdf](./formal/manual-de-instalacion-y-configuracion.pdf) |
+| [PLAN-DE-IMPLEMENTACION.md](./PLAN-DE-IMPLEMENTACION.md) | Salida a produccion a nombre de la organizacion (issue #252): decisiones, pasos en orden, secrets, app movil por APK, riesgos, pruebas posteriores en produccion y lo que quedo creado. Version formal en PDF: [formal/plan-de-implementacion.pdf](./formal/plan-de-implementacion.pdf) |
 | [PROTECCION-DE-DATOS.md](./PROTECCION-DE-DATOS.md) | Logs, almacenamiento movil, cifrado de columnas y secretos (OWASP A02) |
 | [MARCO-LEGAL.md](./MARCO-LEGAL.md) | Marco jurídico guatemalteco aplicable: obligaciones, riesgos, licencia, consentimiento, transferencia internacional y delimitación de responsabilidad del equipo de desarrollo |
 | [manual/](./manual/README.md) | Manual de usuario y material de capacitacion (issue #251): indice de las piezas, formato comun y el [plan de capacitaciones](./manual/PLAN-DE-CAPACITACIONES.md) ([PDF](./formal/plan-de-capacitaciones.pdf)) |
-| [formal/documentacion-tecnica.docx](./formal/documentacion-tecnica.docx) | Documento formal para quien no tiene acceso al repositorio (issue #867): permisos, modelo de datos, pantallas, conexion con Supabase, configuracion y herramientas, consolidados de los `.md` de esta carpeta |
+| [formal/documentacion-tecnica.pdf](./formal/documentacion-tecnica.pdf) | Documento formal para quien no tiene acceso al repositorio (issue #867): permisos, modelo de datos, pantallas, conexion con Supabase, configuracion y herramientas, consolidados de los `.md` de esta carpeta |
 
 ## Manuales de usuario
 
@@ -52,7 +54,8 @@ pantallas usan los datos de demostracion.
 | [ARQUITECTURA-FRONTEND.md](./ARQUITECTURA-FRONTEND.md) | Como se comparte el frontend entre web y movil                        |
 | [PERMISOS.md](./PERMISOS.md)                           | Quien puede hacer que en cada modulo, y donde esta escrito            |
 | [SUPABASE.md](./SUPABASE.md)                           | Supabase en la nube contra el stack local, y como se sincronizan      |
-| [DATOS-DEMO.md](./DATOS-DEMO.md)                       | Datos de prueba para desarrollo                                       |
+| [DATOS-DE-PRUEBA.md](./DATOS-DE-PRUEBA.md)                       | Datos de prueba para desarrollo                                       |
+| [DATOS-DEMO.md](./DATOS-DEMO.md)                       | Los seeds del curso (`supabase/seed*.sql`) y la recarga de la base de desarrollo del equipo. Solo en este repositorio |
 | [PLAN-DE-PRUEBAS.md](./PLAN-DE-PRUEBAS.md)             | Los ocho tipos de prueba con su criterio de aprobacion, que mide la cobertura, politica de evidencias y riesgos al ejecutarlo |
 | [CASOS-DE-PRUEBA.md](./CASOS-DE-PRUEBA.md)             | Cada caso de prueba vinculado a su requerimiento, y los requerimientos que no tienen ninguno |
 | [CUMPLIMIENTO-DE-REQUERIMIENTOS.md](./CUMPLIMIENTO-DE-REQUERIMIENTOS.md) | Los 34 RF y 15 RNF: donde esta cada uno, que issues lo cubren, su evidencia y su estado (issue #253) |

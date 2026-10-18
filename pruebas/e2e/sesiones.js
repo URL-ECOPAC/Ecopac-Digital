@@ -10,7 +10,7 @@
 //
 // LAS CUENTAS SON LAS DEL SEED DEMO, NO SE CREAN AQUI
 //
-// supabase/seed-demo.sql (issue #94) ya siembra una cuenta por rol con su fila en
+// supabase/fixtures/datos-de-prueba.sql (issue #94) ya siembra una cuenta por rol con su fila en
 // auth.identities, que es lo que GoTrue necesita para el login por contrasena. Crear otras aqui
 // duplicaria ese trabajo y, peor, dejaria las pruebas dependiendo de un recorrido de alta que no
 // es el que estan probando. Todo ese archivo es ficticio y la credencial es de desarrollo: nunca

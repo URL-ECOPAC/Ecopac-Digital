@@ -3,12 +3,12 @@ name: Mantener Supabase activo
 # El plan gratuito de Supabase pausa el proyecto tras 7 dias sin actividad. Esta tarea hace una
 # consulta minima cada 3 dias para evitar la pausa.
 #
-# Reutiliza los mismos secrets que ya usan otros workflows -VITE_SUPABASE_URL_DEV (ci.yml, build
-# de la web) y SUPABASE_SERVICE_ROLE_KEY_DEV (alertas-vencimiento.yml, issue #166)-, en vez de
-# los propios que este workflow pedia antes (SUPABASE_URL_DEV, SUPABASE_ANON_KEY_DEV), que
-# ningun otro workflow comparte: si nadie los configuro nunca, el paso se saltaba en silencio y
-# el proyecto podia llevar meses sin proteccion contra la pausa sin que nadie lo notara
-# (issue #515).
+# Hace ping a LOS DOS ambientes (issue #252). Hasta el paso a la cuenta de la organizacion solo
+# tocaba ecopac-dev, y produccion esta en el mismo plan Free: se pausaria a la semana de que la
+# organizacion dejara de usarla, por ejemplo entre dos jornadas. Lee los mismos secrets que
+# alertas-vencimiento.yml (SUPABASE_URL_* y SUPABASE_SERVICE_ROLE_KEY_*), para que configurar uno
+# configure el otro: un secret que solo pide este workflow es uno que nadie se acuerda de poner, y
+# el paso se saltaba en silencio (issue #515).
 #
 # Con la llave de servicio, no con la anonima: desde la 00049/00056, anon no tiene ningun
 # privilegio sobre ninguna tabla de public (comprobado por
@@ -18,8 +18,8 @@ name: Mantener Supabase activo
 # confiar en eso, se usa la llave de servicio para que la consulta tenga exito de verdad y deje
 # una lectura real registrada.
 #
-# Mientras los secrets no esten configurados, el paso se omite y el workflow termina en verde
-# (no falla).
+# Mientras los secrets de un ambiente no esten configurados, su ping se omite con un aviso
+# visible y el workflow termina en verde (no falla).
 
 on:
   schedule:
@@ -31,25 +31,36 @@ permissions:
 
 jobs:
   ping:
-    name: Ping a la base de datos
+    name: Ping a ${{ matrix.ambiente }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    strategy:
+      # Que un ambiente falle no deja al otro sin ping.
+      fail-fast: false
+      matrix:
+        include:
+          - ambiente: ecopac-prod
+            secret_url: SUPABASE_URL_PROD
+            secret_llave: SUPABASE_SERVICE_ROLE_KEY_PROD
+          - ambiente: ecopac-dev
+            secret_url: SUPABASE_URL_DEV
+            secret_llave: SUPABASE_SERVICE_ROLE_KEY_DEV
     env:
-      SUPABASE_URL_DEV: ${{ secrets.VITE_SUPABASE_URL_DEV }}
-      SUPABASE_SERVICE_ROLE_KEY_DEV: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY_DEV }}
+      SUPABASE_URL: ${{ secrets[matrix.secret_url] }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets[matrix.secret_llave] }}
 
     steps:
       - name: Verificar secrets configurados
-        if: env.SUPABASE_URL_DEV == '' || env.SUPABASE_SERVICE_ROLE_KEY_DEV == ''
+        if: env.SUPABASE_URL == '' || env.SUPABASE_SERVICE_ROLE_KEY == ''
         # Anotacion de warning y bloque en el resumen, no un echo: un echo solo se ve abriendo el
         # log, y una corrida que no protegio nada no puede verse igual que una que si (issue #762,
         # "algo no funciona y el sistema dice que si"; misma politica que docs/CI-CD.md, Secrets).
         run: |
-          echo "::warning title=Keep-alive sin efecto::Faltan VITE_SUPABASE_URL_DEV o SUPABASE_SERVICE_ROLE_KEY_DEV: no se hizo ningun ping y el proyecto puede pausarse."
+          echo "::warning title=Keep-alive sin efecto en ${{ matrix.ambiente }}::Faltan ${{ matrix.secret_url }} o ${{ matrix.secret_llave }}: no se hizo ningun ping y el proyecto puede pausarse."
           {
-            echo "### Keep-alive sin efecto"
+            echo "### Keep-alive sin efecto en ${{ matrix.ambiente }}"
             echo ""
-            echo "Faltan los secrets \`VITE_SUPABASE_URL_DEV\` o \`SUPABASE_SERVICE_ROLE_KEY_DEV\`."
+            echo "Faltan los secrets \`${{ matrix.secret_url }}\` o \`${{ matrix.secret_llave }}\`."
             echo "No se hizo ningun ping: el proyecto puede pausarse por inactividad."
             echo "Configuralos en Settings > Secrets and variables > Actions."
           } >> "$GITHUB_STEP_SUMMARY"
@@ -59,8 +70,6 @@ jobs:
       # fallar el paso y ademas imprime el cuerpo de la respuesta en el log, para que quede
       # visible por que fallo en vez de un curl mudo.
       - name: Consulta minima a Supabase
-        if: env.SUPABASE_URL_DEV != '' && env.SUPABASE_SERVICE_ROLE_KEY_DEV != ''
+        if: env.SUPABASE_URL != '' && env.SUPABASE_SERVICE_ROLE_KEY != ''
         run: |
-          curl -sS --fail-with-body -X GET "$SUPABASE_URL_DEV/rest/v1/perfiles?select=id&limit=1" \
-            -H "apikey: $SUPABASE_SERVICE_ROLE_KEY_DEV" \
-            -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY_DEV"
+          curl -sS --fail-with-body -X GET "$SUPABASE_URL/rest/v1/perfiles?select=id&limit=1"             -H "apikey: $SUPABASE_SERVICE_ROLE_KEY"             -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY"

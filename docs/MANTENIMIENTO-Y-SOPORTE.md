@@ -4,10 +4,10 @@ Qué hay que revisar, cada cuánto y quién lo hace para que Ecopac Digital siga
 
 | | |
 | --- | --- |
-| Versión | 1.0 |
-| Fecha | 14 de octubre de 2026 |
+| Versión | 1.1 |
+| Fecha | 17 de octubre de 2026 (1.0: 14 de octubre de 2026) |
 | Dirigido a | Dirección de Ecopac Guatemala, la administradora del sistema, la persona responsable del sistema y quien dé soporte técnico |
-| Estado | Borrador. Las personas, los canales y los plazos de soporte están marcados **PENDIENTE DE CONFIRMAR**; lo que depende de la salida a producción, **pendiente de la salida a producción (#252)** |
+| Estado | Borrador. Las personas, los canales y los plazos de soporte están marcados **PENDIENTE DE CONFIRMAR** |
 
 ## Cómo leer este documento
 
@@ -18,17 +18,16 @@ Qué hay que revisar, cada cuánto y quién lo hace para que Ecopac Digital siga
 - Este documento no repite lo que ya está escrito en otro lado. El respaldo y la restauración están en [RESPALDO-Y-RECUPERACION.md](./RESPALDO-Y-RECUPERACION.md); el uso diario del sistema, en los manuales de `docs/formal/`.
 - Los nombres de botones y pantallas de GitHub, Google y Supabase se escriben como aparecen en esos servicios, casi siempre en inglés.
 
-### Estado del sistema al 14 de octubre de 2026
+### Estado del sistema al 17 de octubre de 2026
 
-Varias tareas de este plan solo tienen sentido cuando el sistema esté en producción, y **producción todavía no está desplegada** ([MANUAL-TECNICO.md](./MANUAL-TECNICO.md), sección 12):
+El sistema está en producción desde el 14 de octubre de 2026, todo a nombre de la organización ([PLAN-DE-IMPLEMENTACION.md](./PLAN-DE-IMPLEMENTACION.md)):
 
-- La base de producción (`Ecopac-Digital-Prod`) existe pero está pausada, y faltan sus secrets en GitHub.
-- La dirección web de producción no existe todavía: **pendiente de la salida a producción (#252)**.
-- La aplicación del teléfono se prueba con Expo Go; cómo se va a instalar en los teléfonos de la organización está **pendiente de la salida a producción (#252)**.
-- El respaldo diario está escrito y ensayado en local, pero nunca ha corrido contra la base real ([RESPALDO-Y-RECUPERACION.md](./RESPALDO-Y-RECUPERACION.md), "Estado").
-- Las tareas automáticas ("Alertas de vencimiento" y "Mantener Supabase activo") apuntan hoy a la base de desarrollo, no a la de producción ([MANUAL-TECNICO.md](./MANUAL-TECNICO.md), 12.4, punto 6).
+- La web de producción es <https://ecopac-digital.vercel.app>, y la base, el proyecto de Supabase `ecopac-prod` de la organización.
+- La aplicación del teléfono se instala como APK desde la carpeta de Drive de la organización ([PLAN-DE-IMPLEMENTACION.md](./PLAN-DE-IMPLEMENTACION.md), sección 7).
+- Las tareas automáticas corren por horario contra producción y desarrollo.
+- **El respaldo diario todavía no está activo** (issue #914): está escrito y ensayado en local, pero no ha corrido contra la base real ([RESPALDO-Y-RECUPERACION.md](./RESPALDO-Y-RECUPERACION.md), "Estado"). Producción no recibe datos reales hasta que el primer respaldo se haya restaurado con éxito.
 
-Este plan se escribe ya para que las cuentas, las personas y los canales queden decididos antes de que el sistema reciba datos reales.
+Las cuentas, las personas y los canales de este plan tienen que quedar decididos antes de que el sistema reciba datos reales.
 
 ## 1. Responsables
 
@@ -39,10 +38,10 @@ Este plan se escribe ya para que las cuentas, las personas y los canales queden 
 | Persona responsable de la base, custodia de la llave privada | **Pendiente de designar** ([RESPALDO-Y-RECUPERACION.md](./RESPALDO-Y-RECUPERACION.md), sección 4) | Única persona que puede abrir un respaldo. Tiene que ser de la organización, no del equipo de desarrollo |
 | Suplente de la custodia (segunda copia de la llave) | **Pendiente de designar** ([RESPALDO-Y-RECUPERACION.md](./RESPALDO-Y-RECUPERACION.md), sección 4) | Abre un respaldo si la titular no está disponible |
 | Administra la cuenta de Google de la organización (`ecopac.digital@gmail.com`: Drive con los respaldos, credencial del respaldo) | **PENDIENTE DE CONFIRMAR**. El equipo de desarrollo solo conoce la dirección, no tiene la contraseña ([RESPALDO-Y-RECUPERACION.md](./RESPALDO-Y-RECUPERACION.md), "Estado") | Revisa los respaldos en Drive y renueva la credencial |
-| Administra la organización de GitHub dueña del repositorio | **PENDIENTE DE CONFIRMAR** | Reactiva los workflows, cambia los secrets y da o quita acceso al repositorio |
-| Administra la organización de Supabase (`Ecopac-Digital-Dev` y `Ecopac-Digital-Prod`) | **PENDIENTE DE CONFIRMAR** | Reanuda un proyecto pausado, revisa el consumo y cambia contraseñas y llaves |
-| Administra la cuenta de Vercel (o el servicio donde quede la web) | **Pendiente de la salida a producción (#252)**: no está decidido dónde se publica la web | Revisa que la web esté publicada |
-| Administra la cuenta de Expo (compilación de la aplicación del teléfono) | **Pendiente de la salida a producción (#252)**: no está decidido cómo se distribuye la aplicación | Compila y publica las versiones nuevas de la aplicación |
+| Administra la cuenta de GitHub de la organización, dueña del repositorio `ecopacdigital/Ecopac-Digital` | **PENDIENTE DE CONFIRMAR** | Reactiva los workflows, cambia los secrets y da o quita acceso al repositorio |
+| Administra la organización de Supabase (`ecopac-prod` y `ecopac-dev`) | **PENDIENTE DE CONFIRMAR** | Reanuda un proyecto pausado, revisa el consumo y cambia contraseñas y llaves |
+| Administra la cuenta de Vercel de la organización (la web) | **PENDIENTE DE CONFIRMAR** | Revisa que la web esté publicada |
+| Administra la cuenta de Expo de la organización (`ecopacdigitals-team`, compilación de la aplicación del teléfono) | **PENDIENTE DE CONFIRMAR** | Compila las versiones nuevas de la aplicación y las deja en Drive |
 | Administra la cuenta de Sentry (monitoreo de errores) | **PENDIENTE DE CONFIRMAR**. Sentry todavía no está contratado ([COSTOS-Y-LIMITES.md](./COSTOS-Y-LIMITES.md), 4.1); el plan gratuito admite un solo usuario | Revisa los errores que reporta el sistema |
 | Gestor de contraseñas de la organización (donde va una de las copias de la llave privada) | **PENDIENTE DE CONFIRMAR** qué gestor y quién lo administra | Guarda las credenciales de todas las cuentas de esta tabla |
 | Soporte técnico del equipo de desarrollo | **PENDIENTE DE CONFIRMAR**: duración del soporte y canal. Al terminar, el equipo se retira de todas las cuentas ([RESPALDO-Y-RECUPERACION.md](./RESPALDO-Y-RECUPERACION.md), sección 4) | Atiende las fallas de la sección 3 mientras dure el soporte |
@@ -104,7 +103,7 @@ Pasos:
 6. Si un workflow tiene corridas en rojo (una X), abrir la más reciente y ver si ya hay una issue abierta en la pestaña **Issues**. Si no la hay, llamar a un técnico (sección 3).
 7. Después de reactivar uno, se puede forzar una corrida en el momento: en la página del workflow, **Run workflow** > **Run workflow**. Tiene que terminar en verde.
 
-> Mientras no se haga la salida a producción (#252), en la rama de producción solo existe "Mantener Supabase activo". Los otros tres empiezan a correr por horario cuando se haga ([MANUAL-TECNICO.md](./MANUAL-TECNICO.md), 12.3). Hasta entonces, que no aparezcan corridas de esos tres no es una falla.
+> Mientras la issue #914 no se cierre, **Respaldo de la base** está desactivado a propósito y no tiene corridas: no es una falla, y no hay que activarlo hasta que estén sus secrets. Los otros tres corren por horario desde el 14 de octubre de 2026.
 
 #### 2.1.2 Los respaldos en Drive
 
@@ -128,7 +127,7 @@ Si faltan respaldos recientes: revisar primero 2.1.1 (el workflow pudo quedar de
 Ningún límite de la capa gratuita se agota por la cantidad de datos que maneja Ecopac ([COSTOS-Y-LIMITES.md](./COSTOS-Y-LIMITES.md), "Resumen"). Lo que más riesgo tiene es la **pausa**: un proyecto del plan gratuito se pausa tras **una semana sin actividad**, y un proyecto pausado no responde hasta que alguien lo reanuda a mano ([COSTOS-Y-LIMITES.md](./COSTOS-Y-LIMITES.md), 6.3).
 
 1. Entrar a <https://supabase.com/dashboard> con la cuenta que administra la organización.
-2. En la lista de proyectos, comprobar que `Ecopac-Digital-Prod` no aparece como pausado ("Paused"). Si lo está, seguir la sección 5, "El proyecto de Supabase se pausó".
+2. En la lista de proyectos, comprobar que el de producción (`ecopacdigital Prod`) no aparece como pausado ("Paused"). Si lo está, seguir la sección 5, "El proyecto de Supabase se pausó".
 3. Abrir la página de uso de la organización (**Usage**) y anotar estos números contra su límite:
 
 | Qué | Límite del plan gratuito | Avisar a un técnico si pasa de |
@@ -226,7 +225,7 @@ Rotar es cambiar una contraseña, un token o una llave por uno nuevo y anular el
 4. **Credencial de Google Drive del respaldo**: repetir [RESPALDO-Y-RECUPERACION.md](./RESPALDO-Y-RECUPERACION.md), 7.B desde el punto 6, reemplazar `RESPALDO_DRIVE_TOKEN` y quitar el acceso anterior desde la cuenta de Google. Comprobar en ese momento que la aplicación de Google Cloud sigue publicada ("En producción") y no en modo de prueba: en modo de prueba la credencial caduca a los 7 días (7.B, punto 4).
 5. **Par de llaves del respaldo**: generar un par nuevo ([RESPALDO-Y-RECUPERACION.md](./RESPALDO-Y-RECUPERACION.md), 7.A), guardar la privada en sus dos copias y reemplazar `RESPALDO_GPG_CLAVE_PUBLICA` (7.C). **La llave privada vieja no se destruye todavía**: los respaldos de los 30 días anteriores solo se abren con ella. Se destruye a los 30 días, cuando el último respaldo cifrado con ella ya se borró solo.
 6. Correr a mano **Respaldo de la base** (2.1.1, paso 7) y comprobar que termina en verde y que el archivo nuevo aparece en Drive.
-7. **Cuentas de demostración en producción.** Las cuentas `*.demo@ecopac.test` y su contraseña están publicadas en el repositorio ([DATOS-DEMO.md](./DATOS-DEMO.md)), así que **no pueden existir en producción**. Solo las crean el stack local y el script de recarga de la base de desarrollo, que se niega a correr contra producción si se le indica cuál es ([DATOS-DEMO.md](./DATOS-DEMO.md), "Recargar `ecopac-dev` desde cero"). Para comprobarlo, en el SQL Editor del proyecto `Ecopac-Digital-Prod`:
+7. **Cuentas de demostración en producción.** Las cuentas `*.demo@ecopac.test` y su contraseña están publicadas en el repositorio ([DATOS-DE-PRUEBA.md](./DATOS-DE-PRUEBA.md)), así que **no pueden existir en producción**. Solo las crea el archivo de datos de prueba en el stack local y en el CI; `supabase db push` no lo ejecuta nunca contra un proyecto remoto. Para comprobarlo, en el SQL Editor del proyecto de producción (`ecopacdigital Prod`):
 
    ```sql
    select email, created_at from auth.users where email ilike '%@ecopac.test';
@@ -284,8 +283,8 @@ Cómo se pide un cambio o una función nueva, y el camino que recorre hasta que 
 3. **Decidir.** Quién decide qué se hace y en qué orden: **PENDIENTE DE CONFIRMAR**.
 4. **Construirlo** (técnico). Una rama desde `develop` por issue, los cambios y sus pruebas, y un Pull Request hacia `develop` con "Closes #X" ([CONTRIBUTING.md](./CONTRIBUTING.md), "Flujo de trabajo"). Las recetas de los cambios típicos, como agregar un campo o una pantalla, están en [MANUAL-TECNICO.md](./MANUAL-TECNICO.md), sección 13.
 5. **Revisarlo.** El CI tiene que terminar en verde y otra persona aprueba el PR. Se mergea con "Squash and merge".
-6. **Probarlo en desarrollo.** Al mergear a `develop`, los cambios de la base se aplican solos a `Ecopac-Digital-Dev`. Ahí se prueba, con los datos de demostración, antes de llevarlo a producción. Si el cambio toca una pantalla, la administradora lo prueba también.
-7. **Llevarlo a producción.** Un PR de `develop` a `main`. Al mergearlo, los cambios de la base se aplican solos a producción ([CI-CD.md](./CI-CD.md), "Ambientes"). Cómo se publica la web y cómo llega la versión nueva de la aplicación a los teléfonos: **pendiente de la salida a producción (#252)**. Quién aprueba el paso a producción: **PENDIENTE DE CONFIRMAR**.
+6. **Probarlo en desarrollo.** Al mergear a `develop`, los cambios de la base se aplican solos a `ecopac-dev` y la web de desarrollo se publica sola en Vercel. Ahí se prueba antes de llevarlo a producción. Si el cambio toca una pantalla, la administradora lo prueba también.
+7. **Llevarlo a producción.** Un PR de `develop` a `main`. Al mergearlo, los cambios de la base se aplican solos a producción y Vercel publica la web nueva ([CI-CD.md](./CI-CD.md), "Ambientes"). Si cambió la aplicación del teléfono, se compila un APK nuevo y se deja en la carpeta de Drive ([PLAN-DE-IMPLEMENTACION.md](./PLAN-DE-IMPLEMENTACION.md), sección 7). Quién aprueba el paso a producción: **PENDIENTE DE CONFIRMAR**.
 8. **Avisar y actualizar.** Si cambió una pantalla, se actualiza el manual y se avisa al personal ([plan de capacitaciones](./manual/PLAN-DE-CAPACITACIONES.md), sección 9: "Revisión de este plan y de los manuales").
 
 Dos reglas que no se rompen nunca, aunque haya prisa ([CI-CD.md](./CI-CD.md)): un cambio de la base que ya se aplicó no se edita, se corrige con otro nuevo; y nadie aplica cambios de la base a mano contra producción: los aplica el workflow al mergear.
@@ -308,7 +307,7 @@ Dos reglas que no se rompen nunca, aunque haya prisa ([CI-CD.md](./CI-CD.md)): u
 5. Revisar si el proyecto de Supabase está pausado (el caso siguiente).
 6. Si no lo está, es una falla **crítica**: reportarla al técnico (sección 3), con la hora en que empezó.
 
-La dirección web de producción: **pendiente de la salida a producción (#252)**.
+La dirección web de producción: <https://ecopac-digital.vercel.app>.
 
 ### Una persona no puede entrar
 
@@ -332,7 +331,7 @@ La dirección web de producción: **pendiente de la salida a producción (#252)*
 
 **Qué ve la persona:** el sistema no carga o falla al iniciar sesión para todo el mundo (el caso "El sistema no carga"). La responsable del sistema puede ver además, en el panel de Supabase, el proyecto marcado como pausado ("Paused").
 
-**Por qué pasa:** el plan gratuito pausa un proyecto tras una semana sin actividad ([COSTOS-Y-LIMITES.md](./COSTOS-Y-LIMITES.md), 6.3). Lo evitan el uso normal, el workflow "Mantener Supabase activo" y el respaldo diario. Hoy "Mantener Supabase activo" solo protege la base de desarrollo, no la de producción ([MANUAL-TECNICO.md](./MANUAL-TECNICO.md), 12.4, punto 6): queda **pendiente de la salida a producción (#252)**.
+**Por qué pasa:** el plan gratuito pausa un proyecto tras una semana sin actividad ([COSTOS-Y-LIMITES.md](./COSTOS-Y-LIMITES.md), 6.3). Lo evitan el uso normal, el workflow "Mantener Supabase activo", que protege las dos bases, y el respaldo diario.
 
 **Qué hace la persona que administra Supabase:**
 
@@ -410,12 +409,12 @@ Solo los nombres. **Los valores nunca se escriben en este documento, ni en el re
 | Cuenta | Para qué | Quién la administra |
 | --- | --- | --- |
 | Google, `ecopac.digital@gmail.com` | Drive con los respaldos y el proyecto de Google Cloud de la credencial del respaldo | **PENDIENTE DE CONFIRMAR** |
-| Organización de GitHub dueña del repositorio | Código, workflows, secrets, issues | **PENDIENTE DE CONFIRMAR** |
-| Organización de Supabase | Las bases `Ecopac-Digital-Dev` y `Ecopac-Digital-Prod`, la autenticación y las Edge Functions | **PENDIENTE DE CONFIRMAR** |
-| Vercel (u otro servicio para la web) | Publicar la web | **Pendiente de la salida a producción (#252)** |
-| Expo | Compilar y distribuir la aplicación del teléfono | **Pendiente de la salida a producción (#252)** |
+| GitHub, cuenta de la organización (`ecopacdigital`) | Código (`ecopacdigital/Ecopac-Digital`), workflows y secrets | **PENDIENTE DE CONFIRMAR** |
+| Organización de Supabase | Las bases `ecopac-prod` y `ecopac-dev` (proyectos `ecopacdigital Prod` y `ecopacdigital Dev`), la autenticación y las Edge Functions | **PENDIENTE DE CONFIRMAR** |
+| Vercel, cuenta Hobby de la organización | Publicar la web (proyecto `ecopac-digital`) | **PENDIENTE DE CONFIRMAR** |
+| Expo, cuenta `ecopacdigitals-team` | Compilar la aplicación del teléfono (APK) y guardar su llave de firma | **PENDIENTE DE CONFIRMAR** |
 | Sentry | Monitoreo de errores | **PENDIENTE DE CONFIRMAR** (no está contratado) |
-| Proveedor de correo (SMTP) | Correos de invitación, recuperación de contraseña y notificaciones | **PENDIENTE DE CONFIRMAR**. En desarrollo se usa una cuenta personal de prueba ([CONFIGURACION-SUPABASE.md](./CONFIGURACION-SUPABASE.md), "Lo que cambia en produccion") |
+| Correo (SMTP) | Correos de invitación, recuperación de contraseña y notificaciones. Es el mismo Gmail de la organización, con una contraseña de aplicación ([CONFIGURACION-SUPABASE.md](./CONFIGURACION-SUPABASE.md), CFG-13 y CFG-16) | Quien administra la cuenta de Google |
 | Gestor de contraseñas | Guardar todo lo de este anexo y una copia de la llave privada | **PENDIENTE DE CONFIRMAR** |
 
 ### Secrets de GitHub Actions
@@ -424,20 +423,17 @@ Se ven y se cambian en el repositorio, **Settings** > **Secrets and variables** 
 
 | Secret | Lo usan los workflows | Nota |
 | --- | --- | --- |
-| `SUPABASE_ACCESS_TOKEN` | Supabase, Verificar despliegue, Respaldo de la base | Token **personal** de una cuenta de Supabase: si esa persona sale de la organización o lo revoca, dejan de funcionar los tres. Ya pasó el 8 de septiembre de 2026 ([CI-CD.md](./CI-CD.md), "La deriva de historial se avisa en el PR") |
-| `SUPABASE_DB_PASSWORD` | Supabase, Verificar despliegue | Contraseña de la base de desarrollo |
-| `SUPABASE_DB_PASSWORD_PROD` | Respaldo de la base | Contraseña de la base de producción. **Todavía no existe** (#252) |
-| `SUPABASE_PROJECT_REF_DEV` | Supabase, Verificar despliegue | Identificador del proyecto de desarrollo |
-| `SUPABASE_PROJECT_REF_PROD` | Supabase, Verificar despliegue, Respaldo de la base | Identificador del proyecto de producción. **Todavía no existe** (#252) |
-| `SUPABASE_SERVICE_ROLE_KEY_DEV` | Alertas de vencimiento, Mantener Supabase activo | Llave de servicio del proyecto de desarrollo. Salta todos los permisos: es la más delicada |
-| `SUPABASE_URL_DEV` | Alertas de vencimiento | Dirección del proyecto de desarrollo |
-| `VITE_SUPABASE_URL_DEV`, `VITE_SUPABASE_ANON_KEY_DEV` | CI (compilar la web), Mantener Supabase activo (la dirección) | Dirección y llave pública del proyecto de desarrollo |
-| `VITE_SUPABASE_URL_PROD`, `VITE_SUPABASE_ANON_KEY_PROD` | CI (compilar la web en `main`) | Dirección y llave pública del proyecto de producción |
-| `RESPALDO_GPG_CLAVE_PUBLICA` | Respaldo de la base | Llave **pública** con la que se cifra. La privada nunca va aquí. **Todavía no existe** (#252) |
-| `RESPALDO_DRIVE_CLIENT_ID`, `RESPALDO_DRIVE_CLIENT_SECRET` | Respaldo de la base | Cliente de OAuth del proyecto de Google Cloud de la organización. **Todavía no existen** (#252) |
-| `RESPALDO_DRIVE_TOKEN` | Respaldo de la base | Credencial de la cuenta de Drive. **Todavía no existe** (#252) |
+| `SUPABASE_ACCESS_TOKEN` | Supabase, Verificar despliegue, Respaldo de la base | Token de la cuenta de Supabase de la organización, dedicado al CI. Si vence o se revoca, dejan de funcionar los tres |
+| `SUPABASE_PROJECT_REF_PROD`, `SUPABASE_PROJECT_REF_DEV` | Supabase, Respaldo de la base (solo el de producción) | Identificador de cada proyecto |
+| `SUPABASE_DB_PASSWORD_PROD`, `SUPABASE_DB_PASSWORD_DEV` | Supabase, Respaldo de la base (solo el de producción) | Contraseña de cada base, distintas entre sí |
+| `SUPABASE_URL_PROD`, `SUPABASE_URL_DEV` | Alertas de vencimiento, Mantener Supabase activo | Dirección de cada proyecto |
+| `SUPABASE_SERVICE_ROLE_KEY_PROD`, `SUPABASE_SERVICE_ROLE_KEY_DEV` | Alertas de vencimiento, Mantener Supabase activo | Llave de servicio de cada proyecto. Salta todos los permisos: es la más delicada |
+| `VITE_SUPABASE_URL_PROD`, `VITE_SUPABASE_URL_DEV`, `VITE_SUPABASE_ANON_KEY_PROD`, `VITE_SUPABASE_ANON_KEY_DEV` | CI (compilar la web) | Dirección y llave pública de cada proyecto |
+| `RESPALDO_GPG_CLAVE_PUBLICA` | Respaldo de la base | Llave **pública** con la que se cifra. La privada nunca va aquí. **Pendiente** (issue #914) |
+| `RESPALDO_DRIVE_CLIENT_ID`, `RESPALDO_DRIVE_CLIENT_SECRET` | Respaldo de la base | Cliente de OAuth del proyecto de Google Cloud de la organización. **Pendientes** (issue #914) |
+| `RESPALDO_DRIVE_TOKEN` | Respaldo de la base | Credencial de la cuenta de Drive. **Pendiente** (issue #914) |
 
-En [CI-CD.md](./CI-CD.md) aparece también `SUPABASE_ANON_KEY_DEV`, que solo usa la versión de "Mantener Supabase activo" que está hoy en `main` ([CI-CD.md](./CI-CD.md), "Secrets"). Hay que mantenerlo hasta que `develop` llegue a `main`.
+Son los diecisiete de [PLAN-DE-IMPLEMENTACION.md](./PLAN-DE-IMPLEMENTACION.md), paso 5, con de dónde sale cada valor.
 
 ### Secrets fuera de GitHub
 

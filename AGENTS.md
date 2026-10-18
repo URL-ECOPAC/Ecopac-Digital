@@ -23,7 +23,7 @@ packages/
 supabase/
   migrations/ Esquema de base de datos versionado (SQL)
   functions/  Rutinas programadas (alertas de vencimiento)
-docs/         Documentacion, entregables y contexto del curso
+docs/         Documentacion tecnica, manuales, evidencias y entregables del curso
 scripts/      Scripts de soporte del equipo
 .github/      Plantillas de issues, PR, GitHub Projects y workflows de CI/CD
 ```
@@ -241,4 +241,4 @@ Commits (Conventional Commits):
   en la migracion (lo exige `supabase/tests/database/diccionario_de_datos.sql`).
 - `docs/QUICKSTART.md` - guia de inicio rapido.
 - `docs/CONTRIBUTING.md` - guia de contribucion.
-- `docs/entregables/` - PDFs de entregables del curso.
+- `docs/entregables/` - PDFs de entregables del curso (solo en este repositorio).

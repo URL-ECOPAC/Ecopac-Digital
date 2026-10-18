@@ -246,40 +246,44 @@ directamente con la misma llave que guarda el secret, y se espera un `200` con
 
 `fecha / quien / comprobado`. Una fila se marca cuando se **verifico**, no cuando se toco.
 
-| ID | Ajuste | Ecopac-Digital-Dev | Ecopac-Digital-Prod |
+Desde la issue #252 los dos ambientes son los proyectos de la cuenta de la organizacion
+(`ecopacdigital Prod` y `ecopacdigital Dev`). El registro anterior era de los proyectos de la
+cuenta del equipo, que dejaron de usarse; se conserva en el historial de git.
+
+Todo lo de esta tabla se aplico por la Management API (`PATCH /v1/projects/{ref}/config/auth`,
+`supabase secrets set`, `POST /v1/projects/{ref}/database/query`) y se comprobo leyendolo de
+vuelta o con la prueba de la columna "Como se comprueba".
+
+| ID | Ajuste | ecopac-prod (`vuujluoxlkiakfstiiur`) | ecopac-dev (`swwtjekapvnkjzshzdjk`) |
 | --- | --- | --- | --- |
-| CFG-01 | Site URL | 23-09-2026 / WilderL / si (`http://localhost:5173`) | pendiente |
-| CFG-02 | Redirect URLs | 23-09-2026 / WilderL / si (4 entradas) | pendiente |
-| CFG-03 | Registro cerrado | 23-09-2026 / WilderL / si (`422 signup_disabled`) | pendiente |
-| CFG-04 | Email provider activado | 23-09-2026 / WilderL / si (login 200) | pendiente |
-| CFG-05 | Confirm email | 23-09-2026 / WilderL / si (activado, divergencia justificada) | pendiente |
-| CFG-06 | Longitud minima 8 | 23-09-2026 / WilderL / si (`422 weak_password`) | pendiente |
-| CFG-07 | Letras y numeros | 23-09-2026 / WilderL / si (`422 weak_password`) | pendiente |
-| CFG-08 | JWT expiry | 23-09-2026 / WilderL / si (3600, provisional) | pendiente |
-| CFG-09 | Rotacion / reuse | 23-09-2026 / WilderL / si | pendiente |
-| CFG-10 | Rate limits | 23-09-2026 / WilderL / si | pendiente |
-| CFG-11 | Email OTP expiration | 24-09-2026 / WilderL / si (3600) | pendiente |
-| CFG-12 | Plantilla de recuperacion | 24-09-2026 / WilderL / si (correo real recibido) | pendiente |
-| CFG-13 | SMTP de Auth | 23-09-2026 / WilderL / si (ya estaba; Gmail, 465) | pendiente |
-| CFG-14 | `ALLOWED_ORIGINS` | 23-09-2026 / WilderL / si (invitacion desde el navegador) | pendiente |
-| CFG-15 | `WEB_URL` | 23-09-2026 / WilderL / si (enlace del correo correcto) | pendiente |
-| CFG-16 | `SMTP_*` de las funciones | **no configurado**, por decision: se llena al pasar a produccion | pendiente |
-| CFG-17 | Extensiones | 23-09-2026 / WilderL / si (`pg_net`, `supabase_vault`) | pendiente |
-| CFG-18 | Vault `notificaciones_url` | 23-09-2026 / WilderL / si | pendiente |
-| CFG-19 | Vault `notificaciones_llave` | 24-09-2026 / WilderL / si (`pg_net` responde 200) | pendiente |
-| CFG-20 | Respaldos | 24-09-2026 / WilderL / si (plan Free: **ninguno**). Restauracion **sin probar** | pendiente |
-| CFG-21 | `SUPABASE_SERVICE_ROLE_KEY_DEV` | 24-09-2026 / WilderL / si (corrida en verde) | pendiente |
-| CFG-22 | URLs del proyecto en Actions | 24-09-2026 / WilderL / si (corrida en verde) | pendiente |
-| CFG-23 | Llaves anonimas en Actions | 24-09-2026 / WilderL / si (legacy; migracion pendiente) | pendiente |
+| CFG-01 | Site URL | 14-10-2026 / si (`https://ecopac-digital.vercel.app`) | 14-10-2026 / si (URL de la rama `develop` en Vercel) |
+| CFG-02 | Redirect URLs | 14-10-2026 / si (3 entradas, sin comodines) | 14-10-2026 / si (6 entradas, con `localhost:5173` y `exp://*`) |
+| CFG-03 | Registro cerrado | 14-10-2026 / si (`422 signup_disabled`) | 14-10-2026 / si (`422 signup_disabled`) |
+| CFG-04 | Email provider activado | 14-10-2026 / si (login 200) | 14-10-2026 / si (login 200) |
+| CFG-05 | Confirm email | 14-10-2026 / si (activado) | 14-10-2026 / si (activado) |
+| CFG-06 | Longitud minima 8 | 14-10-2026 / si (leido de vuelta) | 14-10-2026 / si (leido de vuelta) |
+| CFG-07 | Letras y numeros | 14-10-2026 / si (leido de vuelta) | 14-10-2026 / si (leido de vuelta) |
+| CFG-08 | JWT expiry | 14-10-2026 / si (3600, provisional) | 14-10-2026 / si (3600, provisional) |
+| CFG-09 | Rotacion / reuse | 14-10-2026 / si (activada / 10 s) | 14-10-2026 / si (activada / 10 s) |
+| CFG-10 | Rate limits | 14-10-2026 / si (30 / 30 / 150, valores de fabrica) | 14-10-2026 / si (idem) |
+| CFG-11 | Email OTP expiration | 14-10-2026 / si (3600) | 14-10-2026 / si (3600) |
+| CFG-12 | Plantilla de recuperacion | 14-10-2026 / Karmaz-29, WilderL y LisAY22 / si (correo recibido con la plantilla de Ecopac, issue #954 del curso) | 14-10-2026 / Karmaz-29, WilderL y LisAY22 / si |
+| CFG-13 | SMTP de Auth | 14-10-2026 / Karmaz-29, WilderL y LisAY22 / si (`smtp.gmail.com:465`, 30 correos/hora; recuperacion recibida, #954) | 14-10-2026 / Karmaz-29, WilderL y LisAY22 / si |
+| CFG-14 | `ALLOWED_ORIGINS` | 14-10-2026 / Karmaz-29, WilderL y LisAY22 / si (invitacion desde el navegador, #954) | 14-10-2026 / Karmaz-29, WilderL y LisAY22 / si (URL de dev y `localhost:5173`) |
+| CFG-15 | `WEB_URL` | 14-10-2026 / cargado | 14-10-2026 / cargado |
+| CFG-16 | `SMTP_*` de las funciones | 14-10-2026 / Karmaz-29, WilderL y LisAY22 / si (correo de bienvenida de una invitacion real, #954) | 14-10-2026 / Karmaz-29, WilderL y LisAY22 / si |
+| CFG-17 | Extensiones | 14-10-2026 / si (las crea la 00138) | 14-10-2026 / si |
+| CFG-18 | Vault `notificaciones_url` | 14-10-2026 / si | 14-10-2026 / si |
+| CFG-19 | Vault `notificaciones_llave` | 14-10-2026 / si (`pg_net` responde 200) | 14-10-2026 / si (`pg_net` responde 200) |
+| CFG-20 | Respaldos | plan Free: **ninguno de Supabase**; el respaldo a Drive esta pendiente | plan Free: ninguno |
+| CFG-21 | `SUPABASE_SERVICE_ROLE_KEY_*` | 14-10-2026 / si (alertas y keep-alive en verde) | 14-10-2026 / si (idem) |
+| CFG-22 | URLs del proyecto en Actions | 14-10-2026 / si (idem) | 14-10-2026 / si (idem) |
+| CFG-23 | Llaves anonimas en Actions y Vercel | 14-10-2026 / si (legacy `eyJ`) | 14-10-2026 / si (legacy `eyJ`) |
 
-Lo que en dev quedo sin cerrar, dicho aqui para que no se pierda:
+Lo que quedo sin cerrar en los dos ambientes, dicho aqui para que no se pierda:
 
-- **CFG-16**: los `SMTP_*` de las funciones no se configuraron. Mientras no esten, la invitacion
-  manda el correo de **restablecimiento** en vez del de **bienvenida**. Funciona, pero no es lo que
-  la #864 quiso.
-- **CFG-20**: el plan Free no da respaldos y la prueba de restauracion no se hizo, porque
-  `supabase db dump --linked` pide la contrasena de la base. El procedimiento esta en
-  `docs/CI-CD.md`.
+- **CFG-20**: el plan Free no da respaldos; el respaldo propio a Drive espera sus secrets
+  (`docs/PLAN-DE-IMPLEMENTACION.md`, paso 11). Se lleva en la issue #914 del repositorio del curso.
 
 ---
 
@@ -321,9 +325,11 @@ no hay hueco; lo habria para quien llame a la API directamente con un token roba
 
 ### Orden de aprovisionamiento
 
-`ecopac-prod` esta **pausado**, y su configuracion no se puede leer sin reanudarlo. El orden importa:
+Es el orden que se siguio el 14-10-2026 al aprovisionar `ecopac-prod` y `ecopac-dev`
+([PLAN-DE-IMPLEMENTACION.md](./PLAN-DE-IMPLEMENTACION.md), pasos 1 a 7), y el que hay que repetir con
+cualquier proyecto nuevo. El orden importa:
 
-1. Reanudar el proyecto.
+1. Crear el proyecto (o reanudarlo, si estaba pausado).
 2. **Cerrar el registro (CFG-03) antes que nada.** El valor por defecto de Supabase es abierto, y
    entre reanudar y cerrarlo hay una ventana en la que cualquiera con la llave publica -que viaja
    en el bundle del navegador- puede darse de alta. El rol por defecto de `perfiles` es voluntario

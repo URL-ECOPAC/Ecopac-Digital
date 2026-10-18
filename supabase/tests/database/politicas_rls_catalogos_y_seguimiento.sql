@@ -27,7 +27,7 @@
 --
 -- Ningun dato real: pacientes, comunidades, departamentos, municipios y proyectos son
 -- inventados. Los ids de departamentos/municipios de prueba (900221) estan fuera del rango real
--- de Guatemala (1-22 y 101-2299 aprox., ver supabase/seed.sql) para no chocar con esas filas.
+-- de Guatemala (1-22 y 101-2299 aprox., ver la migracion 00125) para no chocar con esas filas.
 
 BEGIN;
 
@@ -63,7 +63,7 @@ UPDATE perfiles SET rol = 'medico'          WHERE id = '00000000-0000-0000-0000-
 ALTER TABLE perfiles ENABLE TRIGGER USER;
 
 -- Ids fuera del rango real de Guatemala (departamentos 1-22, municipios ~101-2299, ver
--- supabase/seed.sql) para no chocar con las filas reales que carga ese seed.
+-- la migracion 00125) para no chocar con las filas reales que carga esa migracion.
 INSERT INTO departamentos (id, nombre) VALUES
   (900221, 'Departamento de prueba 221');
 

@@ -86,7 +86,7 @@ La guía rápida (G-VOL) no sigue estos capítulos: son pocas páginas, con esta
 
 ### Capturas de pantalla
 
-- **Ninguna captura muestra datos reales de pacientes.** Se toman sobre los datos de demostración (`docs/DATOS-DEMO.md`).
+- **Ninguna captura muestra datos reales de pacientes.** Se toman sobre los datos de demostración (`docs/DATOS-DE-PRUEBA.md`).
 - Nombre del archivo: `<prefijo>-<número>-<descripción>.png`, y `-telefono` al final si es del teléfono. Ya existe `comun-01-inicio-de-sesion.png`.
 - Prefijos: `comun` (lo que comparten varios manuales), `adm`, `med`, `vol`, `jd`, `sf` y `guia`.
 - Lo que se repite en varios manuales (ingreso, inicio, registrar un paciente) se captura **una vez** con el prefijo `comun` y se reutiliza.

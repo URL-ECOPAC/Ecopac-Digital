@@ -114,18 +114,18 @@ La CLI de Supabase no se instala aparte: se usa con `npx supabase`.
 
 | Servicio | Para qué | Quién necesita acceso |
 | --- | --- | --- |
-| GitHub (`URL-ECOPAC/Ecopac-Digital`) | Código, PRs, secrets de los workflows | Todo el equipo; secrets solo quien administra |
+| GitHub (cuenta de la organizacion, repositorio publico `ecopacdigital/Ecopac-Digital`) | Código, PRs, secrets de los workflows | Quien la organizacion autorice; secrets solo quien administra |
 | Supabase: proyectos `ecopac-dev` y `ecopac-prod` | Base de datos, Auth, Edge Functions | Quien administra; el resto trabaja en local |
 | Vercel | Despliegue de la web (preview por PR, producción desde `main`) | Quien administra |
 | Sentry | Errores de web, móvil y Edge Functions | Quien da soporte |
 | Proveedor SMTP | Correo de invitaciones y notificaciones | Quien administra |
-| Expo (EAS) | Compilar la app móvil para tiendas o APK. Todavía no está configurado (ver sección 12) | Quien publique la app |
+| Expo (EAS), cuenta `ecopacdigitals-team` | Compilar el APK de la app móvil (ver sección 12) | Quien publique la app |
 
 ## 4. Puesta en marcha en local, paso a paso
 
 ```bash
 # 1. Código y dependencias
-git clone https://github.com/URL-ECOPAC/Ecopac-Digital.git
+git clone https://github.com/ecopacdigital/Ecopac-Digital.git
 cd Ecopac-Digital
 git checkout develop
 npm install
@@ -151,7 +151,7 @@ npx supabase functions serve --env-file supabase/functions/.env
 ```
 
 - **Usuarios de prueba**: los crea el seed de demostración; los correos, contraseñas y roles están en
-  [DATOS-DEMO.md](DATOS-DEMO.md). Son datos inventados: nunca se usan datos reales de pacientes.
+  [DATOS-DE-PRUEBA.md](DATOS-DE-PRUEBA.md). Son datos inventados: nunca se usan datos reales de pacientes.
 - **Studio** (el panel de la base local): <http://localhost:54423>. La API local queda en el
   puerto 54421 (los puertos están en `supabase/config.toml`).
 - **Correo local**: todo lo que "se envía" en local cae en Mailpit, <http://localhost:54424>.
@@ -160,6 +160,9 @@ npx supabase functions serve --env-file supabase/functions/.env
 La guía corta equivalente es [QUICKSTART.md](QUICKSTART.md).
 
 ## 5. Configuración y claves de acceso
+
+> **Para instalar el sistema desde cero** en cuentas nuevas, el recorrido completo y en orden está
+> en [MANUAL-DE-INSTALACION.md](MANUAL-DE-INSTALACION.md). Esta sección resume qué clave va dónde.
 
 > **Regla:** ninguna llave real se sube al repositorio. `.env.development`, `.env.production` y
 > `supabase/functions/.env` están en `.gitignore`. Los nombres de las variables sí están
@@ -205,18 +208,16 @@ resumen de la corrida sin fallar; la excepción es el respaldo de la base, que f
 
 | Secret | Lo usa | Qué es |
 | --- | --- | --- |
-| `SUPABASE_ACCESS_TOKEN` | Supabase, verificar despliegue, respaldo | Token personal de la CLI para vincular con el proyecto remoto |
-| `SUPABASE_DB_PASSWORD` | Supabase, verificar despliegue | Contraseña de la base remota |
+| `SUPABASE_ACCESS_TOKEN` | Supabase, verificar despliegue, respaldo | Token de la cuenta de Supabase de la organización, dedicado al CI, para vincular con el proyecto remoto |
+| `SUPABASE_DB_PASSWORD_DEV`, `SUPABASE_DB_PASSWORD_PROD` | Supabase (el de producción, también el respaldo) | Contraseña de cada base, distintas entre sí |
 | `SUPABASE_PROJECT_REF_DEV`, `SUPABASE_PROJECT_REF_PROD` | Supabase (el de producción, también el respaldo) | Identificador de cada proyecto |
-| `SUPABASE_URL_DEV`, `SUPABASE_SERVICE_ROLE_KEY_DEV` | Alertas de vencimiento (los dos) y mantener activo (la llave) | Para correr la rutina diaria y la consulta de mantenimiento contra `ecopac-dev` |
-| `VITE_SUPABASE_URL_DEV`, `VITE_SUPABASE_ANON_KEY_DEV` | CI (compilar la web en `develop`) y mantener activo (la URL) | URL y llave anónima de `ecopac-dev` |
-| `VITE_SUPABASE_URL_PROD`, `VITE_SUPABASE_ANON_KEY_PROD` | Solo CI, al compilar la web en `main` | URL y llave anónima de `ecopac-prod` |
-| `SUPABASE_DB_PASSWORD_PROD` | Respaldo de la base | Contraseña de la base de producción, distinta de la de desarrollo |
+| `SUPABASE_URL_DEV`, `SUPABASE_URL_PROD`, `SUPABASE_SERVICE_ROLE_KEY_DEV`, `SUPABASE_SERVICE_ROLE_KEY_PROD` | Alertas de vencimiento y mantener activo | Para correr la rutina diaria y la consulta de mantenimiento contra cada ambiente |
+| `VITE_SUPABASE_URL_DEV`, `VITE_SUPABASE_ANON_KEY_DEV` | CI (compilar la web en `develop`) | URL y llave anónima de `ecopac-dev` |
+| `VITE_SUPABASE_URL_PROD`, `VITE_SUPABASE_ANON_KEY_PROD` | CI, al compilar la web en `main` | URL y llave anónima de `ecopac-prod` |
 | `RESPALDO_GPG_CLAVE_PUBLICA`, `RESPALDO_DRIVE_CLIENT_ID`, `RESPALDO_DRIVE_CLIENT_SECRET`, `RESPALDO_DRIVE_TOKEN` | Respaldo de la base | Llave pública con la que se cifra el respaldo y credencial de la cuenta de Drive de la organización |
 
-Ningún workflow programado usa hoy secrets de producción salvo el respaldo: las alertas de
-vencimiento y "mantener activo" apuntan a `ecopac-dev`. Los secrets de producción y los del
-respaldo todavía no están configurados (ver sección 12).
+Son diecisiete, todos configurados desde el 14-10-2026 salvo los cuatro `RESPALDO_*`, que van con
+la issue #914 ([PLAN-DE-IMPLEMENTACION.md](PLAN-DE-IMPLEMENTACION.md), paso 5).
 
 El detalle de cada workflow y de cada secret está en [CI-CD.md](CI-CD.md).
 
@@ -600,101 +601,57 @@ son manuales. El plan y los casos de prueba:
 
 ## 12. Ambientes y despliegue
 
-> **Estado al 13 de octubre de 2026.** El sistema funciona en local y en el ambiente de desarrollo.
-> **Producción todavía no está desplegada**: el diseño está decidido y varias piezas están escritas,
-> pero la salida a producción es la issue #252 y sigue abierta. Esta sección dice qué hay de verdad
-> hoy y qué falta; no describe un despliegue que no existe.
+> **Estado al 17 de octubre de 2026.** El sistema está en producción desde el 14 de octubre, todo a
+> nombre de la organización (issue #252). Cada paso, con cómo se comprobó, está en
+> [PLAN-DE-IMPLEMENTACION.md](PLAN-DE-IMPLEMENTACION.md); para instalarlo de nuevo en cuentas
+> nuevas, [MANUAL-DE-INSTALACION.md](MANUAL-DE-INSTALACION.md).
 
 ### 12.1 Los tres ambientes
 
-| Ambiente | Rama | Base | Web | Estado hoy |
-| --- | --- | --- | --- | --- |
-| Local | cualquiera | `supabase start` (Docker) | `npm run dev:web` | Funciona. Es donde se desarrolla y se prueba |
-| Desarrollo / staging | `develop` | Supabase `ecopac-dev` (proyecto `Ecopac-Digital-Dev`) | No se despliega: se corre en local apuntando a `ecopac-dev` | Funciona. Las migraciones y las Edge Functions se aplican solas al mergear |
-| Producción | `main` | Supabase `ecopac-prod` (proyecto `Ecopac-Digital-Prod`) | Pensada para Vercel | **Sin desplegar.** Ver 12.3 |
+| Ambiente | Rama | Base | Web |
+| --- | --- | --- | --- |
+| Local | cualquiera | `supabase start` (Docker), con `supabase/fixtures/datos-de-prueba.sql` | `npm run dev:web` |
+| Desarrollo / staging | `develop` | Supabase `ecopac-dev` (proyecto `ecopacdigital Dev`) | Vercel Preview, detrás del login de Vercel |
+| Producción | `main` | Supabase `ecopac-prod` (proyecto `ecopacdigital Prod`) | <https://ecopac-digital.vercel.app> |
 
-### 12.2 Lo que funciona hoy
+El código vive en `ecopacdigital/Ecopac-Digital`, en la cuenta de GitHub de la organización. El
+repositorio del curso, `URL-ECOPAC/Ecopac-Digital`, conserva la historia, los entregables y las
+issues.
+
+### 12.2 Cómo se despliega
 
 - **Flujo de Git**: rama desde `develop` (`feature/...`, `fix/...`, `chore/...`), PR hacia
-  `develop` con "Closes #X", commits con Conventional Commits, squash and merge. `main` solo recibe
-  `develop` con PR aprobado. Ver [CONTRIBUTING.md](CONTRIBUTING.md).
-- **Base de desarrollo**: al mergear a `develop`, el workflow `supabase.yml` aplica las migraciones
-  nuevas a `ecopac-dev` y despliega las Edge Functions. Nadie corre `supabase db push` a mano.
-- **Configuración de `ecopac-dev`**: las 23 comprobaciones de
-  [CONFIGURACION-SUPABASE.md](CONFIGURACION-SUPABASE.md) están recorridas y registradas. El SMTP de
-  las Edge Functions se dejó sin configurar a propósito hasta producción.
-- **Web**: se compila en cada PR (`npm run build` en el CI) y `vercel.json` ya define las rutas y
-  las cabeceras de seguridad, que dos guardas comprueban. Hay además una imagen autohospedable:
-  `npm run docker:prod` (Nginx, `apps/web/Dockerfile`).
-- **Móvil**: se prueba con Expo Go o en un emulador (`npm run dev:mobile`).
-- **Tareas programadas**: son workflows de GitHub Actions (alertas de vencimiento, mantener activa
-  la base, verificar el despliegue, respaldo). Se pueden correr a mano desde la pestaña Actions.
-  Las alertas y "mantener activo" apuntan a `ecopac-dev`.
+  `develop`, commits con Conventional Commits, squash and merge. `main` solo recibe `develop` con
+  PR aprobado; las dos ramas están protegidas. Ver [CONTRIBUTING.md](CONTRIBUTING.md).
+- **Base**: al mergear, el workflow `supabase.yml` aplica las migraciones nuevas y despliega las
+  Edge Functions: `develop` a `ecopac-dev` y `main` a `ecopac-prod`, cada una con su propia
+  contraseña. Nadie corre `supabase db push` a mano.
+- **Configuración de los Dashboard**: lo que no viaja en el repositorio está en
+  [CONFIGURACION-SUPABASE.md](CONFIGURACION-SUPABASE.md), con su registro por ambiente.
+- **Web**: Vercel, conectado al repositorio. `main` publica producción; `develop` y cada PR, una
+  vista previa. `apps/web/vercel.json` define las rutas y las cabeceras de seguridad, que dos
+  guardas comprueban. Hay además una imagen autohospedable: `npm run docker:prod` (Nginx,
+  `apps/web/Dockerfile`).
+- **Móvil**: APK de Android compilado con EAS (`apps/mobile/eas.json`, perfiles `desarrollo` y
+  `produccion`) y repartido desde la carpeta de Drive de la organización, sin tienda. Para
+  desarrollar, Expo Go o un emulador (`npm run dev:mobile`). Ver
+  [PLAN-DE-IMPLEMENTACION.md](PLAN-DE-IMPLEMENTACION.md), sección 7.
+- **Tareas programadas**: workflows de GitHub Actions que corren desde `main`. Alertas de
+  vencimiento y "mantener activo" corren contra los dos ambientes; verificar el despliegue, todos
+  los días. Se pueden correr a mano desde la pestaña Actions.
 
-### 12.3 Producción: qué hay y qué falta
+### 12.3 Lo que queda pendiente
 
-Lo que **ya está preparado** en el repositorio:
+- **El respaldo de la base** (issue #914): `respaldo-base.yml` está escrito y ensayado contra el
+  stack local, pero desactivado hasta tener sus secrets. Producción está en el plan gratuito de
+  Supabase, que no incluye respaldos: este es el único, y **producción no recibe datos reales hasta
+  que el primer respaldo se haya restaurado con éxito**. Plan y procedimiento:
+  [RESPALDO-Y-RECUPERACION.md](RESPALDO-Y-RECUPERACION.md).
+- **La entrega a la organización**: cambiar la contraseña temporal del administrador, revocar los
+  tokens del aprovisionamiento y rotar las llaves.
 
-- **El esquema completo viaja en las migraciones.** Levantar la base de producción es aplicarlas
-  desde cero; ningún `seed` se ejecuta en producción, y los catálogos del primer día (territorio,
-  permisos, bodegas, catálogos clínicos) ya vienen en ellas
-  ([DESPLIEGUE_BASE_DE_DATOS.md](DESPLIEGUE_BASE_DE_DATOS.md)).
-- **El administrador inicial** (issue #913, migración `00188`): al aplicarse, crea la cuenta de
-  administración de la organización sin contraseña. La contraseña se fija en el primer ingreso con
-  "Olvidé mi contraseña", así que no hay ninguna credencial en el repositorio.
-- **El respaldo de la base** (issue #914): `respaldo-base.yml` saca un volcado diario, lo cifra con
-  la llave pública de la organización y lo sube a su Google Drive, conservando los 30 más
-  recientes. El respaldo y la restauración están ensayados de punta a punta contra el stack local.
-  Producción queda en el plan gratuito de Supabase, que no incluye respaldos: este es el único.
-  Plan y procedimiento: [RESPALDO-Y-RECUPERACION.md](RESPALDO-Y-RECUPERACION.md).
-- **La lista de lo que se configura a mano** en el Dashboard de un ambiente nuevo, con cómo se
-  comprueba cada punto y el orden de aprovisionamiento:
-  [CONFIGURACION-SUPABASE.md](CONFIGURACION-SUPABASE.md).
-
-Lo que **no existe todavía**, y por qué:
-
-- **`main` no tiene el sistema.** Su último commit es del 13 de agosto de 2026 y está 428 commits
-  detrás de `develop`. Nada de lo construido desde entonces ha llegado a la rama de producción.
-- **`ecopac-prod` no está en uso.** Según [CI-CD.md](CI-CD.md) y
-  [CONFIGURACION-SUPABASE.md](CONFIGURACION-SUPABASE.md), el proyecto está pausado y su
-  configuración no se puede leer sin reanudarlo: las 23 comprobaciones del registro por ambiente
-  están pendientes en la columna de producción.
-- **Faltan los secrets de producción en GitHub**: `SUPABASE_PROJECT_REF_PROD`,
-  `SUPABASE_DB_PASSWORD_PROD` y los cuatro del respaldo no estaban creados al 11 de octubre de 2026.
-- **La web no está publicada.** El diseño es Vercel conectado al repositorio (preview por PR y
-  producción desde `main`), pero el plan Hobby de Vercel no se puede conectar a un repositorio que
-  pertenece a una organización de GitHub. Las salidas -desplegar por CLI desde un workflow, pagar
-  Vercel Pro o mover la web a otro servicio- y su costo están en
-  [COSTOS-Y-LIMITES.md](COSTOS-Y-LIMITES.md); la decisión no está tomada.
-- **La app móvil no tiene compilación distribuible.** No hay `eas.json` ni perfil de compilación;
-  `apps/mobile/app.config.js` declara `slug: ecopac-digital` y `version: 0.1.0`. Cómo se va a
-  distribuir (EAS, APK directo o tiendas) está por decidir.
-- **Las tareas programadas no corren solas.** GitHub solo dispara un horario desde la rama por
-  defecto, que es `main`, y ahí solo existe "mantener activo". Alertas de vencimiento, verificar
-  despliegue y respaldo empezarán a correr por horario cuando `develop` entre a `main`.
-- **El respaldo no ha corrido nunca contra una base real**: faltan la credencial de Drive y el par
-  de llaves de la organización, y con ellos la primera corrida y la primera restauración real.
-
-### 12.4 Pendiente de la issue #252
-
-Para que esta sección describa una producción real hace falta, en este orden:
-
-1. Reanudar `ecopac-prod` y confirmar su plan.
-2. Crear los secrets de producción en GitHub y mergear `develop` a `main`: el workflow aplica las
-   180 migraciones y despliega las Edge Functions.
-3. Recorrer [CONFIGURACION-SUPABASE.md](CONFIGURACION-SUPABASE.md) en `ecopac-prod`, empezando por
-   cerrar el registro público, y llenar su columna: URLs de Auth, política de contraseñas, plantillas de
-   correo, SMTP, secrets de las Edge Functions (`ALLOWED_ORIGINS` y `WEB_URL` con el dominio real),
-   extensiones y Vault.
-4. Fijar la contraseña del administrador inicial y comprobar el ingreso.
-5. Decidir y montar el despliegue de la web, con su dominio.
-6. Apuntar las alertas de vencimiento y "mantener activo" a producción: hoy leen secrets `_DEV`.
-7. Configurar el respaldo (cuenta de Google, credencial de Drive, par de llaves), correrlo y hacer
-   **la primera restauración real** antes de que producción reciba datos reales.
-8. Decidir la distribución de la app móvil y, si es con EAS, agregar `eas.json` y sus variables.
-
-Cuando eso cierre, esta sección, la 8 de [ARQUITECTURA.md](ARQUITECTURA.md) y las tablas de
-ambientes de [CI-CD.md](CI-CD.md) se reescriben con lo que haya quedado.
+La lista al día está en [PLAN-DE-IMPLEMENTACION.md](PLAN-DE-IMPLEMENTACION.md), "Lo que queda
+pendiente".
 
 **Costos y límites** del plan gratuito y cuánto crece la base:
 [COSTOS-Y-LIMITES.md](COSTOS-Y-LIMITES.md).
@@ -744,7 +701,7 @@ acceso visible hacia ella. La receta completa: [ARQUITECTURA-FRONTEND.md](ARQUIT
 | [CUMPLIMIENTO-DE-REQUERIMIENTOS.md](CUMPLIMIENTO-DE-REQUERIMIENTOS.md) | Cada requerimiento y su estado |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Flujo de trabajo del equipo |
 | [manual/](manual/README.md) | Manuales de usuario por rol y material de capacitación |
-| [formal/documentacion-tecnica.docx](formal/documentacion-tecnica.docx) | Documento formal para quien no tiene acceso al repositorio: consolida este manual y los documentos que resume |
+| [formal/documentacion-tecnica.pdf](formal/documentacion-tecnica.pdf) | Documento formal para quien no tiene acceso al repositorio: consolida este manual y los documentos que resume |
 
 **Mantener los generados al día:** con la base local actualizada (`npx supabase db reset --local`),
 `npm run docs:diccionario` y `npm run docs:pantallas`. No se editan a mano.

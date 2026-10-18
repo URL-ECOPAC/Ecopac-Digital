@@ -1,7 +1,7 @@
 # Permisos por rol - Ecopac Digital
 
 Quien puede hacer que, en cada modulo, y **donde esta escrito**. Este documento existe porque la
-matriz de permisos vivia solo en un PDF (`docs/entregables/Entregable Semana 6.pdf`, seccion
+matriz de permisos vivia solo en un PDF (el Entregable Semana 6 del curso, que no se versiona aqui, seccion
 "Matriz de Permisos por Rol") y cada issue la reinterpretaba por su cuenta.
 
 ## Que manda cuando algo no coincide

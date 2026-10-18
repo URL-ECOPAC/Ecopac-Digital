@@ -1355,7 +1355,7 @@ enlaza la issue que lo trackea. Las tablas sin ninguna nota no tuvieron huecos.
 
 **`departamentos`**, **`municipios`**: `nombre` (y `departamento_id` en municipios) se muestran
 como opciones de un selector en cascada (registro de paciente, jornada). Catalogo sembrado por
-`seed.sql` (22 departamentos, 340 municipios), sin `crearDepartamento`/`crearMunicipio` en el
+la migracion `00125` (22 departamentos, 340 municipios), sin `crearDepartamento`/`crearMunicipio` en el
 repo: correcto, son division politica oficial, no algo que la ONG deba mantener.
 
 **`idiomas`**: `codigo`/`nombre` son la opcion del selector de idioma del paciente. Mismo catalogo

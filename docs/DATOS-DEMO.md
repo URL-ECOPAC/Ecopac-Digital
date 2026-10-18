@@ -4,6 +4,12 @@ Que trae `supabase/seed-demo.sql`, como cargarlo y las credenciales de desarroll
 Complementa a [SUPABASE.md](./SUPABASE.md) (nube vs local) y a
 [QUICKSTART.md](./QUICKSTART.md) (inicio rapido).
 
+> **Desde el 17 de octubre de 2026 este documento es historico.** El stack local y el CI cargan
+> `supabase/fixtures/datos-de-prueba.sql`, que es este mismo seed convertido en fixture de prueba
+> (issue #252): ver [DATOS-DE-PRUEBA.md](./DATOS-DE-PRUEBA.md). `supabase/seed-demo.sql` y
+> `scripts/recargar-datos-demo.sh` se conservan solo en este repositorio, para la base de
+> desarrollo del equipo; el repositorio de la organizacion no los trae.
+
 **Todos los datos son inventados.** Ningun nombre, telefono, DPI, comunidad ni credencial de
 este seed corresponde a una persona o lugar real (regla de confidencialidad de
 [AGENTS.md](../AGENTS.md)).

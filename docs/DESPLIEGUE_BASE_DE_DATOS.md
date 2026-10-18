@@ -6,7 +6,7 @@ Este documento detalla la estrategia de despliegue para levantar la base de dato
 El despliegue en producción se ejecuta **estrictamente mediante las migraciones versionadas** utilizando el comando `supabase db push`.
 
 ### ¿Por qué NINGÚN `seed` se ejecuta en Producción?
-* **Aislamiento de Entornos:** Los archivos como `seed-demo.sql` (pacientes y datos ficticios) están diseñados exclusivamente para pruebas de desarrollo local.
+* **Aislamiento de Entornos:** Los archivos como `datos-de-prueba.sql` (pacientes y datos ficticios) están diseñados exclusivamente para pruebas de desarrollo local.
 * **Catálogos Nativos:** Los datos iniciales obligatorios del "Día 1" (departamentos, municipios, permisos, idiomas, bodegas) ya vienen incorporados de forma segura dentro de las migraciones del esquema.
 * **Idempotencia:** Evita la duplicidad de registros maestros que ya manejan las restricciones del sistema.
 

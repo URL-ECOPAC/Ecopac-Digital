@@ -12,8 +12,8 @@ El criterio para la app movil -areas tactiles, filtros, texto, estados- esta en
 | Recurso              | Donde                                                                        |
 | -------------------- | ---------------------------------------------------------------------------- |
 | Prototipo navegable  | https://www.figma.com/make/OMT8OXRXlNdbwwEh4yXGYd/Control-de-inventario?p=f  |
-| Wireframes anotados  | `docs/entregables/Entregable Semana 6.pdf`, paginas 61 a 68                   |
-| Mapas de navegacion  | `docs/entregables/Entregable Semana 6.pdf`, paginas 69 y 70                   |
+| Wireframes anotados  | Entregable Semana 6 del curso (no versionado aqui), paginas 61 a 68          |
+| Mapas de navegacion  | Entregable Semana 6 del curso (no versionado aqui), paginas 69 y 70          |
 
 El PDF es la referencia citable porque queda versionada en el repositorio. El prototipo de
 Figma manda para el detalle visual que el wireframe no captura: color, tipografia, estados de
