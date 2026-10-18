@@ -1,4 +1,9 @@
 version: 2
+# En este repositorio (el del curso) las actualizaciones automaticas estan apagadas
+# (open-pull-requests-limit: 0): se usa para la capacitacion y la presentacion final, y una
+# dependencia nueva, por ejemplo un Expo de version mayor, podria romper la app justo entonces.
+# Las dependencias se mantienen en el repositorio de la organizacion. Para volver a activarlas,
+# subir el limite.
 updates:
   # npm workspaces: directory "/" cubre todo el arbol via package-lock.json (apps/web,
   # apps/mobile, packages/shared, packages/ui-tokens), no hace falta una entrada por workspace.
@@ -7,7 +12,7 @@ updates:
     schedule:
       interval: "monthly"
     target-branch: "develop"
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 0
     groups:
       dependencias-produccion:
         dependency-type: "production"
@@ -20,3 +25,4 @@ updates:
     schedule:
       interval: "monthly"
     target-branch: "develop"
+    open-pull-requests-limit: 0
