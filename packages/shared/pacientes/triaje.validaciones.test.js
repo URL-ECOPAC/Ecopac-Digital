@@ -13,6 +13,8 @@ import {
   avisosDeSignos,
   calcularImc,
   haySignosCapturados,
+  kilosALibras,
+  librasAKilos,
   validarCambioDeTriaje,
   validarTriaje,
 } from "./triaje.validaciones.js";
@@ -44,6 +46,38 @@ describe("calcularImc", () => {
 
   it("acepta los valores como texto, que es como llegan del formulario", () => {
     expect(calcularImc("70", "170")).toBe(24.2);
+  });
+});
+
+// Issue #964: el formulario pide libras y la tabla guarda kilos. Lo que volvia de la base se
+// mostraba en kilos con la etiqueta "lb".
+describe("librasAKilos y kilosALibras", () => {
+  it("convierte en los dos sentidos", () => {
+    expect(librasAKilos(150)).toBe(68.04);
+    expect(kilosALibras(68.04)).toBe(150);
+  });
+
+  it("la ida y vuelta conserva la decima de libra", () => {
+    for (const libras of [3, 7.5, 98.2, 150, 151.3, 220.4, 800]) {
+      expect(kilosALibras(librasAKilos(libras))).toBe(libras);
+    }
+  });
+
+  it("lo vacio sigue vacio", () => {
+    expect(librasAKilos("")).toBeNull();
+    expect(librasAKilos(null)).toBeNull();
+    expect(kilosALibras(null)).toBeNull();
+    expect(kilosALibras(undefined)).toBeNull();
+  });
+
+  it("los limites del formulario caben en chk_triajes_peso_rango (1 a 400 kg)", () => {
+    const peso = CAMPOS_TRIAJE.find((campo) => campo.id === "peso");
+    expect(librasAKilos(peso.validacion.min)).toBeGreaterThanOrEqual(1);
+    expect(librasAKilos(peso.validacion.max)).toBeLessThanOrEqual(400);
+  });
+
+  it("el IMC de la validacion usa kilos: 150 lb y 165 cm no es un IMC imposible", () => {
+    expect(validarTriaje({ peso: 150, talla: 165 })).toEqual({});
   });
 });
 
@@ -257,6 +291,32 @@ describe("avisosDeSignos (issue #840, G2)", () => {
     expect(avisosDeSignos({ temperatura: 38 }, lactante)).toEqual({});
   });
 
+  it("una saturacion de 92 % avisa en un adulto (NEWS2) y no en un niño (OMS < 90)", () => {
+    expect(avisosDeSignos({ saturacionOxigeno: 92 }, adulto).saturacionOxigeno.nivel).toBe(
+      NIVELES_DE_AVISO.ALARMA,
+    );
+    expect(avisosDeSignos({ saturacionOxigeno: 92 }, escolar)).toEqual({});
+    expect(avisosDeSignos({ saturacionOxigeno: 89 }, escolar)).toHaveProperty("saturacionOxigeno");
+  });
+
+  it("una saturacion de 101 % es imposible, no alarma", () => {
+    const avisos = avisosDeSignos({ saturacionOxigeno: 101 }, adulto);
+    expect(avisos.saturacionOxigeno.nivel).toBe(NIVELES_DE_AVISO.IMPOSIBLE);
+  });
+
+  it("40 respiraciones por minuto es normal en un lactante y alarma en un adulto", () => {
+    expect(avisosDeSignos({ frecuenciaRespiratoria: 40 }, lactante)).toEqual({});
+    expect(
+      avisosDeSignos({ frecuenciaRespiratoria: 40 }, adulto).frecuenciaRespiratoria.nivel,
+    ).toBe(NIVELES_DE_AVISO.ALARMA);
+    expect(avisosDeSignos({ frecuenciaRespiratoria: 16 }, adulto)).toEqual({});
+  });
+
+  it("un triaje con solo la saturacion es valido (00190)", () => {
+    expect(validarTriaje({ saturacionOxigeno: 97 })).toEqual({});
+    expect(validarTriaje({ frecuenciaRespiratoria: 18 })).toEqual({});
+  });
+
   it("edad null (fecha de nacimiento invalida) usa los umbrales de adulto", () => {
     const valores = triajeValido({ frecuenciaCardiaca: 150 });
     expect(avisosDeSignos(valores, null)).toHaveProperty("frecuenciaCardiaca");
@@ -282,6 +342,8 @@ describe("CAMPOS_TRIAJE", () => {
       presionSistolica: "mmHg",
       presionDiastolica: "mmHg",
       frecuenciaCardiaca: "lpm",
+      frecuenciaRespiratoria: "rpm",
+      saturacionOxigeno: "%",
       glucosa: "mg/dL",
       peso: "lb",
       talla: "cm",
@@ -311,8 +373,11 @@ describe("CAMPOS_TRIAJE", () => {
       presionSistolica: { min: 40, max: 300 },
       presionDiastolica: { min: 20, max: 200 },
       frecuenciaCardiaca: { min: 20, max: 250 },
+      // 00190 (issue #964).
+      frecuenciaRespiratoria: { min: 4, max: 100 },
+      saturacionOxigeno: { min: 50, max: 100 },
       glucosa: { min: 20, max: 800 },
-      peso: { min: 1, max: 800 },
+      peso: { min: 3, max: 800 },
       talla: { min: 30, max: 250 },
       temperatura: { min: 25, max: 45 },
     });

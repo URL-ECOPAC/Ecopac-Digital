@@ -308,6 +308,7 @@
   "apps/mobile/src/screens/RestaurandoSesionScreen.js": ["#2d2d2d", "#3db648"],
   "apps/mobile/src/screens/ResumenJornadaScreen.js": ["#2d2d2d", "#3db648", "#7a7a8a", "#f7f8fa"],
   "apps/mobile/src/screens/SeleccionJornadaScreen.js": ["#2d2d2d", "#7a7a8a"],
+  "apps/mobile/src/screens/SelectorDePaciente.js": ["#2d2d2d", "#7a7a8a", "#e2e4e9", "#ffffff"],
   "apps/mobile/src/screens/ValidacionMovimientosScreen.js": [
     "#2d2d2d",
     "#3db648",
@@ -472,6 +473,7 @@
   ],
   "apps/web/src/pages/ProyectosSocialesPage.jsx": ["#3db648", "#f7941d"],
   "apps/web/src/pages/RecetaImprimible.jsx": ["#2d2d2d", "#e91e8c"],
+  "apps/web/src/pages/RecetaMedicaImprimible.jsx": ["#2d2d2d", "#e91e8c"],
   "apps/web/src/pages/reportes.css": [
     "#29abe2",
     "#2d2d2d",

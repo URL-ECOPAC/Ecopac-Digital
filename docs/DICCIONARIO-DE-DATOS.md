@@ -1,6 +1,6 @@
 # Diccionario de datos
 
-> **Documento generado.** No se edita a mano: sale de `npm run docs:diccionario` (`scripts/generar-diccionario-de-datos.mjs`), que lee el catalogo de PostgreSQL de una base con todas las migraciones aplicadas, hasta la `00189_retirar_admin_heredado_de_la_00063.sql`. Las descripciones son los `COMMENT ON` de las migraciones: si falta una, se agrega con una migracion nueva y se regenera.
+> **Documento generado.** No se edita a mano: sale de `npm run docs:diccionario` (`scripts/generar-diccionario-de-datos.mjs`), que lee el catalogo de PostgreSQL de una base con todas las migraciones aplicadas, hasta la `00191_salida_de_inventario_a_paciente_sin_consulta.sql`. Las descripciones son los `COMMENT ON` de las migraciones: si falta una, se agrega con una migracion nueva y se regenera.
 
 Complementa a [MODELO-DE-DATOS.md](MODELO-DE-DATOS.md), que explica el porque de cada decision, y a [PERMISOS.md](PERMISOS.md), que explica que puede hacer cada rol. Este documento es la referencia exhaustiva: cada tabla, cada campo, cada restriccion, cada politica y cada trigger.
 
@@ -12,13 +12,13 @@ Complementa a [MODELO-DE-DATOS.md](MODELO-DE-DATOS.md), que explica el porque de
 | Tablas con RLS activo | 60 |
 | Vistas | 9 |
 | Tipos enumerados | 23 |
-| Columnas (tablas y vistas) | 545 |
-| Llaves foraneas | 113 |
-| Restricciones CHECK | 70 |
+| Columnas (tablas y vistas) | 548 |
+| Llaves foraneas | 114 |
+| Restricciones CHECK | 73 |
 | Politicas RLS | 157 |
-| Triggers | 154 |
+| Triggers | 155 |
 | Funciones (sin contar las de trigger) | 78 |
-| Funciones de trigger | 67 |
+| Funciones de trigger | 68 |
 
 ### Como leer las tablas de este documento
 
@@ -365,6 +365,8 @@ erDiagram
     timestamptz tomado_en
     timestamptz created_at
     timestamptz updated_at
+    smallint saturacion_oxigeno
+    smallint frecuencia_respiratoria
   }
   pacientes ||--o{ atenciones : "paciente_id"
   areas_atencion ||--o{ citas : "area_id"
@@ -375,6 +377,7 @@ erDiagram
   pacientes ||--o| fusiones_pacientes : "paciente_absorbido_id"
   pacientes ||--o{ fusiones_pacientes : "paciente_sobreviviente_id"
   perfiles |o--o{ fusiones_pacientes : "realizada_por"
+  pacientes |o--o{ movimientos_inventario : "paciente_id"
   areas_atencion ||--o{ paciente_area : "area_id"
   pacientes ||--o{ paciente_area : "paciente_id"
   comunidades |o--o{ pacientes : "comunidad_id"
@@ -607,6 +610,7 @@ erDiagram
     text motivo_rechazo
     uuid jornada_id FK
     uuid receta_id FK
+    uuid paciente_id FK
   }
   alertas_caducidad {
     uuid id PK
@@ -667,6 +671,7 @@ erDiagram
   bodegas ||--o{ movimientos_inventario : "bodega_id"
   jornadas |o--o{ movimientos_inventario : "jornada_id"
   lotes ||--o{ movimientos_inventario : "lote_id"
+  pacientes |o--o{ movimientos_inventario : "paciente_id"
   recetas |o--o{ movimientos_inventario : "receta_id"
   perfiles ||--o{ movimientos_inventario : "registrado_por"
   donantes |o--o| proveedores : "donante_id"
@@ -1397,7 +1402,7 @@ Personas atendidas en las jornadas. Datos personales sensibles: solo los lee el 
 | `pacientes_pkey` | PK | `PRIMARY KEY (id)` |
 | `pacientes_dpi_key` | UNIQUE | `UNIQUE (dpi)` |
 
-**La referencian:** `atenciones.paciente_id` (RESTRICT), `citas.paciente_id` (RESTRICT), `expedientes.paciente_id` (RESTRICT), `fusiones_pacientes.paciente_absorbido_id` (RESTRICT), `fusiones_pacientes.paciente_sobreviviente_id` (RESTRICT), `paciente_area.paciente_id` (RESTRICT), `padecimientos_cronicos.paciente_id` (RESTRICT).
+**La referencian:** `atenciones.paciente_id` (RESTRICT), `citas.paciente_id` (RESTRICT), `expedientes.paciente_id` (RESTRICT), `fusiones_pacientes.paciente_absorbido_id` (RESTRICT), `fusiones_pacientes.paciente_sobreviviente_id` (RESTRICT), `movimientos_inventario.paciente_id` (RESTRICT), `paciente_area.paciente_id` (RESTRICT), `padecimientos_cronicos.paciente_id` (RESTRICT).
 
 **Proteccion.** RLS activo. Privilegios: `authenticated`: INSERT, SELECT, UPDATE; `anon`: ninguno.
 
@@ -1656,13 +1661,16 @@ Signos vitales tomados a un paciente en una atencion, antes de la consulta.
 | `tomado_en` | `timestamptz` | no | `now()` |  | Cuando se tomaron. |
 | `created_at` | `timestamptz` | no | `now()` |  | Cuando se creo la fila. Lo pone la base. |
 | `updated_at` | `timestamptz` | no | `now()` |  | Cuando se modifico la fila por ultima vez. Lo mantiene el trigger actualizar_timestamp_updated_at. |
+| `saturacion_oxigeno` | `smallint` | si |  |  | Saturacion de oxigeno (SpO2), en porcentaje. Opcional (00190, issue #964). |
+| `frecuencia_respiratoria` | `smallint` | si |  |  | Respiraciones por minuto. Opcional (00190, issue #964). |
 
 **Llaves y restricciones**
 
 | Nombre | Tipo | Definicion |
 | --- | --- | --- |
-| `chk_triajes_al_menos_un_signo` | CHECK | `CHECK (((presion_sistolica IS NOT NULL) OR (frecuencia_cardiaca IS NOT NULL) OR (glucosa IS NOT NULL) OR (peso IS NOT NULL) OR (talla IS NOT NULL) OR (temperatura IS NOT NULL)))` |
+| `chk_triajes_al_menos_un_signo` | CHECK | `CHECK (((presion_sistolica IS NOT NULL) OR (frecuencia_cardiaca IS NOT NULL) OR (glucosa IS NOT NULL) OR (peso IS NOT NULL) OR (talla IS NOT NULL) OR (temperatura IS NOT NULL) OR (saturacion_oxigeno IS NOT NULL) OR (frecuencia_respiratoria IS NOT NULL)))` Un triaje registra al menos un signo (00136). Desde la 00190 cuentan tambien la saturacion de oxigeno y la frecuencia respiratoria. |
 | `chk_triajes_frecuencia_cardiaca_rango` | CHECK | `CHECK (((frecuencia_cardiaca >= 20) AND (frecuencia_cardiaca <= 250)))` |
+| `chk_triajes_frecuencia_respiratoria_rango` | CHECK | `CHECK (((frecuencia_respiratoria >= 4) AND (frecuencia_respiratoria <= 100)))` |
 | `chk_triajes_glucosa_rango` | CHECK | `CHECK (((glucosa >= 20) AND (glucosa <= 800)))` |
 | `chk_triajes_imc_rango` | CHECK | `CHECK (((imc IS NULL) OR ((imc >= (5)::numeric) AND (imc <= (200)::numeric))))` Acota el IMC a un rango humano posible (issue #699). Fuera de el, lo que hay casi siempre es una talla en metros o un peso en libras, y un 23514 con nombre permite decir que campo revisar. El espejo en el cliente es validarTriaje() en packages/shared/pacientes/triaje.validaciones.js, que lo avisa antes de viajar a la base. |
 | `chk_triajes_peso_rango` | CHECK | `CHECK (((peso >= (1)::numeric) AND (peso <= (400)::numeric)))` |
@@ -1670,6 +1678,7 @@ Signos vitales tomados a un paciente en una atencion, antes de la consulta.
 | `chk_triajes_presion_completa` | CHECK | `CHECK (((presion_sistolica IS NULL) = (presion_diastolica IS NULL)))` |
 | `chk_triajes_presion_diastolica_rango` | CHECK | `CHECK (((presion_diastolica >= 20) AND (presion_diastolica <= 200)))` |
 | `chk_triajes_presion_sistolica_rango` | CHECK | `CHECK (((presion_sistolica >= 40) AND (presion_sistolica <= 300)))` |
+| `chk_triajes_saturacion_oxigeno_rango` | CHECK | `CHECK (((saturacion_oxigeno >= 50) AND (saturacion_oxigeno <= 100)))` |
 | `chk_triajes_talla_rango` | CHECK | `CHECK (((talla >= (30)::numeric) AND (talla <= (250)::numeric)))` |
 | `chk_triajes_temperatura_rango` | CHECK | `CHECK (((temperatura >= (25)::numeric) AND (temperatura <= (45)::numeric)))` |
 | `triajes_atencion_id_fkey` | FK | `FOREIGN KEY (atencion_id) REFERENCES atenciones(id) ON DELETE CASCADE` (al borrar: CASCADE) |
@@ -2392,17 +2401,20 @@ Ingresos y salidas de inventario. Un movimiento pendiente no cambia existencias;
 | `motivo_rechazo` | `text` | si |  |  | Motivo obligatorio al rechazar un movimiento (issue #491, mismo patron que gastos.motivo_rechazo de la 00071). El CHECK chk_movimientos_motivo_rechazo_coherente obliga a que viaje junto con estado = rechazado y a que este en NULL en cualquier otro estado. |
 | `jornada_id` | `uuid` | si |  | FK -> `jornadas` | Jornada para la que se movio el inventario: la carga de su bodega movil (fn_cargar_insumo_a_bodega_de_jornada, 00178). NULL en cualquier otro movimiento. |
 | `receta_id` | `uuid` | si |  | FK -> `recetas` | Receta de la que sale el movimiento: la salida que registra fn_generar_receta, el ajuste de fn_ajustar_entrega_receta y la devolucion al anularla (00186). NULL en cualquier otro movimiento. |
+| `paciente_id` | `uuid` | si |  | FK -> `pacientes` | Paciente al que se le entrego o vendio la salida sin pasar a consulta (00191, issue #964). Obligatorio al registrar una salida con motivo entrega; NULL en cualquier otro movimiento. La salida de una receta no lo usa: su paciente llega por receta_id. |
 
 **Llaves y restricciones**
 
 | Nombre | Tipo | Definicion |
 | --- | --- | --- |
+| `chk_movimientos_inventario_paciente_solo_en_salida` | CHECK | `CHECK (((paciente_id IS NULL) OR (tipo = 'salida'::tipo_movimiento)))` |
 | `chk_movimientos_motivo_rechazo_coherente` | CHECK | `CHECK ((((estado = 'rechazado'::estado_movimiento) AND (motivo_rechazo IS NOT NULL) AND (length(TRIM(BOTH FROM motivo_rechazo)) > 0)) OR ((estado <> 'rechazado'::estado_movimiento) AND (motivo_rechazo IS NULL))))` |
 | `movimientos_inventario_cantidad_check` | CHECK | `CHECK ((cantidad > 0))` |
 | `movimientos_inventario_aprobado_por_fkey` | FK | `FOREIGN KEY (aprobado_por) REFERENCES perfiles(id) ON DELETE RESTRICT` (al borrar: RESTRICT) |
 | `movimientos_inventario_bodega_id_fkey` | FK | `FOREIGN KEY (bodega_id) REFERENCES bodegas(id) ON DELETE RESTRICT` (al borrar: RESTRICT) |
 | `movimientos_inventario_jornada_id_fkey` | FK | `FOREIGN KEY (jornada_id) REFERENCES jornadas(id) ON DELETE RESTRICT` (al borrar: RESTRICT) |
 | `movimientos_inventario_lote_id_fkey` | FK | `FOREIGN KEY (lote_id) REFERENCES lotes(id) ON DELETE RESTRICT` (al borrar: RESTRICT) |
+| `movimientos_inventario_paciente_id_fkey` | FK | `FOREIGN KEY (paciente_id) REFERENCES pacientes(id) ON DELETE RESTRICT` (al borrar: RESTRICT) |
 | `movimientos_inventario_receta_id_fkey` | FK | `FOREIGN KEY (receta_id) REFERENCES recetas(id) ON DELETE SET NULL` (al borrar: SET NULL) |
 | `movimientos_inventario_registrado_por_fkey` | FK | `FOREIGN KEY (registrado_por) REFERENCES perfiles(id) ON DELETE RESTRICT` (al borrar: RESTRICT) |
 | `movimientos_inventario_pkey` | PK | `PRIMARY KEY (id)` |
@@ -2426,6 +2438,7 @@ Ingresos y salidas de inventario. Un movimiento pendiente no cambia existencias;
 | `trg_movimientos_anular_receta_al_rechazar_su_entrega` | AFTER UPDATE OF estado cuando `((old.estado = 'pendiente'::estado_movimiento) AND (new.estado = 'rechazado'::estado_movimiento) AND (new.receta_id IS NOT NULL) AND (new.tipo = 'salida'::tipo_movimiento) AND (new.motivo ~~ 'Entrega por receta medica%'::text))` | `fn_anular_receta_al_rechazar_su_entrega()` |
 | `trg_movimientos_aprobar_entrega_completa_de_receta` | AFTER UPDATE OF estado cuando `((old.estado = 'pendiente'::estado_movimiento) AND (new.estado = 'aprobado'::estado_movimiento) AND (new.receta_id IS NOT NULL) AND (new.tipo = 'salida'::tipo_movimiento) AND (new.motivo ~~ 'Entrega por receta medica%'::text))` | `fn_aprobar_entrega_completa_de_receta()` |
 | `trg_movimientos_inventario_auditoria` | AFTER INSERT OR DELETE OR UPDATE | `registrar_evento_auditoria()` |
+| `trg_movimientos_inventario_exigir_paciente_en_entrega` | BEFORE INSERT | `fn_exigir_paciente_en_entrega()` |
 | `trg_movimientos_inventario_notificar` | AFTER INSERT cuando `(new.estado = 'pendiente'::estado_movimiento)` | `fn_notificar_movimiento_por_validar()` |
 
 #### alertas_caducidad
@@ -3708,6 +3721,7 @@ Seguridad: corre con los permisos de su dueno; filtra con su propio WHERE. Privi
 | `fn_consulta_de_cita_despues()` | DEFINER | Despues de guardar una consulta con cita (00184): la cita pasa a atendida y, si no tenia profesional, queda quien registro la consulta. |
 | `fn_devolver_inventario_de_receta_anulada()` | DEFINER | Al anular una receta (4A, issue #925): rechaza sus movimientos pendientes y devuelve a la bodega lo que ya se habia descontado, con un ingreso enlazado a la receta (00186). |
 | `fn_disparar_correo_de_notificaciones()` | DEFINER | Trigger: pide a la Edge Function de correo (pg_net) que envie por correo la notificacion recien creada (00138). |
+| `fn_exigir_paciente_en_entrega()` | INVOKER | Rechaza una salida nueva con motivo entrega que no indica el paciente (00191, issue #964). Solo al insertar: las entregas anteriores no tenian paciente y se pueden seguir aprobando. |
 | `fn_fechas_reales_de_jornada()` | INVOKER | Fija fecha_inicio_real al pasar una jornada a en curso y fecha_fin_real al finalizarla; reabrirla borra el cierre (00174). |
 | `fn_fijar_registrado_por_origen_de_presupuesto()` | INVOKER | Trigger: pone registrado_por con auth.uid() en un origen de presupuesto; el cliente no lo manda ni lo puede falsear. |
 | `fn_impedir_devuelto_a_mano()` | INVOKER | Trigger de jornada_presupuesto_origen (00160): devuelto y traspasado_desde solo los escribe fn_liquidar_sobrante_de_jornada(). |

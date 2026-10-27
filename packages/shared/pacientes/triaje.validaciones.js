@@ -49,6 +49,41 @@ export function calcularImc(peso, talla) {
   return Math.round((kilos / (metros * metros)) * 10) / 10;
 }
 
+/** 1 kg = 2.20462 lb. */
+const LIBRAS_POR_KILO = 2.20462;
+
+/**
+ * El peso se escribe en LIBRAS (CAMPOS_TRIAJE) y `triajes.peso` lo guarda en KILOGRAMOS, que es lo
+ * que usa el IMC generado de la 00013. Estas dos funciones son la unica conversion entre ambos.
+ *
+ * Hasta la issue #964 solo se convertia al guardar: lo que volvia de la base -historial, grafica
+ * de signos, el formulario al editar una visita- mostraba los kilos con la etiqueta "lb", y la
+ * previsualizacion del IMC usaba las libras como si fueran kilos.
+ *
+ * Se guardan dos decimales (la columna es NUMERIC(5, 2)) para que la ida y vuelta conserve la
+ * decima de libra: 150 lb -> 68.04 kg -> 150 lb.
+ *
+ * @param {number|string|null|undefined} libras
+ * @returns {number|null}
+ */
+export function librasAKilos(libras) {
+  if (libras === null || libras === undefined || libras === "") return null;
+  const valor = Number(libras);
+  if (!Number.isFinite(valor)) return null;
+  return Math.round((valor / LIBRAS_POR_KILO) * 100) / 100;
+}
+
+/**
+ * @param {number|string|null|undefined} kilos `triajes.peso`.
+ * @returns {number|null} Libras, con un decimal.
+ */
+export function kilosALibras(kilos) {
+  if (kilos === null || kilos === undefined || kilos === "") return null;
+  const valor = Number(kilos);
+  if (!Number.isFinite(valor)) return null;
+  return Math.round(valor * LIBRAS_POR_KILO * 10) / 10;
+}
+
 function mensajeDeImposible(campo) {
   const { min, max } = campo.validacion;
   return (
@@ -94,7 +129,8 @@ function erroresDeRangoTriaje(valores = {}) {
     errores.peso === undefined &&
     errores.talla === undefined
   ) {
-    const imc = calcularImc(peso, talla);
+    // El peso llega en libras; calcularImc() espera kilos, como la columna generada.
+    const imc = calcularImc(librasAKilos(peso), talla);
     if (imc !== null && (imc < IMC_MINIMO || imc > IMC_MAXIMO)) {
       const mensaje =
         `Con ${peso} lb y ${talla} cm el indice de masa corporal sale ${imc}, que no es posible. ` +

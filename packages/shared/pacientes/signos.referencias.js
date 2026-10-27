@@ -33,6 +33,15 @@
 // [NICE]   National Institute for Health and Care Excellence. Fever in under 5s: assessment and
 //          initial management (NG143), 2019. En menores de 3 meses, 38 grados C o mas es riesgo alto.
 //
+// Frecuencia respiratoria y saturacion de oxigeno (00190, issue #964):
+//
+// [NEWS2]  El mismo criterio de puntaje individual >= 2: frecuencia respiratoria <= 8 o >= 21, y
+//          saturacion (escala 1) <= 93 %.
+// [PALS]   Frecuencia respiratoria normal por edad: lactante 30-53, 1 a 2 anios 22-37, 3 a 5 anios
+//          20-28, 6 a 11 anios 18-25, adolescente 12-20. Para el neonato se usa 30-60.
+// [OMS]    World Health Organization. Oxygen therapy for children, 2016. Saturacion < 90 % es
+//          hipoxemia y pide oxigeno.
+//
 // LO QUE NO TIENE FUENTE FIRME, y se dice: el techo de glucosa (250 mg/dL) es un umbral
 // pragmatico de atencion primaria para "hiperglucemia marcada que conviene revisar ya", no un
 // criterio diagnostico; y el techo de presion pediatrica por debajo de los 13 anios usa el mismo
@@ -50,6 +59,8 @@ const ADULTO = Object.freeze({
   presionSistolica: rango(101, 180), // [NEWS2] <= 100; [AHA] > 180
   presionDiastolica: rango(0, 120), // [AHA] > 120. Sin piso: NEWS2 no puntua la diastolica
   frecuenciaCardiaca: rango(41, 110), // [NEWS2] <= 40 o >= 111
+  frecuenciaRespiratoria: rango(9, 20), // [NEWS2] <= 8 o >= 21
+  saturacionOxigeno: rango(94, 100), // [NEWS2] <= 93
   temperatura: rango(35.1, 39.0), // [NEWS2] <= 35.0 o >= 39.1
   glucosa: rango(70, 250), // [ADA] < 70; techo pendiente de revision clinica
 });
@@ -59,12 +70,24 @@ const ADULTO = Object.freeze({
  * cuyo limite supera la edad es el que aplica.
  */
 const TRAMOS_PEDIATRICOS = Object.freeze([
-  { id: "neonato", hastaMeses: 1, frecuencia: rango(100, 205), sistolicaMinima: 60 },
-  { id: "lactante", hastaMeses: 12, frecuencia: rango(100, 180), sistolicaMinima: 70 },
-  { id: "1 a 2 anios", hastaMeses: 36, frecuencia: rango(98, 140) },
-  { id: "3 a 5 anios", hastaMeses: 72, frecuencia: rango(80, 120) },
-  { id: "6 a 11 anios", hastaMeses: 144, frecuencia: rango(75, 118) },
-  { id: "12 a 17 anios", hastaMeses: 216, frecuencia: rango(60, 100) },
+  {
+    id: "neonato",
+    hastaMeses: 1,
+    frecuencia: rango(100, 205),
+    respiratoria: rango(30, 60),
+    sistolicaMinima: 60,
+  },
+  {
+    id: "lactante",
+    hastaMeses: 12,
+    frecuencia: rango(100, 180),
+    respiratoria: rango(30, 53),
+    sistolicaMinima: 70,
+  },
+  { id: "1 a 2 anios", hastaMeses: 36, frecuencia: rango(98, 140), respiratoria: rango(22, 37) },
+  { id: "3 a 5 anios", hastaMeses: 72, frecuencia: rango(80, 120), respiratoria: rango(20, 28) },
+  { id: "6 a 11 anios", hastaMeses: 144, frecuencia: rango(75, 118), respiratoria: rango(18, 25) },
+  { id: "12 a 17 anios", hastaMeses: 216, frecuencia: rango(60, 100), respiratoria: rango(12, 20) },
 ]);
 
 const MESES_DE_ADULTEZ = 216;
@@ -103,6 +126,8 @@ export function umbralesDeAlarma(edad) {
     presionSistolica: rango(sistolicaMinimaPediatrica(meses, tramo.sistolicaMinima), 140), // [PALS], [AAP]
     presionDiastolica: rango(0, 90), // [AAP]
     frecuenciaCardiaca: tramo.frecuencia, // [PALS]
+    frecuenciaRespiratoria: tramo.respiratoria, // [PALS]
+    saturacionOxigeno: rango(90, 100), // [OMS] < 90
     // [NICE]: en menores de 3 meses, 38 o mas ya es alarma. Despues, 39 o mas. Hipotermia: < 35.
     temperatura: meses < 3 ? rango(35, 37.9) : rango(35, 38.9),
     glucosa: rango(70, 250), // [ADA]

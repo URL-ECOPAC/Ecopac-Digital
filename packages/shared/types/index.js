@@ -505,6 +505,8 @@
  * @property {number|null} talla
  * @property {number|null} temperatura
  * @property {number} frecuenciaCardiaca
+ * @property {number|null} frecuenciaRespiratoria Respiraciones por minuto (00190).
+ * @property {number|null} saturacionOxigeno Porcentaje (00190).
  * @property {number|null} imc Columna generada a partir de peso y talla: se lee, no se escribe.
  * @property {string} tomadoPor
  * @property {string} tomadoEn
@@ -750,6 +752,7 @@
  * @property {string|null} jornadaId Jornada para la que se cargo su bodega movil (00178).
  * @property {string|null} recetaId Receta de la que sale: su entrega, su ajuste o su devolucion
  *   al anularla (00186).
+ * @property {string|null} pacienteId Paciente de una entrega o venta sin consulta (00191).
  */
 
 /**

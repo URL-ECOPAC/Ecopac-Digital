@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 
 import { esAdministrador } from "../usuarios/roles.js";
 import { listarBodegas } from "./bodegas.api.js";
-import { OPCIONES_MOTIVO_SALIDA } from "./campos.js";
+import { MOTIVO_ENTREGA_A_PACIENTE, OPCIONES_MOTIVO_SALIDA } from "./campos.js";
 import { consultarLotesDisponibles } from "./existencias.api.js";
 import { registrarSalida, trasladarEntreBodegas } from "./movimientos.api.js";
 import { recargarAlertasMontadas } from "./useAlertasVencimiento.js";
@@ -58,11 +58,12 @@ export function bodegaDestinoValidaParaLote(bodegaDestinoId, loteSeleccionado) {
  * navegador muestre "Please select an item in the list" o que el servidor rechace una cantidad que
  * no hay.
  *
- * Un traslado (00179) necesita ademas la bodega destino.
+ * Un traslado (00179) necesita ademas la bodega destino, y una entrega a paciente (00191) el
+ * paciente.
  *
  * @param {{ motivo?: string, medicamentoId?: string, loteSeleccionado?: object|null,
  *   cantidad?: string|number, lotesDisponibles?: object[], cargando?: boolean,
- *   bodegaDestinoId?: string }} estado
+ *   bodegaDestinoId?: string, pacienteId?: string|null }} estado
  * @returns {{ sinExistencia: boolean, avisoCantidad: string|null, puedeGuardar: boolean }}
  */
 export function estadoDeLaSalida({
@@ -73,6 +74,7 @@ export function estadoDeLaSalida({
   lotesDisponibles = [],
   cargando = false,
   bodegaDestinoId = "",
+  pacienteId = null,
 } = {}) {
   const sinExistencia = Boolean(medicamentoId) && !cargando && lotesDisponibles.length === 0;
   const pedida = Number(cantidad);
@@ -87,6 +89,7 @@ export function estadoDeLaSalida({
     !cargando &&
     Boolean(motivo) &&
     (motivo !== MOTIVO_TRASLADO || Boolean(bodegaDestinoId)) &&
+    (motivo !== MOTIVO_ENTREGA_A_PACIENTE || Boolean(pacienteId)) &&
     Boolean(loteSeleccionado) &&
     pedida > 0 &&
     Number.isInteger(pedida) &&
@@ -134,14 +137,21 @@ export function estadoDeLaSalida({
  * trasladarEntreBodegas(): antes era solo la salida del origen y el inventario desaparecia. Solo lo
  * ofrece a la administradora (motivosDeSalida).
  *
+ * ENTREGA A PACIENTE (issue #964, 00191). Con motivo "entrega" se elige al paciente -el buscador
+ * de pacientes de siempre- y la salida lo guarda en paciente_id. Es la salida de quien solo compra
+ * medicamentos y no pasa a consulta: sin consulta no hay receta que la ate al paciente.
+ *
  * @param {{ usuarioId?: string, rol?: string, onExito?: (datos: object) => void }} [opciones]
- * @returns {object} Con: motivos, motivo, setMotivo, bodegasDestino, bodegaDestinoId, setBodegaDestinoId, medicamentoId, setMedicamentoId, loteSeleccionado, seleccionarLote, seleccionarLotePorClave, claveLoteSeleccionado, cantidad, setCantidad, lotesDisponibles, sinExistencia, avisoCantidad, puedeGuardar, error, cargando, guardarSalida.
+ * @returns {object} Con: motivos, motivo, setMotivo, pidePaciente, paciente, setPaciente, bodegasDestino, bodegaDestinoId, setBodegaDestinoId, medicamentoId, setMedicamentoId, loteSeleccionado, seleccionarLote, seleccionarLotePorClave, claveLoteSeleccionado, cantidad, setCantidad, lotesDisponibles, sinExistencia, avisoCantidad, puedeGuardar, error, cargando, guardarSalida.
  */
 export function useRegistroSalida({ usuarioId, rol, onExito } = {}) {
   const [motivo, setMotivo] = useState("");
   const [bodegas, setBodegas] = useState([]);
   const [bodegaDestinoId, setBodegaDestinoId] = useState("");
+  // { id, nombre, numeroFicha }, lo que devuelve el selector de paciente.
+  const [paciente, setPaciente] = useState(null);
   const esTraslado = motivo === MOTIVO_TRASLADO;
+  const pidePaciente = motivo === MOTIVO_ENTREGA_A_PACIENTE;
 
   // Las bodegas destino se piden solo si es un traslado.
   useEffect(() => {
@@ -219,6 +229,7 @@ export function useRegistroSalida({ usuarioId, rol, onExito } = {}) {
     lotesDisponibles,
     cargando,
     bodegaDestinoId: bodegaDestinoValida,
+    pacienteId: paciente?.id ?? null,
   });
 
   // Cualquier bodega menos la del lote elegido.
@@ -232,6 +243,11 @@ export function useRegistroSalida({ usuarioId, rol, onExito } = {}) {
 
     if (!motivo) {
       setError("Elige el motivo de la salida.");
+      return;
+    }
+
+    if (pidePaciente && !paciente?.id) {
+      setError("Elige al paciente al que se le entrega o vende.");
       return;
     }
 
@@ -284,6 +300,8 @@ export function useRegistroSalida({ usuarioId, rol, onExito } = {}) {
       cantidad: Number(cantidad),
       motivo,
       usuarioId,
+      // Solo la entrega a paciente lo lleva: si se eligio uno y despues se cambio de motivo, no viaja.
+      paciente_id: pidePaciente ? paciente.id : null,
     });
 
     setCargando(false);
@@ -306,6 +324,9 @@ export function useRegistroSalida({ usuarioId, rol, onExito } = {}) {
     motivos: motivosDeSalida(rol),
     motivo,
     setMotivo,
+    pidePaciente,
+    paciente,
+    setPaciente,
     bodegasDestino,
     bodegaDestinoId: bodegaDestinoValida,
     setBodegaDestinoId: (valor) => setBodegaDestinoId(valor ?? ""),

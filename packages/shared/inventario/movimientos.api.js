@@ -1,5 +1,6 @@
 import { obtenerSupabase } from "../api/cliente.js";
 import { normalizarError, normalizarErrorConReglas } from "../api/errores-de-supabase.js";
+import { etiquetaDeArticulo, MOTIVO_ENTREGA_A_PACIENTE } from "./campos.js";
 import { esLoteEntregable } from "./lotes.validaciones.js";
 import { REGLAS_DE_RECHAZO_DE_INVENTARIO } from "./rechazos.js";
 import { ESTADOS_MOVIMIENTO, ORIGENES_DE_LOTE, TIPOS_DE_MOVIMIENTO } from "../enums.js";
@@ -18,6 +19,9 @@ import { ESTADOS_MOVIMIENTO, ORIGENES_DE_LOTE, TIPOS_DE_MOVIMIENTO } from "../en
  * un medico o voluntario que mire el kardex de un movimiento ajeno recibe null en ese embed, no
  * un error -- es el mismo limite de visibilidad que ya rige el resto de la aplicacion, no algo
  * que esta funcion deba evadir.
+ *
+ * `paciente` es el de una entrega o venta sin consulta (00191, issue #964), por paciente_id.
+ * Tambien pasa por RLS: quien no puede leer pacientes recibe null y el kardex no lo nombra.
  *
  * @param {object} [opciones]
  * @param {string} [opciones.tipo]
@@ -45,7 +49,8 @@ export async function listarMovimientos({
       lote:lotes(*, medicamento:medicamentos(*)),
       bodega:bodegas(*),
       registradoPor:perfiles!movimientos_inventario_registrado_por_fkey(nombres, apellidos),
-      aprobadoPor:perfiles!movimientos_inventario_aprobado_por_fkey(nombres, apellidos)
+      aprobadoPor:perfiles!movimientos_inventario_aprobado_por_fkey(nombres, apellidos),
+      paciente:pacientes(nombres, apellidos)
     `);
 
     if (tipo) query = query.eq("tipo", tipo);
@@ -233,14 +238,33 @@ export async function registrarIngreso({
  * @param {number} opciones.cantidad
  * @param {string} opciones.motivo
  * @param {string} opciones.usuarioId
+ * @param {string|null} [opciones.paciente_id] El paciente de una entrega o venta sin consulta
+ *   (00191). Obligatorio con motivo "entrega": la base rechaza la salida sin el.
  * @returns {Promise<{ datos: object|null, error: object|null }>}
  */
-export async function registrarSalida({ bodega_id, lote_id, cantidad, motivo, usuarioId }) {
+export async function registrarSalida({
+  bodega_id,
+  lote_id,
+  cantidad,
+  motivo,
+  usuarioId,
+  paciente_id = null,
+}) {
   try {
     if (!cantidad || cantidad <= 0) {
       return {
         datos: null,
         error: { mensaje: "La cantidad a retirar debe ser mayor a cero." },
+      };
+    }
+
+    // Mismo mensaje que fn_exigir_paciente_en_entrega (00191): aqui solo se adelanta.
+    if (motivo === MOTIVO_ENTREGA_A_PACIENTE && !paciente_id) {
+      return {
+        datos: null,
+        error: {
+          mensaje: "Una entrega o venta a paciente dice a que paciente: elige al paciente.",
+        },
       };
     }
 
@@ -304,6 +328,7 @@ export async function registrarSalida({ bodega_id, lote_id, cantidad, motivo, us
         cantidad,
         motivo,
         registrado_por: usuarioId,
+        paciente_id: paciente_id || null,
       })
       .select()
       .single();
@@ -312,6 +337,51 @@ export async function registrarSalida({ bodega_id, lote_id, cantidad, motivo, us
     return { datos: data, error: null };
   } catch (error) {
     return { datos: null, error: normalizarError(error) };
+  }
+}
+
+/**
+ * Lo que se le entrego o vendio a un paciente sin pasar a consulta (00191, issue #964): las salidas
+ * de Inventario con su paciente_id, de la mas reciente a la mas vieja.
+ *
+ * No trae las rechazadas -esa entrega no ocurrio- y si las pendientes, que la pantalla marca como
+ * tales: el medicamento ya se le dio, falta que la administradora apruebe la salida. Lo que se le
+ * entrego en una consulta no esta aqui: sale por su receta, en el historial de visitas.
+ *
+ * @param {string} pacienteId UUID del paciente.
+ * @returns {Promise<{ entregas: object[], error: object|null }>} Cada una con `id`, `fecha`,
+ *   `articulo` (nombre con su concentracion), `numeroLote`, `cantidad`, `bodega` y `estado`.
+ */
+export async function listarEntregasSinConsultaDePaciente(pacienteId) {
+  if (!pacienteId) return { entregas: [], error: null };
+
+  try {
+    const { data, error } = await obtenerSupabase()
+      .from("movimientos_inventario")
+      .select(
+        "id, createdAt:created_at, cantidad, estado, lote:lotes(numeroLote:numero_lote, medicamento:medicamentos(nombre, concentracion)), bodega:bodegas(nombre)",
+      )
+      .eq("paciente_id", pacienteId)
+      .eq("tipo", TIPOS_DE_MOVIMIENTO.SALIDA)
+      .neq("estado", ESTADOS_MOVIMIENTO.RECHAZADO)
+      .order("created_at", { ascending: false });
+
+    if (error) return { entregas: [], error: normalizarError(error) };
+
+    return {
+      entregas: (data ?? []).map((fila) => ({
+        id: fila.id,
+        fecha: fila.createdAt,
+        articulo: etiquetaDeArticulo(fila.lote?.medicamento) || null,
+        numeroLote: fila.lote?.numeroLote ?? null,
+        cantidad: fila.cantidad,
+        bodega: fila.bodega?.nombre ?? null,
+        estado: fila.estado,
+      })),
+      error: null,
+    };
+  } catch (error) {
+    return { entregas: [], error: normalizarError(error) };
   }
 }
 

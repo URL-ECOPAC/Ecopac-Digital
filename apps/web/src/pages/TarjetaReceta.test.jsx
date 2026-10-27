@@ -116,3 +116,42 @@ describe("TarjetaReceta", () => {
     expect(await screen.findByText("No se pudo anular.")).toBeInTheDocument();
   });
 });
+
+describe("TarjetaReceta: Receta / PDF", () => {
+  it("entrega la receta a quien imprime el formato de receta medica, sin tocar Imprimir / PDF", () => {
+    const onImprimir = vi.fn();
+    const onImprimirRecetaMedica = vi.fn();
+    render(
+      <TarjetaReceta
+        receta={RECETA_DE_EJEMPLO}
+        onImprimir={onImprimir}
+        onImprimirRecetaMedica={onImprimirRecetaMedica}
+        puedeAnular={false}
+        onAnular={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByText("Receta / PDF"));
+    expect(onImprimirRecetaMedica).toHaveBeenCalledWith(RECETA_DE_EJEMPLO);
+    expect(onImprimir).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByText("Imprimir / PDF"));
+    expect(onImprimir).toHaveBeenCalledWith(RECETA_DE_EJEMPLO);
+    expect(onImprimirRecetaMedica).toHaveBeenCalledTimes(1);
+  });
+
+  it("se ofrece tambien en una receta anulada, igual que Imprimir / PDF", () => {
+    render(
+      <TarjetaReceta
+        receta={{ ...RECETA_DE_EJEMPLO, anulada: true }}
+        onImprimir={vi.fn()}
+        onImprimirRecetaMedica={vi.fn()}
+        puedeAnular
+        onAnular={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("Receta / PDF")).toBeInTheDocument();
+    expect(screen.getByText("Imprimir / PDF")).toBeInTheDocument();
+  });
+});

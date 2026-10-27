@@ -32,9 +32,11 @@ function Signos({ signos }) {
       ? `PA ${signos.presionSistolica}/${signos.presionDiastolica}`
       : null,
     signos.frecuenciaCardiaca ? `FC ${signos.frecuenciaCardiaca}` : null,
+    signos.frecuenciaRespiratoria ? `FR ${signos.frecuenciaRespiratoria}` : null,
+    signos.saturacionOxigeno ? `SpO2 ${signos.saturacionOxigeno} %` : null,
     signos.temperatura ? `${signos.temperatura} °C` : null,
     signos.glucosa ? `Glu ${signos.glucosa}` : null,
-    signos.peso ? `${signos.peso} kg` : null,
+    signos.peso ? `${signos.peso} lb` : null,
     signos.talla ? `${signos.talla} cm` : null,
     signos.imc ? `IMC ${signos.imc}` : null,
   ].filter(Boolean);

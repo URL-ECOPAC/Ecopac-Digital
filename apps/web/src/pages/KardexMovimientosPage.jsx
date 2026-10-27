@@ -75,7 +75,7 @@ const COLUMNAS_CSV_KARDEX = [
 function descargarCSV(movimientos) {
   const filas = movimientos.map((mov) => ({
     ...mov,
-    motivo: etiquetaDeMotivoDeMovimiento(mov.motivo),
+    motivo: etiquetaDeMotivoDeMovimiento(mov.motivo, mov.paciente_nombre),
   }));
   const blob = new Blob([exportarFilasACSV(filas, COLUMNAS_CSV_KARDEX)], {
     type: "text/csv;charset=utf-8;",
@@ -313,7 +313,7 @@ export default function KardexMovimientosPage({
                     <EtiquetaTipo tipo={mov.tipo} />
                   </td>
                   <td className="text-end fw-semibold">{mov.cantidadConSigno}</td>
-                  <td>{etiquetaDeMotivoDeMovimiento(mov.motivo)}</td>
+                  <td>{etiquetaDeMotivoDeMovimiento(mov.motivo, mov.paciente_nombre)}</td>
                   <td>{mov.bodega_nombre || "—"}</td>
                   <td>{mov.registrado_por_nombre || "—"}</td>
                   <td>
@@ -388,7 +388,7 @@ export default function KardexMovimientosPage({
                   <td>{formatoFecha(mov.created_at)}</td>
                   <td>{ETIQUETAS_TIPO[mov.tipo] ?? mov.tipo}</td>
                   <td>{mov.cantidadConSigno}</td>
-                  <td>{etiquetaDeMotivoDeMovimiento(mov.motivo)}</td>
+                  <td>{etiquetaDeMotivoDeMovimiento(mov.motivo, mov.paciente_nombre)}</td>
                   <td>{mov.bodega_nombre || "—"}</td>
                   <td>{mov.registrado_por_nombre || "—"}</td>
                   <td>{mov.aprobado_por_nombre || "Pendiente"}</td>

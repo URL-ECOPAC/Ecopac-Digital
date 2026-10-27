@@ -20,7 +20,9 @@ const COLUMNAS_DE_LA_RECETA = [
   "createdAt:created_at",
   "medico:perfiles!recetas_medico_id_fkey(nombres, apellidos)",
   "anuladaPorPerfil:perfiles!recetas_anulada_por_fkey(nombres, apellidos)",
-  "consulta:consultas!inner(id, jornadaId:jornada_id, expedienteId:expediente_id, jornada:jornadas(nombre, fecha), expediente:expedientes!inner(pacienteId:paciente_id))",
+  // El triaje de la atencion de la consulta da el peso y la talla de la receta medica. Sin
+  // !inner: una atencion sin triaje, o que RLS no deja ver, no puede esconder la receta.
+  "consulta:consultas!inner(id, jornadaId:jornada_id, expedienteId:expediente_id, jornada:jornadas(nombre, fecha), expediente:expedientes!inner(pacienteId:paciente_id), atencion:atenciones(triaje:triajes(peso, talla)))",
   "detalle:receta_detalle(id, medicamentoId:medicamento_id, loteId:lote_id, dosis, frecuencia, duracion, cantidadEntregada:cantidad_entregada, cantidadAjustada:cantidad_ajustada, ajustadaPor:ajustada_por, ajustadaEn:ajustada_en, ajustadaPorPerfil:perfiles(nombres, apellidos), bodega:bodegas(nombre), medicamento:medicamentos(nombre, concentracion, presentacion:presentaciones(nombre)))",
 ].join(", ");
 
@@ -42,6 +44,10 @@ function aReceta(fila) {
     jornadaId: consulta.jornadaId ?? null,
     jornada: consulta.jornada?.nombre ?? null,
     fechaDeJornada: consulta.jornada?.fecha ?? null,
+    // triajes_atencion_id_key (00013) hace la relacion 1:1: PostgREST embebe un objeto o null,
+    // no un arreglo (mismo caso que historial.api.js). Peso en kg y talla en cm, como en la base.
+    peso: consulta.atencion?.triaje?.peso ?? null,
+    talla: consulta.atencion?.triaje?.talla ?? null,
     indicacionesGenerales: fila.indicacionesGenerales ?? null,
     motivoAnulacion: fila.motivoAnulacion ?? null,
     anuladaPor: fila.anuladaPor ?? null,

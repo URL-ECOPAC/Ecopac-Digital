@@ -9,6 +9,7 @@ import { puedeVerHistorial } from "./permisos.js";
 import { ESTADOS_RECETA } from "../enums.js";
 import { formatearFechaConHora } from "../formato/fechas.js";
 import { etiquetaDeArea } from "./areas.campos.js";
+import { kilosALibras } from "./triaje.validaciones.js";
 
 export const TIPOS_DE_EVENTO = {
   TRIAJE: "triaje",
@@ -38,6 +39,7 @@ const COLUMNAS_DEL_HISTORIAL = [
     "id, tomadoEn:tomado_en, tomadoPor:tomado_por,",
     "presionSistolica:presion_sistolica, presionDiastolica:presion_diastolica,",
     "glucosa, peso, talla, temperatura, frecuenciaCardiaca:frecuencia_cardiaca, imc,",
+    "frecuenciaRespiratoria:frecuencia_respiratoria, saturacionOxigeno:saturacion_oxigeno,",
     "profesional:perfiles(nombres, apellidos)",
     ")",
   ].join(" "),
@@ -106,10 +108,13 @@ export function aEventos(atencion) {
         presionSistolica: triaje.presionSistolica ?? null,
         presionDiastolica: triaje.presionDiastolica ?? null,
         glucosa: triaje.glucosa ?? null,
-        peso: triaje.peso ?? null,
+        // En libras, la unidad del formulario: la visita se edita con estos valores (#964).
+        peso: kilosALibras(triaje.peso),
         talla: triaje.talla ?? null,
         temperatura: triaje.temperatura ?? null,
         frecuenciaCardiaca: triaje.frecuenciaCardiaca ?? null,
+        frecuenciaRespiratoria: triaje.frecuenciaRespiratoria ?? null,
+        saturacionOxigeno: triaje.saturacionOxigeno ?? null,
         imc: triaje.imc ?? null,
       },
     });

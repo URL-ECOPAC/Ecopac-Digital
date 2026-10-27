@@ -11,6 +11,7 @@ import NumberField from "../components/NumberField";
 import PrimaryButton from "../components/PrimaryButton";
 import SecondaryButton from "../components/SecondaryButton";
 import Selector from "../components/Selector";
+import SelectorDePacienteCita from "./SelectorDePacienteCita";
 
 // "Registrar salida" de Inventario. El estado, lo que se puede guardar y la llamada viven en
 // useRegistroSalida(); aqui solo se dibuja.
@@ -31,6 +32,9 @@ export function ModalSalidaMedicamento({
     motivos,
     motivo,
     setMotivo,
+    pidePaciente,
+    paciente,
+    setPaciente,
     bodegasDestino,
     bodegaDestinoId,
     setBodegaDestinoId,
@@ -80,6 +84,12 @@ export function ModalSalidaMedicamento({
           placeholder="Seleccione motivo..."
           disabled={cargando}
         />
+
+        {/* 00191 (issue #964): quien solo compra medicamentos no pasa a consulta, y sin esto la
+            salida no quedaba en su expediente. El buscador es el mismo de las citas. */}
+        {pidePaciente && (
+          <SelectorDePacienteCita paciente={paciente} onElegir={setPaciente} disabled={cargando} />
+        )}
 
         {/* 00179: un traslado entra a otra bodega; antes solo salia del origen. */}
         {motivo === MOTIVO_TRASLADO && (

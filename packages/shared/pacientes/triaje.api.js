@@ -42,27 +42,24 @@ import {
   normalizarError,
 } from "../api/errores-de-supabase.js";
 export { puedeTomarTriaje, puedeCorregirTriaje } from "./permisos.js";
-import { validarCambioDeTriaje, validarTriaje } from "./triaje.validaciones.js";
+import {
+  kilosALibras,
+  librasAKilos,
+  validarCambioDeTriaje,
+  validarTriaje,
+} from "./triaje.validaciones.js";
 
-// Factor de conversión exacto: 1 kg = 2.20462 lb
-const FACTOR_KG_A_LB = 2.20462;
-
-/** Convierte libras → kilogramos antes de guardar en BD */
-const librasAKg = (lb) => {
-  if (lb === null || lb === undefined || lb === "") return null;
-  const valor = Number(lb);
-  if (isNaN(valor)) return null;
-  // Redondea a 1 decimal para coincidir con precisión de la BD
-  return Math.round((valor / FACTOR_KG_A_LB) * 10) / 10;
-};
-
-/** Convierte kilogramos → libras al mostrar en pantalla */
-const kgALibras = (kg) => {
-  if (kg === null || kg === undefined) return null;
-  const valor = Number(kg);
-  if (isNaN(valor)) return null;
-  return Math.round(valor * FACTOR_KG_A_LB * 100) / 10;
-};
+/**
+ * Un triaje tal como lo usa el cliente: el peso en libras, la unidad de CAMPOS_TRIAJE.
+ *
+ * La tabla lo guarda en kilos. Hasta la issue #964 la conversion solo existia al guardar: kgALibras
+ * estaba declarada aqui y no la llamaba nadie (ademas multiplicaba por 10 de mas), asi que lo que
+ * volvia mostraba los kilos como libras.
+ */
+function aTriajeDelCliente(fila) {
+  if (!fila) return fila;
+  return { ...fila, peso: kilosALibras(fila.peso) };
+}
 
 /**
  * Del camelCase de CAMPOS_TRIAJE al snake_case de la tabla.
@@ -74,6 +71,8 @@ const MAPA_COLUMNAS_DEL_TRIAJE = {
   presionSistolica: "presion_sistolica",
   presionDiastolica: "presion_diastolica",
   frecuenciaCardiaca: "frecuencia_cardiaca",
+  frecuenciaRespiratoria: "frecuencia_respiratoria",
+  saturacionOxigeno: "saturacion_oxigeno",
   glucosa: "glucosa",
   peso: "peso",
   talla: "talla",
@@ -88,6 +87,8 @@ const COLUMNAS_DEL_TRIAJE = [
   "presionSistolica:presion_sistolica",
   "presionDiastolica:presion_diastolica",
   "frecuenciaCardiaca:frecuencia_cardiaca",
+  "frecuenciaRespiratoria:frecuencia_respiratoria",
+  "saturacionOxigeno:saturacion_oxigeno",
   "glucosa",
   "peso",
   "talla",
@@ -109,9 +110,9 @@ function aColumnasDeTabla(valores = {}) {
     if (!Object.prototype.hasOwnProperty.call(valores, campo)) continue;
     let valor = valores[campo];
 
-    //  Convertir peso de libras → kilogramos antes de guardar
+    // El formulario pide libras y la tabla guarda kilos.
     if (campo === "peso") {
-      valor = librasAKg(valor);
+      valor = librasAKilos(valor);
     }
 
     fila[columna] = valor === "" || valor === undefined ? null : valor;
@@ -174,7 +175,7 @@ export async function registrarTriaje(atencionId, valores = {}, { tomadoPor } = 
       return { triaje: null, errores: {}, error: normalizado };
     }
 
-    return { triaje: data ?? null, errores: {}, error: null };
+    return { triaje: aTriajeDelCliente(data ?? null), errores: {}, error: null };
   } catch (error) {
     return { triaje: null, errores: {}, error: normalizarError(error) };
   }
@@ -237,7 +238,7 @@ export async function actualizarTriaje(triajeId, valores = {}) {
       };
     }
 
-    return { triaje: data, errores: {}, error: null };
+    return { triaje: aTriajeDelCliente(data), errores: {}, error: null };
   } catch (error) {
     return { triaje: null, errores: {}, error: normalizarError(error) };
   }
@@ -272,7 +273,7 @@ export async function obtenerTriajes(pacienteId) {
       .order("tomado_en", { ascending: true });
 
     if (error) return { triajes: [], error: normalizarError(error) };
-    return { triajes: data ?? [], error: null };
+    return { triajes: (data ?? []).map(aTriajeDelCliente), error: null };
   } catch (error) {
     return { triajes: [], error: normalizarError(error) };
   }

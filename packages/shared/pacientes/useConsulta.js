@@ -67,6 +67,7 @@ import {
   avisosDeSignos,
   calcularImc,
   haySignosCapturados,
+  librasAKilos,
   validarCambioDeTriaje,
   validarTriaje,
 } from "./triaje.validaciones.js";
@@ -403,7 +404,11 @@ export function useConsulta({
 
   const edad = useMemo(() => calcularEdad(paciente?.fechaNacimiento), [paciente?.fechaNacimiento]);
   const avisos = useMemo(() => avisosDeSignos(signos, edad), [signos, edad]);
-  const imc = useMemo(() => calcularImc(signos.peso, signos.talla), [signos.peso, signos.talla]);
+  // El formulario pide libras; el IMC se calcula en kilos, como la columna generada (issue #964).
+  const imc = useMemo(
+    () => calcularImc(librasAKilos(signos.peso), signos.talla),
+    [signos.peso, signos.talla],
+  );
 
   // Borrador: solo para una consulta nueva. Una consulta existente ya esta guardada en la base.
   const claveBorrador =
