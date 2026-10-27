@@ -317,6 +317,9 @@ export const organizacion = {
   nombre: "Ecopac Digital",
   pais: "Guatemala",
   logo: "/logo-ecopac.png",
+  // El telefono que va al pie de la receta medica: lo dio el equipo de Ecopac al pedir el formato
+  // nuevo de receta. Ya agrupado como se marca en Guatemala.
+  telefono: "4237-5025",
 };
 
 export default {

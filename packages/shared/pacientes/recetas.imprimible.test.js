@@ -2,7 +2,13 @@ import { describe, expect, it } from "vitest";
 
 import {
   datosDeRecetaImprimible,
+  datosDeRecetaMedica,
+  describirCantidadRecetada,
+  describirUso,
+  DOCUMENTO_RECETA_MEDICA,
   ENCABEZADO_DE_RECETA,
+  formatearPeso,
+  formatearTalla,
   escaparHtml,
   htmlDeRecetaImprimible,
 } from "./recetas.imprimible.js";
@@ -172,5 +178,158 @@ describe("htmlDeRecetaImprimible (issue #866)", () => {
     expect(escaparHtml("Paracetamol 500 mg")).toBe("Paracetamol 500 mg");
     expect(escaparHtml(`&<>"'`)).toBe("&amp;&lt;&gt;&quot;&#39;");
     expect(escaparHtml(null)).toBe("");
+  });
+});
+
+describe("datosDeRecetaMedica", () => {
+  const CON_TRIAJE = { ...RECETA, peso: 62.5, talla: 158 };
+
+  it("no lleva comunidad ni ficha, y si peso y talla con sus unidades", () => {
+    const datos = datosDeRecetaMedica({ receta: CON_TRIAJE, paciente: PACIENTE });
+
+    expect(datos.documento).toBe(DOCUMENTO_RECETA_MEDICA);
+    expect(datos.paciente).not.toHaveProperty("comunidad");
+    expect(datos.paciente).not.toHaveProperty("numeroFicha");
+    expect(datos.paciente.peso).toBe("62.5 kg (137.8 lb)");
+    expect(datos.paciente.talla).toBe("158 cm");
+  });
+
+  it("un medicamento sale en tres lineas: titulo, cantidad y uso", () => {
+    const datos = datosDeRecetaMedica({ receta: CON_TRIAJE, paciente: PACIENTE });
+
+    expect(datos.medicamentos).toEqual([
+      {
+        id: "d-1",
+        numero: 1,
+        titulo: "Amoxicilina 500 mg",
+        cantidad: "# 21 capsulas",
+        uso: "tomar 1 capsula cada 8 horas por 7 días.",
+      },
+    ]);
+  });
+
+  it("varios medicamentos se numeran y completan la frase de lo que se escribio corto", () => {
+    const datos = datosDeRecetaMedica({
+      receta: {
+        ...RECETA,
+        detalle: [
+          {
+            id: "d-1",
+            medicamento: "Ibuprofeno",
+            concentracion: "400 mg",
+            presentacion: "Tableta",
+            dosis: "1",
+            frecuencia: "8 horas",
+            duracion: "3 dias",
+            cantidadEntregada: 10,
+          },
+          {
+            id: "d-2",
+            medicamento: "Acetaminofén",
+            concentracion: "120 mg/5 ml",
+            presentacion: "Jarabe",
+            dosis: "5 ml",
+            frecuencia: "Cada 6 horas",
+            duracion: "por 5 dias",
+            cantidadEntregada: 1,
+          },
+          {
+            id: "d-3",
+            medicamento: "Clotrimazol",
+            concentracion: "1%",
+            presentacion: "Pomada",
+            dosis: "una capa delgada",
+            frecuencia: "c/12 horas",
+            duracion: "una semana",
+            // La corregida manda, como en el formato de siempre (00128).
+            cantidadEntregada: 1,
+            cantidadAjustada: 2,
+          },
+        ],
+      },
+      paciente: PACIENTE,
+    });
+
+    expect(datos.medicamentos.map((m) => [m.numero, m.titulo, m.cantidad, m.uso])).toEqual([
+      [1, "Ibuprofeno 400 mg", "# 10 tabletas", "tomar 1 tableta cada 8 horas por 3 días."],
+      [
+        2,
+        "Acetaminofén 120 mg/5 ml",
+        "# 1 frasco de jarabe",
+        "tomar 5 ml cada 6 horas por 5 días.",
+      ],
+      [
+        3,
+        "Clotrimazol 1%",
+        "# 2 tubos de pomada",
+        "aplicar una capa delgada cada 12 horas por una semana.",
+      ],
+    ]);
+  });
+
+  it("con datos incompletos omite lo que falta sin dejar la frase rota", () => {
+    const datos = datosDeRecetaMedica({
+      receta: {
+        ...RECETA,
+        indicacionesGenerales: "  ",
+        detalle: [
+          {
+            id: "d-1",
+            medicamento: "Loratadina",
+            presentacion: "Tableta",
+            frecuencia: "cada 24 horas",
+          },
+          { id: "d-2", medicamento: "Suero oral" },
+        ],
+      },
+      paciente: { nombres: "Ana" },
+    });
+
+    expect(datos.paciente.peso).toBeNull();
+    expect(datos.paciente.talla).toBeNull();
+    expect(datos.paciente.edad).toBeNull();
+    expect(datos.indicacionesGenerales).toBeNull();
+    // Sin cantidad, la presentacion se queda en el titulo.
+    expect(datos.medicamentos[0]).toMatchObject({
+      titulo: "Loratadina Tableta",
+      cantidad: null,
+      uso: "tomar cada 24 horas.",
+    });
+    expect(datos.medicamentos[1]).toMatchObject({
+      titulo: "Suero oral",
+      cantidad: null,
+      uso: null,
+    });
+  });
+
+  it("devuelve null sin receta", () => {
+    expect(datosDeRecetaMedica()).toBeNull();
+  });
+});
+
+describe("describirCantidadRecetada", () => {
+  it("pluraliza segun la cantidad", () => {
+    expect(describirCantidadRecetada(1, "Tableta")).toBe("# 1 tableta");
+    expect(describirCantidadRecetada(3, "Unidad")).toBe("# 3 unidades");
+    expect(describirCantidadRecetada(2, "Gotas oftálmicas")).toBe(
+      "# 2 frascos de gotas oftálmicas",
+    );
+    expect(describirCantidadRecetada(4, null)).toBe("# 4");
+    expect(describirCantidadRecetada(null, "Tableta")).toBeNull();
+  });
+});
+
+describe("describirUso", () => {
+  it("cuenta en piezas una dosis numerica solo donde la pieza es clara", () => {
+    expect(describirUso({ dosis: "2", presentacion: "Cápsula" })).toBe("tomar 2 cápsulas.");
+    expect(describirUso({ dosis: "5", presentacion: "Jarabe" })).toBe("tomar 5.");
+  });
+});
+
+describe("formatearPeso y formatearTalla", () => {
+  it("ignoran lo que no es numero", () => {
+    expect(formatearPeso("62.50")).toBe("62.5 kg (137.8 lb)");
+    expect(formatearPeso("")).toBeNull();
+    expect(formatearTalla("abc")).toBeNull();
   });
 });
