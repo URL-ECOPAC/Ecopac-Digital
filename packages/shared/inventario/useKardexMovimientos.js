@@ -52,6 +52,8 @@ export function filasDeKardex(datos, medicamentoId) {
     registrado_por_nombre: nombreDe(mov.registradoPor),
     aprobado_por_nombre: nombreDe(mov.aprobadoPor),
     bodega_nombre: mov.bodega?.nombre ?? null,
+    // La entrega o venta sin consulta (00191): a quien se le dio. Mismo nombreDe() que los perfiles.
+    paciente_nombre: nombreDe(mov.paciente),
   }));
 }
 

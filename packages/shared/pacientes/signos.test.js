@@ -32,13 +32,16 @@ const TRIAJES = [
 ];
 
 describe("aSeriesDeSignos", () => {
-  // Las ocho series cubren los SIETE campos de CAMPOS_TRIAJE mas el IMC, que es la columna
-  // generada de la 00013. Declaraba tres, asi que la frecuencia cardiaca, la talla y la
-  // temperatura se capturaban, se guardaban y no se veian en ninguna pantalla.
+  // Las series cubren todos los campos de CAMPOS_TRIAJE mas el IMC, que es la columna generada
+  // de la 00013. Declaraba tres, asi que la frecuencia cardiaca, la talla y la temperatura se
+  // capturaban, se guardaban y no se veian en ninguna pantalla. La 00190 sumo la frecuencia
+  // respiratoria y la saturacion (issue #964).
   it("arma una serie por cada signo que se captura, mas el IMC", () => {
     expect(aSeriesDeSignos(TRIAJES).map((serie) => serie.id)).toEqual([
       "presion",
       "frecuenciaCardiaca",
+      "frecuenciaRespiratoria",
+      "saturacionOxigeno",
       "temperatura",
       "glucosa",
       "peso",
@@ -102,7 +105,7 @@ describe("aSeriesDeSignos", () => {
   });
 
   it("no falla sin triajes", () => {
-    expect(aSeriesDeSignos()).toHaveLength(7);
+    expect(aSeriesDeSignos()).toHaveLength(9);
   });
 });
 

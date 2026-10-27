@@ -464,6 +464,61 @@ describe("listarPacientesAtendidosDeJornada", () => {
     expect(pacientes[0].diagnosticoPrincipal.nombre).toBe("Cefalea");
   });
 
+  it("trae ficha, telefono y comunidad del paciente (issue #964)", async () => {
+    dobles.cliente = crearCliente({
+      consultas: {
+        data: [
+          {
+            ...FILA_DE_PACIENTE_ATENDIDO,
+            atencion: {
+              pacienteId: "pac-1",
+              paciente: {
+                nombres: "Maria",
+                apellidos: "Lopez",
+                telefonoContacto: "5555-0000",
+                comunidad: { nombre: "Comunidad Prueba" },
+              },
+            },
+            expediente: { numeroFicha: "F-0001" },
+          },
+        ],
+        error: null,
+      },
+    });
+
+    const { pacientes } = await listarPacientesAtendidosDeJornada("jor-1", {
+      rol: ROLES.ADMINISTRADOR,
+    });
+
+    expect(pacientes[0].numeroFicha).toBe("F-0001");
+    expect(pacientes[0].telefono).toBe("5555-0000");
+    expect(pacientes[0].comunidad).toBe("Comunidad Prueba");
+  });
+
+  it("sin telefono registrado deja null, no un texto vacio", async () => {
+    dobles.cliente = crearCliente({
+      consultas: {
+        data: [
+          {
+            ...FILA_DE_PACIENTE_ATENDIDO,
+            atencion: {
+              pacienteId: "pac-1",
+              paciente: { nombres: "Maria", apellidos: "Lopez", telefonoContacto: "" },
+            },
+          },
+        ],
+        error: null,
+      },
+    });
+
+    const { pacientes } = await listarPacientesAtendidosDeJornada("jor-1", {
+      rol: ROLES.ADMINISTRADOR,
+    });
+
+    expect(pacientes[0].telefono).toBeNull();
+    expect(pacientes[0].comunidad).toBeNull();
+  });
+
   it("filtra por jornada_id, no por otra columna", async () => {
     const cliente = crearCliente({ consultas: { data: [], error: null } });
     dobles.cliente = cliente;

@@ -1,15 +1,16 @@
 /**
  * Las series que dibuja la pestania de signos vitales.
  *
- * TIENE QUE CUBRIR LOS SIETE CAMPOS DE CAMPOS_TRIAJE. Declaraba tres -presion, glucosa y peso-,
+ * TIENE QUE CUBRIR TODOS LOS CAMPOS DE CAMPOS_TRIAJE (nueve desde la 00190, que sumo la
+ * frecuencia respiratoria y la saturacion de oxigeno). Declaraba tres -presion, glucosa y peso-,
  * asi que la frecuencia cardiaca, la talla y la temperatura se capturaban, se guardaban en
  * `triajes` (00013) y **no se veian en ninguna parte**: quien tomaba el triaje escribia siete
- * valores y la ficha le devolvia tres. El IMC se suma como una octava serie porque, aunque no
+ * valores y la ficha le devolvia tres. El IMC se suma como una serie mas porque, aunque no
  * sea un campo del formulario, es una columna generada de la tabla y es el dato que de verdad se
  * sigue en el tiempo para un paciente cronico.
  *
  * `grupo` separa las series por lo que miden, para que la pestania no sea una lista corrida de
- * ocho tarjetas iguales: cardiovascular, metabolico y antropometrico.
+ * diez tarjetas iguales: cardiovascular, respiratorio, metabolico y antropometrico.
  *
  * Los rangos normales de referencia son de adulto. Lo son tambien los de la version anterior; no
  * se ajustan por edad aqui a proposito, porque esa regla ya existe y vive en
@@ -18,6 +19,7 @@
  */
 export const GRUPOS_DE_SIGNOS = Object.freeze([
   { id: "cardiovascular", label: "Cardiovascular" },
+  { id: "respiratorio", label: "Respiratorio" },
   { id: "metabolico", label: "Metabolico" },
   { id: "antropometrico", label: "Medidas corporales" },
 ]);
@@ -39,6 +41,20 @@ export const SERIES_DE_SIGNOS = Object.freeze([
     label: "Frecuencia cardíaca",
     sufijo: "lpm",
     lineas: [{ id: "frecuenciaCardiaca", label: "Frecuencia", normal: { min: 60, max: 100 } }],
+  },
+  {
+    id: "frecuenciaRespiratoria",
+    grupo: "respiratorio",
+    label: "Frecuencia respiratoria",
+    sufijo: "rpm",
+    lineas: [{ id: "frecuenciaRespiratoria", label: "Frecuencia", normal: { min: 12, max: 20 } }],
+  },
+  {
+    id: "saturacionOxigeno",
+    grupo: "respiratorio",
+    label: "Saturación de oxígeno",
+    sufijo: "%",
+    lineas: [{ id: "saturacionOxigeno", label: "SpO2", normal: { min: 95, max: 100 } }],
   },
   {
     id: "temperatura",

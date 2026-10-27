@@ -215,6 +215,21 @@ export const CAMPOS_TRIAJE = [
     validacion: { requerido: false, min: 20, max: 250 },
   },
   {
+    // Issue #964 (00190), junto con la saturacion: las pidio la administradora.
+    id: "frecuenciaRespiratoria",
+    label: "Frecuencia respiratoria",
+    tipo: TIPOS_DE_CAMPO.NUMERO,
+    sufijo: "rpm",
+    validacion: { requerido: false, min: 4, max: 100 },
+  },
+  {
+    id: "saturacionOxigeno",
+    label: "Saturación de oxígeno",
+    tipo: TIPOS_DE_CAMPO.NUMERO,
+    sufijo: "%",
+    validacion: { requerido: false, min: 50, max: 100 },
+  },
+  {
     id: "glucosa",
     label: "Glucosa",
     tipo: TIPOS_DE_CAMPO.NUMERO,
@@ -227,7 +242,9 @@ export const CAMPOS_TRIAJE = [
     tipo: TIPOS_DE_CAMPO.NUMERO,
     sufijo: "lb",
     paso: 0.1,
-    validacion: { requerido: false, min: 1, max: 800 },
+    // En libras; chk_triajes_peso_rango (00013) es de 1 a 400 KILOS. 3 lb son 1.36 kg y 800 lb,
+    // 362.9 kg. Con min 1 el cliente aceptaba 1 o 2 lb y la base las rechazaba (issue #964).
+    validacion: { requerido: false, min: 3, max: 800 },
   },
   {
     id: "talla",

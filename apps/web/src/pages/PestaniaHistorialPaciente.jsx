@@ -17,6 +17,7 @@ import EmptyState from "../components/EmptyState";
 import ErrorState from "../components/ErrorState";
 import LoadingState from "../components/LoadingState";
 import SecondaryButton from "../components/SecondaryButton";
+import EntregasSinConsultaPaciente from "./EntregasSinConsultaPaciente";
 import PestaniaSignosPaciente from "./PestaniaSignosPaciente";
 import RecetaImprimible from "./RecetaImprimible";
 import RecetaMedicaImprimible from "./RecetaMedicaImprimible";
@@ -35,6 +36,8 @@ import TarjetaReceta, { FORMATOS_DE_RECETA, useImpresionDeReceta } from "./Tarje
 const ETIQUETAS_DE_SIGNOS = [
   ["presion", "Presión"],
   ["frecuenciaCardiaca", "Frecuencia cardiaca", "lpm"],
+  ["frecuenciaRespiratoria", "Frecuencia respiratoria", "rpm"],
+  ["saturacionOxigeno", "Saturación de oxígeno", "%"],
   ["temperatura", "Temperatura", "°C"],
   ["glucosa", "Glucosa", "mg/dL"],
   ["peso", "Peso", "lb"],
@@ -338,6 +341,8 @@ export default function PestaniaHistorialPaciente({ paciente, rol, perfilId, onE
                 receta={accionesDeReceta}
               />
             ))}
+          {/* Issue #964: lo que se le dio sin consulta no tiene visita ni receta. */}
+          <EntregasSinConsultaPaciente pacienteId={paciente?.id} rol={rol} />
         </>
       )}
 

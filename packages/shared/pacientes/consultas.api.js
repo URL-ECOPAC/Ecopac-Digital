@@ -378,7 +378,10 @@ export async function actualizarConsulta(id, datos = {}) {
 const COLUMNAS_DE_PACIENTE_ATENDIDO = [
   "id",
   "createdAt:created_at",
-  "atencion:atenciones(pacienteId:paciente_id, paciente:pacientes(nombres, apellidos))",
+  "atencion:atenciones(pacienteId:paciente_id, paciente:pacientes(nombres, apellidos, telefonoContacto:telefono_contacto, comunidad:comunidades(nombre)))",
+  // La ficha vive en expedientes, no en pacientes (00009). consultas.expediente_id es muchos a uno:
+  // llega como objeto.
+  "expediente:expedientes(numeroFicha:numero_ficha)",
   "diagnosticos:consulta_diagnostico(esPrincipal:es_principal, diagnostico:diagnosticos(id, codigo, nombre))",
 ].join(", ");
 
@@ -398,6 +401,11 @@ function aPacienteAtendido(fila) {
       [fila.atencion?.paciente?.nombres, fila.atencion?.paciente?.apellidos]
         .filter(Boolean)
         .join(" ") || null,
+    // Issue #964: la administradora llama a los pacientes de la jornada para darles seguimiento.
+    // El telefono es opcional desde la 00130: sin el llega null y la tabla pinta el guion.
+    numeroFicha: fila.expediente?.numeroFicha ?? null,
+    telefono: fila.atencion?.paciente?.telefonoContacto || null,
+    comunidad: fila.atencion?.paciente?.comunidad?.nombre ?? null,
     diagnosticos,
     diagnosticoPrincipal: diagnosticos.find((diagnostico) => diagnostico.esPrincipal) ?? null,
   };
@@ -459,7 +467,8 @@ export function agruparPacientesAtendidos(filas = []) {
  * @param {object} [opciones]
  * @param {string} [opciones.rol] Rol de quien consulta, para el chequeo previo.
  * @returns {Promise<{ pacientes: object[], error: object|null }>} Cada fila trae
- *   `diagnosticos` (arreglo) y `diagnosticoPrincipal` (el que tenga `esPrincipal`, o `null`).
+ *   `numeroFicha`, `telefono` y `comunidad` del paciente (issue #964), `diagnosticos` (arreglo) y
+ *   `diagnosticoPrincipal` (el que tenga `esPrincipal`, o `null`).
  */
 export async function listarPacientesAtendidosDeJornada(jornadaId, { rol } = {}) {
   if (!jornadaId) return { pacientes: [], error: null };

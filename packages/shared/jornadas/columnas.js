@@ -76,9 +76,15 @@ export const COLUMNAS_RESULTADOS_ASIGNACION_PERSONAL = [
  * Solo tiene sentido pintarla para quien puedeVerHistorial() de pacientes/permisos.js (espejo
  * de la 00033, administrador o medico): para el resto la pantalla oculta la seccion entera en
  * vez de mostrar esta tabla vacia (ver useDetalleJornada.js).
+ *
+ * Ficha, telefono y comunidad (issue #964): la administradora llama a los pacientes de la jornada
+ * para darles seguimiento, y con solo el nombre tenia que abrir la ficha de cada uno.
  */
 export const COLUMNAS_PACIENTES_ATENDIDOS_JORNADA = [
   { id: "paciente", label: "Paciente", tipo: TIPOS_DE_PRESENTACION.TEXTO, principal: true },
+  { id: "numeroFicha", label: "Ficha", tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  { id: "telefono", label: "Teléfono", tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  { id: "comunidad", label: "Comunidad", tipo: TIPOS_DE_PRESENTACION.TEXTO },
   {
     id: "diagnosticoPrincipal",
     label: "Diagnóstico principal",

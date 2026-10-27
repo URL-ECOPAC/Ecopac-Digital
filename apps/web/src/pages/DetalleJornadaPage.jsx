@@ -258,6 +258,9 @@ export default function DetalleJornadaPage() {
   const filasPacientes = pacientesAtendidos.map((fila) => ({
     id: fila.consultaId,
     paciente: fila.paciente,
+    numeroFicha: fila.numeroFicha,
+    telefono: fila.telefono,
+    comunidad: fila.comunidad,
     diagnosticoPrincipal: fila.diagnosticoPrincipal?.nombre ?? null,
   }));
 

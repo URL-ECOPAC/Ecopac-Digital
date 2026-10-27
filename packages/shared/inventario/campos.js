@@ -66,8 +66,17 @@ export const OPCIONES_ACCION_ALERTA = opcionesDe(ACCIONES_DE_ALERTA, ETIQUETAS_A
  * plataformas escriban el mismo motivo y los reportes puedan agruparlos. Estaba escrita a mano
  * dentro de ModalSalidaMedicamento.jsx, donde el movil no podia leerla.
  */
+/**
+ * Codigo del motivo "Entrega o venta a paciente (sin consulta)". Pide el paciente (issue #964,
+ * 00191): hay pacientes que solo compran medicamentos y no pasan a consulta, y sin esto la salida
+ * no quedaba en ningun expediente.
+ */
+export const MOTIVO_ENTREGA_A_PACIENTE = "entrega";
+
 export const OPCIONES_MOTIVO_SALIDA = Object.freeze([
-  { value: "entrega", label: "Entrega a paciente" },
+  // Pide el paciente desde la 00191 (issue #964): es la salida de quien solo compra medicamentos y
+  // no pasa a consulta. La de una consulta sale por la receta.
+  { value: MOTIVO_ENTREGA_A_PACIENTE, label: "Entrega o venta a paciente (sin consulta)" },
   { value: "traslado", label: "Traslado entre bodegas" },
   { value: "baja", label: "Baja por vencimiento" },
   { value: "donacion", label: "Donación a terceros" },
@@ -78,12 +87,23 @@ export const OPCIONES_MOTIVO_SALIDA = Object.freeze([
  * escribe el sistema, como `entrega`-, su etiqueta; si es texto libre (el numero de comprobante de
  * un ingreso, una nota escrita a mano), tal cual. El kardex mostraba el codigo crudo.
  *
+ * Con `paciente` (la entrega a paciente, 00191) se agrega su nombre: "Entrega o venta a paciente
+ * (sin consulta) · Maria Lopez".
+ *
  * @param {string|null|undefined} motivo
+ * @param {string|{ nombres?: string, apellidos?: string }|null} [paciente] El nombre del paciente
+ *   de la salida, o el paciente embebido tal como lo trae listarMovimientos().
  * @returns {string}
  */
-export function etiquetaDeMotivoDeMovimiento(motivo) {
+export function etiquetaDeMotivoDeMovimiento(motivo, paciente = null) {
   if (!motivo) return "";
-  return OPCIONES_MOTIVO_SALIDA.find((opcion) => opcion.value === motivo)?.label ?? motivo;
+  const etiqueta =
+    OPCIONES_MOTIVO_SALIDA.find((opcion) => opcion.value === motivo)?.label ?? motivo;
+  const nombre =
+    typeof paciente === "string"
+      ? paciente
+      : [paciente?.nombres, paciente?.apellidos].filter(Boolean).join(" ");
+  return nombre ? `${etiqueta} · ${nombre}` : etiqueta;
 }
 
 /**

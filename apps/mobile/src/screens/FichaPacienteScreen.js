@@ -17,6 +17,7 @@ import { Card, ErrorState, LoadingState, PrimaryButton, SecondaryButton } from "
 import { useSesionCompartida } from "../contexto/SesionProvider";
 import { ROUTES } from "../navigation/rutas";
 import CondicionesPacienteSeccion from "./ficha-paciente/CondicionesPacienteSeccion";
+import EntregasSinConsultaSeccion from "./ficha-paciente/EntregasSinConsultaSeccion";
 import VisitasPacienteSeccion from "./ficha-paciente/VisitasPacienteSeccion";
 import ModalEdicionPaciente from "./ModalEdicionPaciente";
 
@@ -156,6 +157,10 @@ export default function FichaPacienteScreen({ route, navigation }) {
               navigation.navigate(ROUTES.ENTREGA_MEDICAMENTOS, { atencionId: visita.atencionId })
             }
           />
+        )}
+        {/* Issue #964: lo que se le dio sin consulta no tiene visita ni receta. */}
+        {pestaniaActiva === "historial" && (
+          <EntregasSinConsultaSeccion pacienteId={paciente.id} rol={rol} />
         )}
       </ScrollView>
 
