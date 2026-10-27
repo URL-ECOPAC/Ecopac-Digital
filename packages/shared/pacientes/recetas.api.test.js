@@ -257,6 +257,27 @@ describe("obtenerReceta", () => {
     expect(receta.jornadaId).toBe("jor-1");
   });
 
+  it("trae peso y talla del triaje de la atencion, y null si la atencion no tiene", async () => {
+    dobles.cliente = crearCliente({
+      tabla: {
+        data: {
+          ...FILA_RECETA,
+          consulta: { ...FILA_RECETA.consulta, atencion: { triaje: { peso: 62.5, talla: 158 } } },
+        },
+        error: null,
+      },
+    });
+
+    const { receta } = await obtenerReceta("rec-1");
+    expect(receta.peso).toBe(62.5);
+    expect(receta.talla).toBe(158);
+
+    dobles.cliente = crearCliente({ tabla: { data: FILA_RECETA, error: null } });
+    const sinTriaje = (await obtenerReceta("rec-1")).receta;
+    expect(sinTriaje.peso).toBeNull();
+    expect(sinTriaje.talla).toBeNull();
+  });
+
   it("trae el detalle con el nombre del medicamento", async () => {
     dobles.cliente = crearCliente({ tabla: { data: FILA_RECETA, error: null } });
 

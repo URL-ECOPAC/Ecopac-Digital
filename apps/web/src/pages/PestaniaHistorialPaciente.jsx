@@ -19,7 +19,8 @@ import LoadingState from "../components/LoadingState";
 import SecondaryButton from "../components/SecondaryButton";
 import PestaniaSignosPaciente from "./PestaniaSignosPaciente";
 import RecetaImprimible from "./RecetaImprimible";
-import TarjetaReceta, { useImpresionDeReceta } from "./TarjetaReceta";
+import RecetaMedicaImprimible from "./RecetaMedicaImprimible";
+import TarjetaReceta, { FORMATOS_DE_RECETA, useImpresionDeReceta } from "./TarjetaReceta";
 
 // El historial clinico como lista de visitas (issue #840, bloque F).
 //
@@ -221,6 +222,7 @@ function Visita({ visita, abierta, onAlternar, onEditar, recetasPorId, receta })
                   key={resumen.id}
                   receta={completa}
                   onImprimir={receta.imprimir}
+                  onImprimirRecetaMedica={receta.imprimirRecetaMedica}
                   puedeAnular={receta.puedeAnular(completa)}
                   onAnular={receta.anular}
                 />
@@ -248,7 +250,7 @@ export default function PestaniaHistorialPaciente({ paciente, rol, perfilId, onE
   const { visitas, filtros, setFiltro, limpiarFiltros, hayFiltros, cargando, error, recargar } =
     useVisitasPaciente(paciente?.id, { rol });
   const recetas = useRecetasPaciente(paciente?.id, { rol });
-  const { aImprimir, imprimir } = useImpresionDeReceta();
+  const { aImprimir, formato, imprimir, imprimirRecetaMedica } = useImpresionDeReceta();
   // La visita mas reciente se abre sola: es la que casi siempre se viene a ver.
   const [abiertas, setAbiertas] = useState(() => new Set());
   const [primeraAbierta, setPrimeraAbierta] = useState(false);
@@ -270,6 +272,7 @@ export default function PestaniaHistorialPaciente({ paciente, rol, perfilId, onE
   const recetasPorId = new Map(recetas.recetas.map((receta) => [receta.id, receta]));
   const accionesDeReceta = {
     imprimir,
+    imprimirRecetaMedica,
     puedeAnular: (receta) => puedeAnularReceta(rol, receta, perfilId),
     anular: async (recetaId, motivo) => {
       const respuesta = await anularReceta(recetaId, { motivo, anuladaPor: perfilId });
@@ -338,7 +341,12 @@ export default function PestaniaHistorialPaciente({ paciente, rol, perfilId, onE
         </>
       )}
 
-      {aImprimir && <RecetaImprimible receta={aImprimir} paciente={paciente} />}
+      {aImprimir && formato === FORMATOS_DE_RECETA.CLASICO && (
+        <RecetaImprimible receta={aImprimir} paciente={paciente} />
+      )}
+      {aImprimir && formato === FORMATOS_DE_RECETA.RECETA_MEDICA && (
+        <RecetaMedicaImprimible receta={aImprimir} paciente={paciente} />
+      )}
     </div>
   );
 }

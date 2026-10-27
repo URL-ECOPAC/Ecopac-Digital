@@ -472,6 +472,7 @@
   ],
   "apps/web/src/pages/ProyectosSocialesPage.jsx": ["#3db648", "#f7941d"],
   "apps/web/src/pages/RecetaImprimible.jsx": ["#2d2d2d", "#e91e8c"],
+  "apps/web/src/pages/RecetaMedicaImprimible.jsx": ["#2d2d2d", "#e91e8c"],
   "apps/web/src/pages/reportes.css": [
     "#29abe2",
     "#2d2d2d",

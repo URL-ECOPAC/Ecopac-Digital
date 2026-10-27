@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Ban, EyeOff } from "lucide-react";
+import { Ban, EyeOff, FileText } from "lucide-react";
 
 import {
   describirMedicamento,
@@ -48,7 +48,13 @@ function Detalle({ receta }) {
   );
 }
 
-export default function TarjetaReceta({ receta, onImprimir, puedeAnular, onAnular }) {
+export default function TarjetaReceta({
+  receta,
+  onImprimir,
+  onImprimirRecetaMedica,
+  puedeAnular,
+  onAnular,
+}) {
   const [abierta, setAbierta] = useState(false);
   const [anulando, setAnulando] = useState(false);
   const [motivo, setMotivo] = useState("");
@@ -85,6 +91,16 @@ export default function TarjetaReceta({ receta, onImprimir, puedeAnular, onAnula
             aria-expanded={abierta}
           />
           <BotonImprimir size="sm" onClick={() => onImprimir(receta)} />
+          {/* El formato de receta medica escrita. Aparece en los mismos casos que "Imprimir /
+              PDF" -tambien en una anulada, que sale marcada como tal-. */}
+          {onImprimirRecetaMedica && (
+            <SecondaryButton
+              title="Receta / PDF"
+              size="sm"
+              icon={<FileText size={16} aria-hidden="true" />}
+              onClick={() => onImprimirRecetaMedica(receta)}
+            />
+          )}
           {puedeAnular && !receta.anulada && !anulando && (
             <SecondaryButton
               title="Anular"
@@ -151,19 +167,31 @@ export default function TarjetaReceta({ receta, onImprimir, puedeAnular, onAnula
   );
 }
 
+/** Los dos papeles que salen de una receta. */
+export const FORMATOS_DE_RECETA = Object.freeze({
+  // "Imprimir / PDF": RecetaImprimible.jsx.
+  CLASICO: "clasico",
+  // "Receta / PDF": RecetaMedicaImprimible.jsx.
+  RECETA_MEDICA: "receta_medica",
+});
+
 /**
  * Imprime una receta: la monta en su portal imprimible y abre el dialogo del navegador. Vivia en
  * PestaniaRecetasPaciente.jsx; se extrae con la tarjeta.
  *
- * @returns {{ aImprimir: object|null, imprimir: (receta: object) => void }}
+ * `imprimir` sigue imprimiendo el formato de siempre; `imprimirRecetaMedica` el de receta medica.
+ * `formato` dice cual de los dos montar.
+ *
+ * @returns {{ aImprimir: object|null, formato: string|null, imprimir: (receta: object) => void,
+ *   imprimirRecetaMedica: (receta: object) => void }}
  */
 export function useImpresionDeReceta() {
-  const [aImprimir, setAImprimir] = useState(null);
+  const [pedido, setPedido] = useState(null);
 
   useEffect(() => {
-    if (!aImprimir) return undefined;
+    if (!pedido) return undefined;
 
-    const limpiar = () => setAImprimir(null);
+    const limpiar = () => setPedido(null);
     window.addEventListener("afterprint", limpiar);
     // Espera al logo: impreso un fotograma despues, el papel salia sin el.
     const cancelarImpresion = imprimirCuandoEsteListo();
@@ -172,7 +200,13 @@ export function useImpresionDeReceta() {
       window.removeEventListener("afterprint", limpiar);
       cancelarImpresion();
     };
-  }, [aImprimir]);
+  }, [pedido]);
 
-  return { aImprimir, imprimir: setAImprimir };
+  return {
+    aImprimir: pedido?.receta ?? null,
+    formato: pedido?.formato ?? null,
+    imprimir: (receta) => setPedido({ receta, formato: FORMATOS_DE_RECETA.CLASICO }),
+    imprimirRecetaMedica: (receta) =>
+      setPedido({ receta, formato: FORMATOS_DE_RECETA.RECETA_MEDICA }),
+  };
 }
