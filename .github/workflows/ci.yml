@@ -36,6 +36,30 @@ jobs:
       - name: Instalar dependencias
         run: npm ci
 
+      # La instalacion de arriba lee el .npmrc del repo, cuyo legacy-peer-deps=true (lo necesita
+      # Expo) tapa un lockfile incoherente: una dependencia que exige una version de un peer que
+      # el lockfile no trae. La imagen de Docker de la web (apps/web/Dockerfile) instala SIN ese
+      # .npmrc y solo los workspaces de la web, y ahi npm intenta resolver el peer y revienta con
+      # "Cannot read properties of null (reading 'edgesOut')". Paso en develop con a247e31: el CI
+      # quedo en verde y `docker compose up --build` dejo de funcionar. Esto repite esa instalacion
+      # con --dry-run: no descarga nada y tarda unos segundos.
+      - name: Comprobar que el lockfile instala como en Docker (sin legacy-peer-deps)
+        run: |
+          dir="$(mktemp -d)"
+          mkdir -p "$dir/apps/web" "$dir/packages/shared" "$dir/packages/ui-tokens"
+          cp package.json package-lock.json "$dir/"
+          for pkg in apps/web packages/shared packages/ui-tokens; do
+            cp "$pkg/package.json" "$dir/$pkg/package.json"
+          done
+          cd "$dir"
+          if ! NPM_CONFIG_LEGACY_PEER_DEPS=false npm ci --workspace=apps/web --ignore-scripts \
+            --dry-run --no-audit --no-fund > /tmp/npm-docker.txt 2>&1; then
+            cat /tmp/npm-docker.txt
+            echo "::error::package-lock.json no instala sin legacy-peer-deps: la imagen de Docker de la web no se va a poder construir. Busca la dependencia que pide una version de un peer que el lockfile no trae y actualizala (npm update <paquete>)."
+            exit 1
+          fi
+          echo "El lockfile instala como en la imagen de Docker."
+
       # Bloquea solo lo critico: medido el 2026-09-17 hay 15 vulnerabilidades conocidas (14
       # moderate, 1 high) en la cadena de @expo/config-plugins (tooling de mobile, no codigo
       # publicado), sin arreglo disponible sin un downgrade que rompe Expo. Bloquear en "high"
