@@ -386,7 +386,7 @@ export default function BandejaValidacionPage({ usuarioId, rolUsuario }) {
                       >
                         {esEntregaDeReceta
                           ? "Se aprueba o se rechaza completa"
-                          : etiquetaDeMotivoDeMovimiento(mov.motivo) || "Sin motivo"}
+                          : etiquetaDeMotivoDeMovimiento(mov.motivo, mov.paciente) || "Sin motivo"}
                       </div>
                     </td>
 

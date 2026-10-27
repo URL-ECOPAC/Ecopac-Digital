@@ -88,6 +88,24 @@ export const COLUMNAS_MIS_MOVIMIENTOS = [
 ];
 
 /**
+ * Lo que se le entrego o vendio a un paciente sin pasar a consulta (00191, issue #964), en su
+ * ficha. Son las filas de listarEntregasSinConsultaDePaciente() (movimientos.api.js). El estado
+ * importa: una pendiente ya se le dio, pero la salida todavia espera la aprobacion.
+ */
+export const COLUMNAS_ENTREGAS_SIN_CONSULTA = [
+  { id: "articulo", label: "Medicamento", tipo: TIPOS_DE_PRESENTACION.TEXTO, principal: true },
+  { id: "cantidad", label: "Cantidad", tipo: TIPOS_DE_PRESENTACION.NUMERO },
+  { id: "fecha", label: "Fecha", tipo: TIPOS_DE_PRESENTACION.FECHA },
+  { id: "bodega", label: "Bodega", tipo: TIPOS_DE_PRESENTACION.TEXTO },
+  {
+    id: "estado",
+    label: "Estado",
+    tipo: TIPOS_DE_PRESENTACION.ESTADO,
+    etiquetasDesde: "estadosMovimiento",
+  },
+];
+
+/**
  * Columnas de la existencia disponible, que es la fila que arma `aExistencia()` en
  * existencias.api.js: una por medicamento, no una por lote.
  *

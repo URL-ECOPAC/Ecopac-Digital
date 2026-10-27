@@ -19,6 +19,7 @@ import {
 } from "../components";
 import { EnFormulario } from "../components/contextoDeFormulario";
 import { useSesionCompartida } from "../contexto/SesionProvider";
+import SelectorDePaciente from "./SelectorDePaciente";
 
 function etiquetaDeLote(lote) {
   return [
@@ -40,6 +41,9 @@ export default function RegistroSalidaScreen({ navigation }) {
     motivos,
     motivo,
     setMotivo,
+    pidePaciente,
+    paciente,
+    setPaciente,
     bodegasDestino,
     bodegaDestinoId,
     setBodegaDestinoId,
@@ -97,6 +101,12 @@ export default function RegistroSalidaScreen({ navigation }) {
         placeholder="Elegir motivo"
         disabled={cargando}
       />
+
+      {/* 00191 (issue #964): quien solo compra medicamentos no pasa a consulta, y sin esto la
+          salida no quedaba en su expediente. */}
+      {pidePaciente ? (
+        <SelectorDePaciente paciente={paciente} onElegir={setPaciente} disabled={cargando} />
+      ) : null}
 
       <Selector
         label="Medicamento"

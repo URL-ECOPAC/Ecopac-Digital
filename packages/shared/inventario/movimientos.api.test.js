@@ -3,6 +3,7 @@ import {
   registrarIngreso,
   registrarSalida,
   editarMovimiento,
+  listarEntregasSinConsultaDePaciente,
   listarMovimientos,
 } from "./movimientos.api.js";
 import { obtenerSupabase } from "../api/cliente.js";
@@ -274,6 +275,131 @@ describe("Módulo de Inventario - API Movimientos", () => {
 
       expect(res.error).toBeNull();
       expect(res.datos.id).toBe("MOV-3");
+    });
+
+    // Issue #964 (00191): la entrega o venta sin consulta dice a que paciente.
+    it("una entrega a paciente sin paciente no llega a la base", async () => {
+      const res = await registrarSalida({
+        bodega_id: "B-1",
+        lote_id: "LOTE-1",
+        cantidad: 2,
+        motivo: "entrega",
+        usuarioId: "U-1",
+      });
+
+      expect(res.datos).toBeNull();
+      expect(res.error.mensaje).toContain("paciente");
+      expect(mockSupabase.from).not.toHaveBeenCalled();
+    });
+
+    it("guarda el paciente de la entrega en paciente_id", async () => {
+      mockSupabase.single
+        .mockResolvedValueOnce({
+          data: { id: "LOTE-1", fecha_vencimiento: "2099-01-01" },
+          error: null,
+        })
+        .mockResolvedValueOnce({ data: { id: "MOV-4", tipo: "salida" }, error: null });
+      mockSupabase.maybeSingle.mockResolvedValueOnce({
+        data: { cantidad_disponible: 20 },
+        error: null,
+      });
+
+      const res = await registrarSalida({
+        bodega_id: "B-1",
+        lote_id: "LOTE-1",
+        cantidad: 2,
+        motivo: "entrega",
+        usuarioId: "U-1",
+        paciente_id: "PAC-1",
+      });
+
+      expect(res.error).toBeNull();
+      expect(mockSupabase.insert).toHaveBeenCalledWith(
+        expect.objectContaining({ motivo: "entrega", paciente_id: "PAC-1" }),
+      );
+    });
+
+    it("otra salida no lleva paciente", async () => {
+      mockSupabase.single
+        .mockResolvedValueOnce({
+          data: { id: "LOTE-1", fecha_vencimiento: "2099-01-01" },
+          error: null,
+        })
+        .mockResolvedValueOnce({ data: { id: "MOV-5", tipo: "salida" }, error: null });
+      mockSupabase.maybeSingle.mockResolvedValueOnce({
+        data: { cantidad_disponible: 20 },
+        error: null,
+      });
+
+      await registrarSalida({
+        bodega_id: "B-1",
+        lote_id: "LOTE-1",
+        cantidad: 2,
+        motivo: "baja",
+        usuarioId: "U-1",
+      });
+
+      expect(mockSupabase.insert).toHaveBeenCalledWith(
+        expect.objectContaining({ motivo: "baja", paciente_id: null }),
+      );
+    });
+  });
+
+  describe("listarEntregasSinConsultaDePaciente", () => {
+    it("sin paciente no llama a la base", async () => {
+      const res = await listarEntregasSinConsultaDePaciente();
+      expect(res).toEqual({ entregas: [], error: null });
+      expect(mockSupabase.from).not.toHaveBeenCalled();
+    });
+
+    it("filtra por paciente y salida, deja fuera las rechazadas y arma cada fila", async () => {
+      mockSupabase.neq = vi.fn().mockReturnThis();
+      mockSupabase.order.mockResolvedValueOnce({
+        data: [
+          {
+            id: "MOV-1",
+            createdAt: "2026-10-20T15:00:00Z",
+            cantidad: 3,
+            estado: "pendiente",
+            lote: {
+              numeroLote: "L-1",
+              medicamento: { nombre: "Paracetamol", concentracion: "500 mg" },
+            },
+            bodega: { nombre: "Bodega Principal" },
+          },
+        ],
+        error: null,
+      });
+
+      const res = await listarEntregasSinConsultaDePaciente("PAC-1");
+
+      expect(mockSupabase.eq).toHaveBeenCalledWith("paciente_id", "PAC-1");
+      expect(mockSupabase.eq).toHaveBeenCalledWith("tipo", "salida");
+      expect(mockSupabase.neq).toHaveBeenCalledWith("estado", "rechazado");
+      expect(res.error).toBeNull();
+      expect(res.entregas).toEqual([
+        {
+          id: "MOV-1",
+          fecha: "2026-10-20T15:00:00Z",
+          articulo: "Paracetamol (500 mg)",
+          numeroLote: "L-1",
+          cantidad: 3,
+          bodega: "Bodega Principal",
+          estado: "pendiente",
+        },
+      ]);
+    });
+
+    it("un error de la base llega como error, no como lista vacia sin aviso", async () => {
+      mockSupabase.neq = vi.fn().mockReturnThis();
+      mockSupabase.order.mockResolvedValueOnce({
+        data: null,
+        error: { code: "42501", message: "permission denied" },
+      });
+
+      const res = await listarEntregasSinConsultaDePaciente("PAC-1");
+      expect(res.entregas).toEqual([]);
+      expect(res.error).not.toBeNull();
     });
   });
 

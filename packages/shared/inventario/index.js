@@ -115,6 +115,7 @@ export {
   TIPO_MOVIMIENTO,
   useKardexMovimientos,
 } from "./useKardexMovimientos.js";
+export { useEntregasSinConsultaPaciente } from "./useEntregasSinConsultaPaciente.js";
 export {
   claveDeLoteDeSalida,
   MOTIVO_TRASLADO,

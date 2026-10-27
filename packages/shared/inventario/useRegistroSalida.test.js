@@ -72,6 +72,29 @@ describe("estadoDeLaSalida", () => {
 });
 
 // 00179: un traslado mueve el lote a otra bodega; antes solo salia del origen.
+// Issue #964 (00191): la entrega o venta sin consulta pide el paciente.
+describe("entrega a paciente sin consulta", () => {
+  const base = {
+    motivo: "entrega",
+    medicamentoId: "m-1",
+    loteSeleccionado: LOTE,
+    cantidad: "2",
+    lotesDisponibles: [LOTE],
+  };
+
+  it("sin paciente no se puede guardar", () => {
+    expect(estadoDeLaSalida(base).puedeGuardar).toBe(false);
+  });
+
+  it("con paciente si", () => {
+    expect(estadoDeLaSalida({ ...base, pacienteId: "pac-1" }).puedeGuardar).toBe(true);
+  });
+
+  it("otro motivo no pide paciente", () => {
+    expect(estadoDeLaSalida({ ...base, motivo: "baja" }).puedeGuardar).toBe(true);
+  });
+});
+
 describe("traslado entre bodegas", () => {
   const LOTE = { loteId: "l-1", bodegaId: "b-1", cantidadDisponible: 10 };
 
